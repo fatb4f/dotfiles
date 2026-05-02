@@ -1,0 +1,92 @@
+KITTY MODAL KEY REFERENCE
+
+Entry
+- Ctrl+Space+w -> workspace mode
+- Ctrl+Space+t -> tabs mode
+- Ctrl+Space+s -> scrollback mode
+- Ctrl+Space+h -> hints mode
+- Ctrl+Space+p -> paths mode
+- Ctrl+Space+l -> launchers mode
+- Ctrl+Space+x -> signals mode
+
+Global
+- Ctrl+Shift+Escape -> command palette
+- Ctrl+Shift+C -> copy to clipboard
+- Ctrl+Shift+V / Shift+Insert -> paste from clipboard
+- Ctrl+Shift+Backspace -> SIGINT
+- Ctrl+Shift+Tab -> launch a zsh tab in the active session
+- Ctrl+Alt+U -> unicode input
+- Ctrl+Shift+Delete -> clear terminal and scrollback
+- Ctrl+Shift+Alt+C -> goto codex session
+- Ctrl+Shift+Alt+W -> goto work session
+- Ctrl+Alt+R -> reload config
+- Ctrl+Shift+Alt+, -> edit config
+- Ctrl+Shift+Alt+D -> debug config
+
+Smart-splits
+- Alt+H/J/K/L -> move between Neovim splits when Kitty sees the key
+- Alt+Shift+H/J/K/L -> resize, or pass through to Neovim when IS_NVIM is set
+
+Workspace mode
+- Shift+/ -> open workspace binds overlay
+- h/j/k/l -> move between Kitty panes
+- v -> vertical split
+- s -> horizontal split
+- b -> bias current split
+- m -> maximize horizontal
+- r -> rotate split axis
+- e -> reset window sizes
+- q -> close window
+- 1..9 / 0 -> focus window 1..10
+
+Tabs mode
+- Shift+/ -> open tabs binds overlay
+- t -> new tab
+- n / p -> next / previous tab
+- q -> close tab
+- w -> close window
+
+Scrollback mode
+- Shift+/ -> open scrollback binds overlay
+- s -> current screen in Neovim
+- a -> full scrollback in Neovim with ANSI
+- c -> current selection in Neovim
+- g -> last command output in Neovim
+- n -> last non-empty output in Neovim
+- f -> first command output on screen in Neovim
+- r -> raw Kitty scrollback
+
+Hints mode
+- Shift+/ -> open hints binds overlay
+- u -> open visible URL
+- p -> insert visible path
+- o -> open visible path
+- l -> select visible line
+- w -> select visible word
+- h -> select hash
+- n -> select file:line
+- y -> select hyperlink
+
+Paths mode
+- Shift+/ -> open paths binds overlay
+- f -> choose a file
+- d -> choose a directory
+
+Launchers mode
+- Shift+/ -> open launchers binds overlay
+- y -> open yazi in a new tab
+
+Signals mode
+- Shift+/ -> open signals binds overlay
+- b -> broadcast mode
+- c -> copy
+- v -> paste
+- x -> send SIGINT
+- u -> unicode input
+- d -> clear terminal and scrollback
+
+Notes
+- Command-output scrollback requires manual Kitty Bash integration in that shell session.
+- Use Kitty hints for visible text, paths mode for filesystem picking, and scrollback mode for terminal output.
+- Use workspace mode for window focus and split-tree reshaping.
+- The reachability layer lives in kitty-key-delivery.md.

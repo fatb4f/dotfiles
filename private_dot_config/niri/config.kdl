@@ -1,0 +1,80 @@
+// Minimal niri rescue config for ASUS Chromebook Plus CX34 / MARASOV
+// Purpose:
+//   - get a recoverable Wayland session
+//   - use Alt as Mod, avoiding Chromebook Search/Super ambiguity
+//   - launch kitty
+//   - disable built-in touchpad and touchscreen globally while PIXA2342 is noisy
+//
+// Install:
+//   mkdir -p ~/.config/niri
+//   cp niri-marasov-rescue.config.kdl ~/.config/niri/config.kdl
+//   niri validate
+//   dbus-run-session niri
+//
+// Controls:
+//   Alt+Return      spawn kitty
+//   Alt+Shift+Q     close focused window
+//   Alt+Shift+E     exit niri immediately
+//   Alt+Escape      recover if an app inhibits shortcuts
+
+input {
+    keyboard {
+        xkb {
+            layout "us"
+        }
+
+        repeat-delay 600
+        repeat-rate 25
+    }
+
+    // PIXA2342 touchpad is currently unstable on this machine.
+    // This is global: niri does not yet support per-device input rules.
+    touchpad {
+        off
+    }
+
+    // Elan touchscreen is also disabled during bring-up.
+    touch {
+        off
+    }
+
+    // Make Mod deterministic on the Chromebook keyboard.
+    mod-key "Alt"
+    mod-key-nested "Super"
+}
+
+layout {
+    gaps 8
+
+    focus-ring {
+        width 3
+        active-color "#7fc8ff"
+        inactive-color "#505050"
+    }
+
+    border {
+        off
+    }
+}
+
+prefer-no-csd
+
+binds {
+    Mod+Return { spawn "kitty"; }
+    Mod+Shift+Q { close-window; }
+    Mod+Shift+E { quit skip-confirmation=true; }
+    Mod+Escape { toggle-keyboard-shortcuts-inhibit; }
+        // Core Noctalia binds
+    Mod+Space { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
+    Mod+S { spawn-sh "qs -c noctalia-shell ipc call controlCenter toggle"; }
+    Mod+Comma { spawn-sh "qs -c noctalia-shell ipc call settings toggle"; }
+    XF86MonBrightnessUp allow-when-locked=true {
+      spawn "/usr/bin/brightnessctl" "-d" "intel_backlight" "set" "+5%";
+    }
+
+    XF86MonBrightnessDown allow-when-locked=true {
+      spawn "/usr/bin/brightnessctl" "-d" "intel_backlight" "set" "5%-";
+}
+}
+
+spawn-at-startup "qs" "-c" "noctalia-shell"

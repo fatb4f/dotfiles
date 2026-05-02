@@ -1,0 +1,5 @@
+new_tab Codex
+cd /home/x404/src
+enabled_layouts splits
+layout splits
+launch --title Codex /home/x404/.local/bin/codex --dangerously-bypass-approvals-and-sandbox resume --last

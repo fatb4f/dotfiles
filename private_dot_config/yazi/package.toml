@@ -1,0 +1,22 @@
+[[plugin.deps]]
+use = "yazi-rs/plugins:piper"
+rev = "b224ddf"
+hash = "384464b6df8cb807425c521f8cd790f3"
+
+[[plugin.deps]]
+use = "AnirudhG07/plugins-yazi:copy-file-contents"
+rev = "71545f4"
+hash = "f8530ee84fee95dbcc26bb1d8d8019c7"
+
+[[plugin.deps]]
+use = "AminurAlam/yazi-plugins:preview-git"
+rev = "f3608de"
+hash = "52f20cafe2faf4901910ef77da8956e8"
+
+[[plugin.deps]]
+use = "Lil-Dank/lazygit"
+rev = "0e56060"
+hash = "ab2e66065a94cca4886b303518e44bd8"
+
+[flavor]
+deps = []

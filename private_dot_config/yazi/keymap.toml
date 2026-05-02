@@ -1,0 +1,18 @@
+# A TOML linter such as https://taplo.tamasfe.dev/ can use this schema to validate your config.
+# If you encounter any issues, please make an issue at https://github.com/yazi-rs/schemas.
+"$schema" = "https://yazi-rs.github.io/schemas/keymap.json"
+
+[mgr]
+prepend_keymap = [
+  { on = "<A-y>", run = "plugin copy-file-contents", desc = "Copy contents of file" },
+  { on = "<Enter>", run = "open", desc = "Open selected files" },
+  { on = [
+    "g",
+    ".",
+  ], run = "hidden toggle", desc = "Toggle hidden files" },
+  { on = [
+    "g",
+    "i",
+  ], run = "plugin lazygit", desc = "Launch lazygit" },
+]
+append_keymap = []

@@ -1,0 +1,19 @@
+#
+# This file is used by zimfw to build the static init script.
+#
+
+zmodule environment
+zmodule git
+zmodule input
+zmodule termtitle
+zmodule utility
+zmodule duration-info
+zmodule git-info
+zmodule zsh-users/zsh-completions
+zmodule completion
+zmodule zsh-users/zsh-autosuggestions
+zmodule zsh-users/zsh-syntax-highlighting
+zmodule zsh-users/zsh-history-substring-search
+zmodule jeffreytse/zsh-vi-mode
+zmodule prompt-pwd
+zmodule minimal

@@ -1,0 +1,59 @@
+# ~/.config/zsh/.zshrc
+[[ -o interactive ]] || return 0
+
+# Interactive Zsh state/cache contract.
+export ZSH_CACHE_DIR="${ZSH_CACHE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/zsh}"
+export ZSH_STATE_DIR="${ZSH_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/zsh}"
+
+if [[ ! -d "$ZSH_CACHE_DIR" || ! -d "$ZSH_STATE_DIR" ]]; then
+  print -u2 "zsh: missing cache/state dirs; run bootstrap"
+fi
+
+# History belongs in state, not config.
+HISTFILE="$ZSH_STATE_DIR/history"
+HISTSIZE=50000
+SAVEHIST=50000
+
+setopt append_history
+setopt share_history
+setopt hist_ignore_dups
+setopt hist_ignore_space
+setopt hist_reduce_blanks
+setopt extended_history
+setopt aliases
+
+# Completion artifacts belong in cache, not config.
+zstyle ':zim:completion' dumpfile "$ZSH_CACHE_DIR/zcompdump"
+zstyle ':completion::complete:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
+
+# Zim.
+export ZIM_HOME="${ZIM_HOME:-$ZSH_CACHE_DIR/zim}"
+export ZIM_CONFIG_FILE="${ZIM_CONFIG_FILE:-$ZDOTDIR/zimrc}"
+
+if [[ -r "$ZIM_HOME/zimfw.zsh" && ! "$ZIM_HOME/init.zsh" -nt "$ZIM_CONFIG_FILE" ]]; then
+  source "$ZIM_HOME/zimfw.zsh" init
+fi
+
+if [[ -r "$ZIM_HOME/init.zsh" ]]; then
+  source "$ZIM_HOME/init.zsh"
+else
+  print -u2 "zim: missing $ZIM_HOME/init.zsh"
+fi
+
+# Local functions.
+fpath=("$ZDOTDIR/fn" $fpath)
+autoload -Uz br y fzf.nameddirs
+
+# Named dirs from env contract.
+[[ -n "${DIR_SRC:-}" ]] && hash -d src="$DIR_SRC"
+[[ -n "${DIR_WORK:-}" ]] && hash -d work="$DIR_WORK"
+[[ -n "${DIR_WIKI:-}" ]] && hash -d wiki="$DIR_WIKI"
+[[ -n "${DIR_DOTS:-}" ]] && hash -d dots="$DIR_DOTS"
+[[ -n "${DIR_BOOTSTRAP:-}" ]] && hash -d strap="$DIR_BOOTSTRAP"
+
+# Aliases last, so they can wrap tools/functions.
+if [[ -r "$ZDOTDIR/aliases.zsh" ]]; then
+  source "$ZDOTDIR/aliases.zsh"
+else
+  print -u2 "zsh: missing $ZDOTDIR/aliases.zsh"
+fi

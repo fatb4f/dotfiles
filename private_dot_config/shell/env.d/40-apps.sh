@@ -1,0 +1,11 @@
+# shellcheck shell=bash
+export KITTY_CONFIG_DIRECTORY="${KITTY_CONFIG_DIRECTORY:-$XDG_CONFIG_HOME/kitty}"
+export KITTY_CACHE_DIRECTORY="${KITTY_CACHE_DIRECTORY:-$XDG_CACHE_HOME/kitty}"
+export EDITOR="${EDITOR:-$HOME/.local/bin/nvim}"
+export VISUAL="${VISUAL:-$EDITOR}"
+export ANDROID_USER_HOME="${ANDROID_USER_HOME:-$XDG_DATA_HOME/android}"
+export GNUPGHOME="${GNUPGHOME:-$HOME/.local/share/gnupg}"
+export PASSWORD_STORE_DIR="${PASSWORD_STORE_DIR:-$HOME/.local/share/pass}"
+export CODEX_HOME="${CODEX_HOME:-$HOME/.local/share/codex}"
+export CODEX_STATE="${CODEX_STATE:-$HOME/.local/state/codex}"
+export LESSHISTFILE="${LESSHISTFILE:-$XDG_STATE_HOME/lesshst}"

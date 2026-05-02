@@ -1,0 +1,5 @@
+new_tab Work
+cd ~/.local/share/workbench/bash
+enabled_layouts splits
+layout splits
+launch --title Work /usr/bin/env zsh -l

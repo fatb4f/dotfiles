@@ -1,0 +1,12 @@
+[Unit]
+Description=Fnott notifications
+PartOf=wayland-session@niri.desktop.target graphical-session.target
+After=wayland-session@niri.desktop.target graphical-session.target
+
+[Service]
+ExecStart=/usr/bin/fnott
+Restart=on-failure
+RestartSec=1
+
+[Install]
+WantedBy=wayland-session@niri.desktop.target

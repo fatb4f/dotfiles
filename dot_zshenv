@@ -1,0 +1,16 @@
+# Home zshenv shim.
+# Read only before ZDOTDIR is established.
+
+: ${XDG_CONFIG_HOME:="$HOME/.config"}
+: ${XDG_DATA_HOME:="$HOME/.local/share"}
+: ${XDG_STATE_HOME:="$HOME/.local/state"}
+: ${XDG_CACHE_HOME:="$HOME/.cache"}
+
+export XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME
+export ZDOTDIR="${ZDOTDIR:-$XDG_CONFIG_HOME/zsh}"
+
+if [ -z "${__ZDOTDIR_ZSHENV_LOADED:-}" ] && [ -r "$ZDOTDIR/.zshenv" ]; then
+  __ZDOTDIR_ZSHENV_LOADED=1
+  . "$ZDOTDIR/.zshenv"
+  unset __ZDOTDIR_ZSHENV_LOADED
+fi

@@ -1,0 +1,10 @@
+# ~/.zprofile
+# Login shell only. Universal env has already been loaded by .zshenv.
+
+if [ -x "${XDG_CONFIG_HOME:-$HOME/.config}/shell/import-env-to-user-manager.sh" ]; then
+  "${XDG_CONFIG_HOME:-$HOME/.config}/shell/import-env-to-user-manager.sh"
+fi
+
+if command -v uwsm >/dev/null 2>&1 && uwsm check may-start 2 >/dev/null 2>&1; then
+  exec systemd-cat -t uwsm_start uwsm start niri.desktop
+fi
