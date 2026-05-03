@@ -6,30 +6,6 @@ return {
     },
   },
   {
-    "christoomey/vim-tmux-navigator",
-    lazy = false,
-  },
-  {
-    "nvim-treesitter/nvim-treesitter",
-    opts = function(_, opts)
-      vim.list_extend(opts.ensure_installed, {
-        "bash",
-        "cue",
-        "json",
-        "lua",
-        "markdown",
-        "markdown_inline",
-        "python",
-        "regex",
-        "toml",
-        "tsx",
-        "typescript",
-        "vim",
-        "yaml",
-      })
-    end,
-  },
-  {
     "neovim/nvim-lspconfig",
     opts = {
       servers = {
