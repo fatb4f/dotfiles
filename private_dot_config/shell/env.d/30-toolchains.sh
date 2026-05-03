@@ -1,41 +1,37 @@
 # shellcheck shell=bash
-if [[ -d "$HOME/.local/share/cargo" ]]; then
-	export CARGO_HOME="${CARGO_HOME:-$HOME/.local/share/cargo}"
-else
-	export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
-fi
 
-if [[ -d "$HOME/.local/share/rustup" ]]; then
-	export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.local/share/rustup}"
-else
-	export RUSTUP_HOME="${RUSTUP_HOME:-$HOME/.rustup}"
-fi
+: "${XDG_DATA_HOME:=$HOME/.local/share}"
 
-export GOPATH="${GOPATH:-$HOME/go}"
-export GOBIN="${GOBIN:-$GOPATH/bin}"
+export CARGO_HOME="$XDG_DATA_HOME/cargo"
+export RUSTUP_HOME="$XDG_DATA_HOME/rustup"
 
-if [[ -d "$CARGO_HOME/bin" ]]; then
-	path_prepend "$CARGO_HOME/bin"
-fi
+export GOPATH="$XDG_DATA_HOME/go"
+export GOBIN="$GOPATH/bin"
 
-path_prepend "$HOME/.go/bin"
+# npm / node userland tooling
+export npm_config_userconfig="$XDG_CONFIG_HOME/npm/npmrc"
+export npm_config_cache="$XDG_CACHE_HOME/npm"
+export npm_config_prefix="$XDG_DATA_HOME/npm"
+
+path_prepend "$npm_config_prefix/bin"
+path_prepend "$CARGO_HOME/bin"
 path_prepend "$GOBIN"
 
 # shellcheck disable=SC1091
-if [[ -f "$HOME/.cargo/env" ]]; then
-	. "$HOME/.cargo/env"
+if [[ -f "$CARGO_HOME/env" ]]; then
+  . "$CARGO_HOME/env"
 fi
 
 if command -v gcc >/dev/null 2>&1; then
-	CC="$(command -v gcc)"
-	export CC
+  export CC
+  CC="$(command -v gcc)"
 else
-	unset CC
+  unset CC
 fi
 
 if command -v g++ >/dev/null 2>&1; then
-	CXX="$(command -v g++)"
-	export CXX
+  export CXX
+  CXX="$(command -v g++)"
 else
-	unset CXX
+  unset CXX
 fi
