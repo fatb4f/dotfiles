@@ -1,7 +1,13 @@
 # shellcheck shell=bash
 # Source-only shell environment loader for bash/zsh.
-# Owns loading mechanics and helper primitives only.
+# Owns loading mechanics and pure helper primitives only.
 # Env declarations belong in env.d/*.sh.
+#
+# Runtime contract:
+#   - no mkdir/touch/ln/install/rm
+#   - no command discovery
+#   - no provisioning or repair
+#   - source existing fragments deterministically
 
 : "${HOME:?HOME is required}"
 
@@ -21,6 +27,7 @@ env_export() {
 	export "$name=$value"
 }
 
+# Directory-shaped export. Pure: does not create the target.
 env_export_dir() {
 	local name="${1-}"
 	local target="${2-}"
@@ -31,22 +38,17 @@ env_export_dir() {
 	target="${target%/}"
 	[ -n "$target" ] || target="/"
 
-	mkdir -p "$target" || return 1
 	env_export "$name" "$target"
 }
 
+# File-shaped export. Pure: does not create the parent directory.
 env_export_file() {
 	local name="${1-}"
 	local target="${2-}"
-	local parent
 
 	env_name_valid "$name" || return 2
 	[ -n "$target" ] || return 2
 
-	parent="${target%/*}"
-	[ "$parent" = "$target" ] && parent="."
-
-	mkdir -p "$parent" || return 1
 	env_export "$name" "$target"
 }
 
@@ -63,12 +65,12 @@ path_prepend() {
 	export PATH
 }
 
+# Path-shaped prepend. Pure: does not create the target.
 path_prepend_dir() {
 	local entry="${1-}"
 
 	[ -n "$entry" ] || return 0
 
-	mkdir -p "$entry" || return 1
 	path_prepend "$entry"
 }
 
@@ -92,4 +94,4 @@ shell_env_load() {
 	done
 }
 
-shell_env_load "$@"
+shell_env_load
