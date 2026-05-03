@@ -1,0 +1,11 @@
+[PIXA2342 CX34 Touchpad pressure override]
+MatchUdevType=touchpad
+MatchName=PIXA2342:00 093A:200D Touchpad
+AttrPressureRange=10:8
+AttrPalmPressureThreshold=150
+AttrThumbPressureThreshold=100
+
+[keyd virtual keyboard]
+MatchName=keyd virtual keyboard
+AttrKeyboardIntegration=internal
+ModelTabletModeNoSuspend=1
