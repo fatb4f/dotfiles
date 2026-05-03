@@ -50,14 +50,11 @@ return {
     opts = function(_, opts)
       vim.list_extend(opts.ensure_installed, {
         "bash-language-server",
-        "basedpyright",
-        "debugpy",
         "prettier",
         "ruff",
         "shellcheck",
         "shfmt",
         "stylua",
-        "taplo",
       })
     end,
   },
