@@ -1,24 +1,14 @@
-@author "baf"
-@description "Stasis + waylock lifecycle policy: lock grace, then terminate abandoned session"
-
 default:
-  # Process-lifetime lock tracking.
-  # Keep false so Stasis treats the foreground waylock process as the lock lifetime.
   enable_loginctl false
-
-  # Honor browser/portal/session-bus inhibitors.
   enable_dbus_inhibit true
 
-  # Media handling. Browser media inhibit is handled by D-Bus, not monitor_media.
   monitor_media true
   ignore_remote_media true
   debounce_seconds 5
 
-  # Destructive actions should warn before firing.
   notify_before_action true
   notify_on_unpause false
 
-  # Keep this conservative. Do not put always-running apps here.
   inhibit_apps [
     "mpv"
     "vlc"
@@ -26,20 +16,11 @@ default:
     r"zoom.*"
   ]
 
-  # Optional: ignore noisy remote/media endpoints if needed.
   media_blacklist [ ]
 
-  # Idle path:
-  #   idle 10m -> waylock
-  #   locked/idle another 20m -> terminate the graphical session
-  #
-  # Manual lock path:
-  #   ~/.local/bin/session-lock -> stasis trigger lock-screen
-  #   waylock remains foreground-owned by Stasis
-  #   retire_session follows if still locked/idle.
   lock_screen:
     timeout 600
-    command "sh -lc '$HOME/.local/bin/waylock-session'"
+    command "sh -lc '$HOME/.local/bin/swaylock-session'"
     notification "Session will lock in 30 seconds"
     notify_seconds_before 30
   end
