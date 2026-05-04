@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Stable lock command surface for niri binds, launchers, and manual calls.
+# Stasis owns the actual waylock process lifetime.
+exec /usr/bin/stasis trigger lock-screen
