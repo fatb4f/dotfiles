@@ -1,22 +1,12 @@
 # Universal zsh environment. Keep silent, deterministic, and cheap.
 # zsh reads this for every invocation once ZDOTDIR is active.
 
-: ${XDG_CONFIG_HOME:="$HOME/.config"}
-: ${XDG_DATA_HOME:="$HOME/.local/share"}
-: ${XDG_STATE_HOME:="$HOME/.local/state"}
-: ${XDG_CACHE_HOME:="$HOME/.cache"}
+: "${HOME:?HOME is required}"
+: "${XDG_CONFIG_HOME:=$HOME/.config}"
 
-export XDG_CONFIG_HOME XDG_DATA_HOME XDG_STATE_HOME XDG_CACHE_HOME
+export XDG_CONFIG_HOME
 export ZDOTDIR="${ZDOTDIR:-$XDG_CONFIG_HOME/zsh}"
-export SHELL_ENV_LOADER="${SHELL_ENV_LOADER:-$XDG_CONFIG_HOME/shell/load-env.sh}"
 
-# Bootstrap path only; real PATH policy lives in env.d/20-paths.sh.
-case ":${PATH-}:" in
-  *":$HOME/.local/bin:"*) ;;
-  *) PATH="$HOME/.local/bin${PATH:+:$PATH}" ;;
-esac
-export PATH
-
-if [ -r "$SHELL_ENV_LOADER" ]; then
-  . "$SHELL_ENV_LOADER"
+if [[ -r "$ZDOTDIR/zload.zsh/loader.zsh" ]]; then
+  source "$ZDOTDIR/zload.zsh/loader.zsh"
 fi

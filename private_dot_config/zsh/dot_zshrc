@@ -26,18 +26,14 @@ setopt aliases
 zstyle ':zim:completion' dumpfile "$ZSH_CACHE_DIR/zcompdump"
 zstyle ':completion::complete:*' cache-path "$ZSH_CACHE_DIR/zcompcache"
 
-# Zim.
+# Zim generated init belongs to bootstrap/provisioning, not runtime shell init.
 export ZIM_HOME="${ZIM_HOME:-$ZSH_CACHE_DIR/zim}"
 export ZIM_CONFIG_FILE="${ZIM_CONFIG_FILE:-$ZDOTDIR/zimrc}"
-
-if [[ -r "$ZIM_HOME/zimfw.zsh" && ! "$ZIM_HOME/init.zsh" -nt "$ZIM_CONFIG_FILE" ]]; then
-  source "$ZIM_HOME/zimfw.zsh" init
-fi
 
 if [[ -r "$ZIM_HOME/init.zsh" ]]; then
   source "$ZIM_HOME/init.zsh"
 else
-  print -u2 "zim: missing $ZIM_HOME/init.zsh"
+  print -u2 "zim: missing $ZIM_HOME/init.zsh; run bootstrap"
 fi
 
 # Local functions.

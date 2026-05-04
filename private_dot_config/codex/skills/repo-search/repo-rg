@@ -1,0 +1,86 @@
+#!/usr/bin/env sh
+# generated Codex repo search adapter
+# shellcheck shell=sh
+set -eu
+
+usage() {
+  cat >&2 <<'EOF'
+usage:
+  repo-rg KEYWORD [ROOT]
+
+examples:
+  repo-rg CODEX_PROFILE_FILES
+  repo-rg codex_profile init/src
+  repo-rg "session-init.sh" /home/x404/.local/share/_404/init
+
+env:
+  REPO_RG_MAX_RESULTS=200
+  REPO_RG_MODE=literal|regex
+  RG_BIN=$HOME/.local/bin/rg
+EOF
+}
+
+[ "${1-}" ] || {
+  usage
+  exit 64
+}
+
+keyword=$1
+root=${2:-.}
+mode=${REPO_RG_MODE:-literal}
+max_results=${REPO_RG_MAX_RESULTS:-200}
+
+rg_bin=${RG_BIN:-"$HOME/.local/bin/rg"}
+
+if [ ! -x "$rg_bin" ]; then
+  if command -v rg >/dev/null 2>&1; then
+    rg_bin=$(command -v rg)
+  else
+    printf >&2 'error: rg not found at %s and not available on PATH\n' "$rg_bin"
+    exit 127
+  fi
+fi
+
+if git_root=$(git -C "$root" rev-parse --show-toplevel 2>/dev/null); then
+  root=$git_root
+else
+  root=$(cd "$root" && pwd)
+fi
+
+case "$root" in
+  "$HOME")
+    printf >&2 'error: refusing to search $HOME directly; pass a repo or subdir root\n'
+    exit 64
+    ;;
+esac
+
+case "$mode" in
+  literal)
+    pattern_args="--fixed-strings"
+    ;;
+  regex)
+    pattern_args=""
+    ;;
+  *)
+    printf >&2 'error: invalid REPO_RG_MODE: %s\n' "$mode"
+    exit 64
+    ;;
+esac
+
+# shellcheck disable=SC2086
+exec "$rg_bin" \
+  $pattern_args \
+  --line-number \
+  --column \
+  --hidden \
+  --color=never \
+  --max-count "$max_results" \
+  --glob '!.git/**' \
+  --glob '!node_modules/**' \
+  --glob '!__pycache__/**' \
+  --glob '!.mypy_cache/**' \
+  --glob '!.pytest_cache/**' \
+  --glob '!target/**' \
+  --glob '!dist/**' \
+  --glob '!build/**' \
+  -- "$keyword" "$root"
