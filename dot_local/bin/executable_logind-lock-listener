@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+die() {
+  printf 'logind-lock-listener: %s\n' "$*" >&2
+  exit 1
+}
+
+command -v busctl >/dev/null || die "busctl not found"
+command -v gdbus >/dev/null || die "gdbus not found; install glib2 or replace listener backend"
+
+sid="${XDG_SESSION_ID:-}"
+
+if [[ -z "$sid" ]]; then
+  sid="$(loginctl show-user "$USER" -p Display --value 2>/dev/null || true)"
+fi
+
+[[ -n "$sid" ]] || die "could not determine logind session id"
+
+session_path="$(
+  busctl call org.freedesktop.login1 /org/freedesktop/login1 \
+    org.freedesktop.login1.Manager GetSession s "$sid" \
+  | awk '{print $2}' | tr -d '"'
+)"
+
+[[ -n "$session_path" ]] || die "could not determine session object path for '$sid'"
+
+printf 'logind-lock-listener: monitoring %s for session %s\n' "$session_path" "$sid" >&2
+
+gdbus monitor --system --dest org.freedesktop.login1 --object-path "$session_path" |
+while IFS= read -r line; do
+  case "$line" in
+    *".Lock"*|*" Lock "*)
+      systemctl --user start session-lock.service || true
+      systemctl --user start locked-session-halt.timer || true
+      ;;
+    *".Unlock"*|*" Unlock "*)
+      systemctl --user stop locked-session-halt.timer || true
+      ;;
+  esac
+done

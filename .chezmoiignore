@@ -1,0 +1,59 @@
+# chezmoi local/source state
+.config/chezmoi/**
+.local/share/chezmoi/**
+
+# caches/state/runtime
+.cache/**
+.local/state/**
+.local/share/Trash/**
+.local/share/gvfs-metadata/**
+.local/share/recently-used.xbel
+.local/share/mime/**
+.local/share/nautilus/**
+.local/share/pulse/**
+.config/pulse/**
+.config/dconf/**
+
+# browser/application state
+.config/chromium/**
+.local/share/pki/**
+.config/user-dirs.locale
+.config/user-dirs.dirs
+
+# auth/secrets/tool local state
+.config/codex/auth.json
+.config/codex/version.json
+.config/gh/hosts.yml
+.gemini/**
+.local/share/gnupg/**
+
+# language/package stores
+.local/share/cargo/**
+.local/share/go/**
+.local/share/npm/**
+.local/share/uv/**
+.local/share/nvim/**
+.local/share/flatpak/**
+.local/share/path/**
+.npm/**
+.config/go/**
+.config/npm/**
+
+# system/hardware/application state
+.local/share/com.chrultrabook.tools/**
+.local/share/iwctl/**
+
+# generated systemd enablement symlinks
+.config/systemd/user/**/*.wants/**
+
+# user workspace dirs
+Desktop/**
+Documents/**
+Downloads/**
+Music/**
+Pictures/**
+Projects/**
+Public/**
+Templates/**
+Videos/**
+src/**

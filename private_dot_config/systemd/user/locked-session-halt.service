@@ -1,0 +1,6 @@
+[Unit]
+Description=Power off abandoned locked session
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl poweroff

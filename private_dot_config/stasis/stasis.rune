@@ -1,5 +1,5 @@
 default:
-  enable_loginctl false
+  enable_loginctl true
   enable_dbus_inhibit true
 
   monitor_media true
@@ -20,15 +20,8 @@ default:
 
   lock_screen:
     timeout 600
-    command "sh -lc '$HOME/.local/bin/swaylock-session'"
+    command "sh -lc '$HOME/.local/bin/session-lock'"
     notification "Session will lock in 30 seconds"
-    notify_seconds_before 30
-  end
-
-  retire_session:
-    timeout 1200
-    command "sh -lc '$HOME/.local/bin/session-retire'"
-    notification "Abandoned session will terminate in 30 seconds"
     notify_seconds_before 30
   end
 end

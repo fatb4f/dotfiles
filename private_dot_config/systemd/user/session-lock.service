@@ -1,0 +1,11 @@
+[Unit]
+Description=Graphical session locker
+Documentation=man:swaylock(1)
+PartOf=wayland-session@niri.desktop.target
+After=wayland-session@niri.desktop.target
+Requisite=wayland-session@niri.desktop.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/swaylock-logind-session
+Restart=no

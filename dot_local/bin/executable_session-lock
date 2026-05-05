@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Stable lock command surface for niri binds, launchers, and manual calls.
-# Stasis owns the actual waylock process lifetime.
-exec /usr/bin/stasis trigger lock-screen
+sid="${XDG_SESSION_ID:-}"
+
+if [[ -z "$sid" ]]; then
+  sid="$(loginctl show-user "$USER" -p Display --value 2>/dev/null || true)"
+fi
+
+if [[ -n "$sid" ]]; then
+  loginctl lock-session "$sid" || true
+else
+  loginctl lock-session || true
+fi
+
+# Fallback: if no listener reacts quickly, keep manual lock usable.
+# systemd will not spawn duplicate session-lock.service instances.
+sleep 0.2
+if ! systemctl --user is-active --quiet session-lock.service; then
+  exec systemctl --user start session-lock.service
+fi

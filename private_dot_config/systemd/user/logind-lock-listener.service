@@ -1,0 +1,15 @@
+[Unit]
+Description=Bridge logind Lock/Unlock signals to locker and halt timer
+Documentation=man:loginctl(1) man:org.freedesktop.login1(5)
+PartOf=wayland-session@niri.desktop.target
+After=wayland-session@niri.desktop.target
+Requisite=wayland-session@niri.desktop.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/logind-lock-listener
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=wayland-session@niri.desktop.target

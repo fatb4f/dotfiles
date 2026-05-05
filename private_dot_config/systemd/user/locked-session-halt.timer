@@ -1,0 +1,7 @@
+[Unit]
+Description=Power off if session remains locked too long
+
+[Timer]
+OnActiveSec=20min
+AccuracySec=15s
+Unit=locked-session-halt.service

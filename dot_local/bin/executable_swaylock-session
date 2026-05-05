@@ -1,8 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-config="${XDG_CONFIG_HOME:-$HOME/.config}/swaylock/config"
-
-# Deliberately foregrounded.
-# Stasis tracks lock state by monitoring this process lifetime.
-exec /usr/bin/swaylock --config "$config"
