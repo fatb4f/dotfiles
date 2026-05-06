@@ -1,18 +1,3 @@
-// Minimal niri rescue config for ASUS Chromebook Plus CX34 / MARASOV
-//
-// Purpose:
-//   - get a recoverable Wayland session
-//   - use Alt as Mod, avoiding Chromebook Search/Super ambiguity
-//   - launch kitty
-//   - run Noctalia
-//   - keep touchpad enabled; PIXA2342 is fixed by libinput local-overrides.quirks
-//
-// Controls:
-//   Alt+Return      spawn kitty
-//   Alt+Shift+Q     close focused window
-//   Alt+Shift+E     exit niri immediately
-//   Alt+Escape      recover if an app inhibits shortcuts
-
 input {
     keyboard {
         xkb {
@@ -30,12 +15,6 @@ input {
         natural-scroll
         scroll-method "two-finger"
         click-method "clickfinger"
-    }
-
-    // Optional: constrain touchscreen to internal panel.
-    // Use the real output name from `niri msg outputs`.
-    touch {
-        map-to-output "eDP-1"
     }
 
     // Make Mod deterministic on the Chromebook keyboard.

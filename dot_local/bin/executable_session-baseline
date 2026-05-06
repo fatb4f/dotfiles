@@ -159,12 +159,12 @@ assert_unit_disabled_or_absent() {
   fi
 
   case "$file_state" in
-    disabled|static|indirect|"")
-      pass "$unit inactive and not enabled: ActiveState=$active UnitFileState=$file_state"
-      ;;
-    *)
-      fail "$unit has unexpected UnitFileState=$file_state ActiveState=$active"
-      ;;
+  disabled | static | indirect | "")
+    pass "$unit inactive and not enabled: ActiveState=$active UnitFileState=$file_state"
+    ;;
+  *)
+    fail "$unit has unexpected UnitFileState=$file_state ActiveState=$active"
+    ;;
   esac
 }
 
@@ -322,9 +322,9 @@ baseline_noctalia() {
     pass "Noctalia config dir exists: $noctalia_config_dir"
 
     printf '\n### Noctalia config hints\n\n'
-    grep -RInE 'idle|notification|lockScreen|lockOnSuspend|sessionMenu' "$noctalia_config_dir" 2>/dev/null \
-      | sed 's/^/  /' \
-      || true
+    grep -RInE 'idle|notification|lockScreen|lockOnSuspend|sessionMenu' "$noctalia_config_dir" 2>/dev/null |
+      sed 's/^/  /' ||
+      true
   else
     warn "Noctalia config dir not found: $noctalia_config_dir"
   fi
@@ -357,8 +357,7 @@ baseline_services() {
     session-lock.service \
     locked-session-halt.timer \
     locked-session-halt.service \
-    fnott.service
-  do
+    fnott.service; do
     printf '%s\n' "$unit"
     printf '  LoadState=%s\n' "$(unit_load_state "$unit")"
     printf '  ActiveState=%s\n' "$(unit_active_state "$unit")"
@@ -366,6 +365,88 @@ baseline_services() {
     printf '  UnitFileState=%s\n' "$(unit_file_state "$unit")"
     printf '  FragmentPath=%s\n' "$(show_user_prop "$unit" FragmentPath)"
   done
+}
+
+check_niri_cgroup_process_leaders() {
+  local unit="wayland-wm@niri.desktop.service"
+  local main_pid
+  local cgroup
+  local cgroup_path
+  local rows
+  local niri_count
+
+  printf '\n### niri compositor process leaders\n\n'
+
+  if ! unit_exists "$unit"; then
+    warn "$unit not found; cannot inspect compositor process leaders"
+    return
+  fi
+
+  main_pid="$(show_user_prop "$unit" MainPID)"
+  cgroup="$(show_user_prop "$unit" ControlGroup)"
+
+  if [ -z "$main_pid" ] || [ "$main_pid" = "0" ]; then
+    fail "could not resolve MainPID for $unit"
+    return
+  fi
+
+  if [ -z "$cgroup" ]; then
+    fail "could not resolve ControlGroup for $unit"
+    return
+  fi
+
+  cgroup_path="/sys/fs/cgroup${cgroup}"
+
+  if [ ! -d "$cgroup_path" ]; then
+    fail "cgroup path missing: $cgroup_path"
+    return
+  fi
+
+  rows="$(
+    cat "$cgroup_path/cgroup.procs" 2>/dev/null |
+      sort -n -u |
+      while read -r pid; do
+        [ -n "$pid" ] || continue
+        [ -r "/proc/$pid/status" ] || continue
+
+        name="$(awk '/^Name:/ { print $2 }' "/proc/$pid/status")"
+        tgid="$(awk '/^Tgid:/ { print $2 }' "/proc/$pid/status")"
+        ppid="$(awk '/^PPid:/ { print $2 }' "/proc/$pid/status")"
+        cmd="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | sed 's/[[:space:]]*$//')"
+
+        printf 'pid=%s tgid=%s ppid=%s name=%s cmd=%s\n' "$pid" "$tgid" "$ppid" "$name" "$cmd"
+      done
+  )"
+
+  niri_count="$(
+    printf '%s\n' "$rows" |
+      grep -Ec '^pid=[0-9]+ tgid=[0-9]+ ppid=[0-9]+ name=niri cmd=niri --session$' ||
+      true
+  )"
+
+  printf 'unit=%s\n' "$unit"
+  printf 'main_pid=%s\n' "$main_pid"
+  printf 'cgroup=%s\n' "$cgroup"
+  printf 'cgroup_path=%s\n' "$cgroup_path"
+  printf 'niri_process_leader_count=%s\n\n' "$niri_count"
+
+  if [ -n "$rows" ]; then
+    printf '%s\n' "$rows" | sed 's/^/  /'
+  else
+    printf '  none\n'
+  fi
+
+  case "$niri_count" in
+  1)
+    pass "exactly one niri compositor process leader under $unit"
+    ;;
+  0)
+    fail "no niri compositor process leader under $unit"
+    ;;
+  *)
+    warn "multiple niri compositor process leaders under $unit: count=$niri_count"
+    ;;
+  esac
 }
 
 baseline_graph() {
@@ -376,6 +457,7 @@ baseline_graph() {
 
   if unit_exists wayland-wm@niri.desktop.service; then
     run_block "wayland-wm@niri.desktop.service status" systemctl --user status wayland-wm@niri.desktop.service --no-pager
+    check_niri_cgroup_process_leaders
   else
     warn "wayland-wm@niri.desktop.service not found"
   fi
@@ -433,32 +515,32 @@ EOF
 baseline_header
 
 case "$SUBCOMMAND" in
-  all)
-    baseline_niri
-    baseline_noctalia
-    baseline_services
-    baseline_graph
-    ;;
-  niri)
-    baseline_niri
-    ;;
-  noctalia)
-    baseline_noctalia
-    ;;
-  services)
-    baseline_services
-    ;;
-  graph)
-    baseline_graph
-    ;;
-  -h|--help|help)
-    usage
-    exit 0
-    ;;
-  *)
-    fail "unknown subcommand: $SUBCOMMAND"
-    usage
-    ;;
+all)
+  baseline_niri
+  baseline_noctalia
+  baseline_services
+  baseline_graph
+  ;;
+niri)
+  baseline_niri
+  ;;
+noctalia)
+  baseline_noctalia
+  ;;
+services)
+  baseline_services
+  ;;
+graph)
+  baseline_graph
+  ;;
+-h | --help | help)
+  usage
+  exit 0
+  ;;
+*)
+  fail "unknown subcommand: $SUBCOMMAND"
+  usage
+  ;;
 esac
 
 summary

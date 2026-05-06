@@ -1,6 +1,0 @@
-# UWSM graphical-session env ingress.
-# Keep silent. Source the same stable shell env contract used by zsh/bash.
-
-if [ -r "${XDG_CONFIG_HOME:-$HOME/.config}/shell/load-env.sh" ]; then
-  . "${XDG_CONFIG_HOME:-$HOME/.config}/shell/load-env.sh"
-fi
