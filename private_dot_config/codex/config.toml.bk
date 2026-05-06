@@ -5,16 +5,13 @@ profile = "slim"
 [features]
 codex_hooks = false
 shell_tool = true
-shell_snapshot = false
+shell_snapshot = true
 
 [profiles.slim]
-model = "gpt-5.4-mini"
-model_reasoning_effort = "medium"
 approval_policy = "never"
 sandbox_mode = "workspace-write"
 web_search = "cached"
 allow_login_shell = false
-model_reasoning_summary = "auto"
 
 [profiles.slim.shell_environment_policy]
 inherit = "core"
@@ -28,20 +25,12 @@ include_only = [
   "PWD",
   "LANG",
   "LC_*",
-
   "XDG_CONFIG_HOME",
   "XDG_DATA_HOME",
   "XDG_STATE_HOME",
   "XDG_CACHE_HOME",
-
   "CODEX_HOME",
   "CODEX_STATE",
-
-  "TOOL_PATH_HOME",
-  "XDG_DATA_BIN",
-  "DOTS_HOME",
-  "DOTS_PROFILE",
-  "DOTS_AGENT_SURFACE",
 ]
 exclude = ["*TOKEN*", "*SECRET*", "*KEY*", "*PASSWORD*"]
 experimental_use_profile = false
