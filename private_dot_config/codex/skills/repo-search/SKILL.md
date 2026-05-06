@@ -24,10 +24,9 @@ repo-rg KEYWORD [ROOT]
 ## Examples
 
 ```sh
-repo-rg CODEX_PROFILE_FILES /home/x404/.local/share/_404/init
-repo-rg codex_profile /home/x404/.local/share/_404/init
-repo-rg "session-init.sh" /home/x404/.local/share/_404/init
-repo-rg override.py /home/x404/.local/share/_404/init
+repo-rg CODEX_HOME /path/to/repo
+repo-rg codex_profile /path/to/repo/init
+repo-rg "session-init.sh" /path/to/repo
 ```
 
 ## Modes
@@ -44,7 +43,7 @@ Regex mode is explicit:
 REPO_RG_MODE=regex repo-rg 'CODEX_.*FILES' init/src
 ```
 
-Limit output for normal slices:
+Limit total displayed output for normal slices:
 
 ```sh
 REPO_RG_MAX_RESULTS=80 repo-rg codex_profile init
@@ -62,10 +61,10 @@ Before searching:
 
 Forbidden:
 
-* Do not search `$HOME`.
-* Do not crawl unrelated repositories.
-* Do not use broad searches like `repo-rg codex /`.
-* Do not continue searching after enough evidence is found.
+- Do not search `$HOME`.
+- Do not crawl unrelated repositories.
+- Do not use broad searches like `repo-rg codex /`.
+- Do not continue searching after enough evidence is found.
 
 ## Failure handling
 
@@ -80,11 +79,3 @@ $HOME/.local/bin/rg
 Fallback to PATH is allowed only if that file is missing and `repo-rg` has already checked the absolute path.
 
 Do not claim `rg` is unavailable until `repo-rg` has failed.
-
-## Recommended prompt behavior
-
-When a task requires lookup, use:
-
-```txt
-I will use repo-rg with an exact keyword and narrow root, then inspect only the matching files needed for this slice.
-```

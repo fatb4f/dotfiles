@@ -1,0 +1,464 @@
+#!/usr/bin/env bash
+set -u
+set -o pipefail
+
+PROGRAM="${0##*/}"
+SUBCOMMAND="${1:-all}"
+
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+REPORT_ROOT="${STATE_HOME}/session-baseline"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+REPORT_DIR="${REPORT_ROOT}/${STAMP}"
+REPORT_FILE="${REPORT_DIR}/report.txt"
+
+NIRI_TARGET="${NIRI_TARGET:-wayland-session@niri.desktop.target}"
+GRAPHICAL_TARGET="${GRAPHICAL_TARGET:-graphical-session.target}"
+
+mkdir -p "$REPORT_DIR"
+exec > >(tee "$REPORT_FILE") 2>&1
+
+pass_count=0
+warn_count=0
+fail_count=0
+
+section() {
+  printf '\n## %s\n\n' "$*"
+}
+
+info() {
+  printf 'INFO  %s\n' "$*"
+}
+
+pass() {
+  pass_count=$((pass_count + 1))
+  printf 'PASS  %s\n' "$*"
+}
+
+warn() {
+  warn_count=$((warn_count + 1))
+  printf 'WARN  %s\n' "$*"
+}
+
+fail() {
+  fail_count=$((fail_count + 1))
+  printf 'FAIL  %s\n' "$*"
+}
+
+have() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+run_block() {
+  local title="$1"
+  shift
+
+  printf '\n### %s\n\n' "$title"
+  printf '$'
+  printf ' %q' "$@"
+  printf '\n'
+
+  "$@" 2>&1 | sed 's/^/  /'
+  local rc=${PIPESTATUS[0]}
+
+  if [ "$rc" -eq 0 ]; then
+    pass "$title exited 0"
+  else
+    warn "$title exited $rc"
+  fi
+}
+
+show_user_prop() {
+  local unit="$1"
+  local prop="$2"
+
+  systemctl --user show "$unit" -p "$prop" --value 2>/dev/null || true
+}
+
+unit_load_state() {
+  show_user_prop "$1" LoadState
+}
+
+unit_active_state() {
+  show_user_prop "$1" ActiveState
+}
+
+unit_file_state() {
+  show_user_prop "$1" UnitFileState
+}
+
+unit_exists() {
+  local load
+  load="$(unit_load_state "$1")"
+  [ "$load" != "not-found" ] && [ -n "$load" ]
+}
+
+is_user_active() {
+  [ "$(unit_active_state "$1")" = "active" ]
+}
+
+is_user_enabled() {
+  local state
+  state="$(unit_file_state "$1")"
+  [ "$state" = "enabled" ] || [ "$state" = "enabled-runtime" ]
+}
+
+assert_command() {
+  if have "$1"; then
+    pass "command exists: $1 -> $(command -v "$1")"
+  else
+    fail "missing command: $1"
+  fi
+}
+
+assert_unit_active_or_warn() {
+  local unit="$1"
+
+  if ! unit_exists "$unit"; then
+    warn "$unit not found"
+    return
+  fi
+
+  if is_user_active "$unit"; then
+    pass "$unit active"
+  else
+    warn "$unit not active: ActiveState=$(unit_active_state "$unit")"
+  fi
+}
+
+assert_unit_not_enabled() {
+  local unit="$1"
+
+  if ! unit_exists "$unit"; then
+    pass "$unit absent"
+    return
+  fi
+
+  if is_user_enabled "$unit"; then
+    fail "$unit is enabled but should be runtime-only/absent"
+  else
+    pass "$unit not enabled: UnitFileState=$(unit_file_state "$unit")"
+  fi
+}
+
+assert_unit_disabled_or_absent() {
+  local unit="$1"
+
+  if ! unit_exists "$unit"; then
+    pass "$unit absent"
+    return
+  fi
+
+  local active file_state
+  active="$(unit_active_state "$unit")"
+  file_state="$(unit_file_state "$unit")"
+
+  if [ "$active" = "active" ]; then
+    fail "$unit active but target baseline expects disabled/absent"
+    return
+  fi
+
+  case "$file_state" in
+    disabled|static|indirect|"")
+      pass "$unit inactive and not enabled: ActiveState=$active UnitFileState=$file_state"
+      ;;
+    *)
+      fail "$unit has unexpected UnitFileState=$file_state ActiveState=$active"
+      ;;
+  esac
+}
+
+notification_owner_line() {
+  busctl --user --list 2>/dev/null | awk '$1 == "org.freedesktop.Notifications" {print}'
+}
+
+notification_owner_process() {
+  notification_owner_line | awk '{print $3}'
+}
+
+baseline_header() {
+  section "session baseline"
+
+  info "program: $PROGRAM"
+  info "subcommand: $SUBCOMMAND"
+  info "timestamp: $STAMP"
+  info "report: $REPORT_FILE"
+  info "user: ${USER:-unknown}"
+  info "home: $HOME"
+  info "config_home: $CONFIG_HOME"
+  info "state_home: $STATE_HOME"
+  info "niri_target: $NIRI_TARGET"
+  info "graphical_target: $GRAPHICAL_TARGET"
+}
+
+baseline_niri() {
+  section "baseline niri state"
+
+  assert_command niri
+
+  local config="${NIRI_CONFIG:-$CONFIG_HOME/niri/config.kdl}"
+
+  if [ -f "$config" ]; then
+    pass "niri config exists: $config"
+
+    if grep -Eq 'mod-key[[:space:]]+"Alt"' "$config"; then
+      pass 'niri Mod is Alt'
+    else
+      warn 'niri Mod=Alt not found in config'
+    fi
+
+    if grep -Eq 'Mod\+Return[[:space:]]*\{[[:space:]]*spawn[[:space:]]+"kitty"' "$config"; then
+      pass 'bind exists: Mod+Return -> kitty'
+    else
+      warn 'bind not detected: Mod+Return -> kitty'
+    fi
+
+    if grep -Eq 'Mod\+Escape' "$config"; then
+      pass 'bind exists: Mod+Escape rescue'
+    else
+      warn 'bind not detected: Mod+Escape'
+    fi
+
+    if grep -Eq 'Mod\+Shift\+E' "$config"; then
+      pass 'bind exists: Mod+Shift+E compositor exit'
+    else
+      warn 'bind not detected: Mod+Shift+E'
+    fi
+
+    if grep -Eq 'Mod\+L.*session-lock|session-lock.*Mod\+L' "$config"; then
+      pass 'bind exists: Mod+L -> session-lock'
+    else
+      warn 'bind not detected: Mod+L -> session-lock'
+    fi
+
+    if grep -Eq 'noctalia-ipc[[:space:]]+"launcher"[[:space:]]+"toggle"' "$config"; then
+      pass 'bind exists: Noctalia launcher'
+    else
+      warn 'bind not detected: Noctalia launcher'
+    fi
+
+    if grep -Eq 'noctalia-ipc[[:space:]]+"controlCenter"[[:space:]]+"toggle"' "$config"; then
+      pass 'bind exists: Noctalia control center'
+    else
+      warn 'bind not detected: Noctalia control center'
+    fi
+
+    if grep -Eq 'noctalia-ipc[[:space:]]+"settings"[[:space:]]+"toggle"' "$config"; then
+      pass 'bind exists: Noctalia settings'
+    else
+      warn 'bind not detected: Noctalia settings'
+    fi
+
+    if grep -Eq 'fnott|app2unit|XF86' "$config"; then
+      warn 'deferred/excluded edge appears in niri config: fnott/app2unit/XF86'
+      grep -En 'fnott|app2unit|XF86' "$config" | sed 's/^/  /'
+    else
+      pass 'niri config contains no fnott/app2unit/XF86 edges'
+    fi
+
+    if grep -Eq 'lockScreen' "$config"; then
+      fail 'Noctalia lockScreen IPC appears in niri config'
+      grep -En 'lockScreen' "$config" | sed 's/^/  /'
+    else
+      pass 'niri config does not invoke Noctalia lockScreen'
+    fi
+  else
+    fail "niri config missing: $config"
+  fi
+
+  if have niri; then
+    run_block "niri validate" niri validate
+    run_block "niri outputs" niri msg outputs
+  fi
+}
+
+baseline_noctalia() {
+  section "baseline Noctalia state"
+
+  assert_command qs
+  assert_command noctalia-ipc
+
+  if pgrep -x qs >/dev/null 2>&1; then
+    pass "qs process running"
+    pgrep -a qs | sed 's/^/  /'
+  else
+    fail "qs process not running"
+  fi
+
+  local owner_line owner_proc
+  owner_line="$(notification_owner_line)"
+  owner_proc="$(notification_owner_process)"
+
+  if [ -z "$owner_line" ]; then
+    warn "org.freedesktop.Notifications has no current owner"
+  else
+    info "notification owner: $owner_line"
+
+    if [ "$owner_proc" = "qs" ]; then
+      pass "notifications owned by qs / Noctalia"
+    elif [ "$owner_proc" = "fnott" ]; then
+      fail "notifications owned by fnott; baseline expects qs / Noctalia"
+    else
+      warn "notifications owned by unexpected process: $owner_proc"
+    fi
+  fi
+
+  if unit_exists noctalia-shell.service; then
+    assert_unit_active_or_warn noctalia-shell.service
+    run_block "noctalia-shell.service properties" systemctl --user show noctalia-shell.service \
+      -p LoadState \
+      -p ActiveState \
+      -p SubState \
+      -p UnitFileState \
+      -p PartOf \
+      -p WantedBy \
+      -p FragmentPath
+  else
+    warn "noctalia-shell.service not found; qs may be launched by another path"
+  fi
+
+  local noctalia_config_dir="$CONFIG_HOME/noctalia"
+  if [ -d "$noctalia_config_dir" ]; then
+    pass "Noctalia config dir exists: $noctalia_config_dir"
+
+    printf '\n### Noctalia config hints\n\n'
+    grep -RInE 'idle|notification|lockScreen|lockOnSuspend|sessionMenu' "$noctalia_config_dir" 2>/dev/null \
+      | sed 's/^/  /' \
+      || true
+  else
+    warn "Noctalia config dir not found: $noctalia_config_dir"
+  fi
+}
+
+baseline_services() {
+  section "baseline session companion services"
+
+  assert_unit_active_or_warn "$NIRI_TARGET"
+  assert_unit_active_or_warn "$GRAPHICAL_TARGET"
+
+  assert_unit_active_or_warn noctalia-shell.service
+  assert_unit_active_or_warn stasis.service
+  assert_unit_active_or_warn logind-lock-listener.service
+
+  assert_unit_disabled_or_absent fnott.service
+
+  assert_unit_not_enabled session-lock.service
+  assert_unit_not_enabled locked-session-halt.timer
+  assert_unit_not_enabled locked-session-halt.service
+
+  printf '\n### important unit states\n\n'
+  for unit in \
+    "$NIRI_TARGET" \
+    "$GRAPHICAL_TARGET" \
+    wayland-wm@niri.desktop.service \
+    noctalia-shell.service \
+    stasis.service \
+    logind-lock-listener.service \
+    session-lock.service \
+    locked-session-halt.timer \
+    locked-session-halt.service \
+    fnott.service
+  do
+    printf '%s\n' "$unit"
+    printf '  LoadState=%s\n' "$(unit_load_state "$unit")"
+    printf '  ActiveState=%s\n' "$(unit_active_state "$unit")"
+    printf '  SubState=%s\n' "$(show_user_prop "$unit" SubState)"
+    printf '  UnitFileState=%s\n' "$(unit_file_state "$unit")"
+    printf '  FragmentPath=%s\n' "$(show_user_prop "$unit" FragmentPath)"
+  done
+}
+
+baseline_graph() {
+  section "baseline process/session graph"
+
+  run_block "dependencies: $NIRI_TARGET" systemctl --user list-dependencies "$NIRI_TARGET"
+  run_block "dependencies: $GRAPHICAL_TARGET" systemctl --user list-dependencies "$GRAPHICAL_TARGET"
+
+  if unit_exists wayland-wm@niri.desktop.service; then
+    run_block "wayland-wm@niri.desktop.service status" systemctl --user status wayland-wm@niri.desktop.service --no-pager
+  else
+    warn "wayland-wm@niri.desktop.service not found"
+  fi
+
+  run_block "user cgroups" systemctl --user status --no-pager
+
+  if have busctl; then
+    run_block "notification bus owner" bash -lc 'busctl --user --list | grep -i "org.freedesktop.Notifications\|notification" || true'
+  else
+    warn "busctl missing"
+  fi
+
+  printf '\n### process hints\n\n'
+  for proc in niri qs fnott stasis swaylock; do
+    printf '%s\n' "$proc"
+    pgrep -a "$proc" 2>/dev/null | sed 's/^/  /' || true
+  done
+}
+
+summary() {
+  section "summary"
+
+  printf 'passes=%s\n' "$pass_count"
+  printf 'warnings=%s\n' "$warn_count"
+  printf 'failures=%s\n' "$fail_count"
+  printf 'report=%s\n' "$REPORT_FILE"
+
+  if [ "$fail_count" -gt 0 ]; then
+    printf '\nRESULT=FAIL\n'
+    exit 1
+  fi
+
+  if [ "$warn_count" -gt 0 ]; then
+    printf '\nRESULT=WARN\n'
+    exit 0
+  fi
+
+  printf '\nRESULT=PASS\n'
+}
+
+usage() {
+  cat <<EOF
+usage: $PROGRAM [all|niri|noctalia|services|graph]
+
+Environment:
+  NIRI_CONFIG       override niri config path
+  NIRI_TARGET       default: wayland-session@niri.desktop.target
+  GRAPHICAL_TARGET  default: graphical-session.target
+
+Reports:
+  $REPORT_ROOT/<timestamp>/report.txt
+EOF
+}
+
+baseline_header
+
+case "$SUBCOMMAND" in
+  all)
+    baseline_niri
+    baseline_noctalia
+    baseline_services
+    baseline_graph
+    ;;
+  niri)
+    baseline_niri
+    ;;
+  noctalia)
+    baseline_noctalia
+    ;;
+  services)
+    baseline_services
+    ;;
+  graph)
+    baseline_graph
+    ;;
+  -h|--help|help)
+    usage
+    exit 0
+    ;;
+  *)
+    fail "unknown subcommand: $SUBCOMMAND"
+    usage
+    ;;
+esac
+
+summary

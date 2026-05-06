@@ -28,7 +28,7 @@ Prefer the explicitly installed binary:
 
 ```sh
 SEM_BIN="${SEM_BIN:-$HOME/.local/bin/sem}"
-````
+```
 
 Fallback only when safe:
 
@@ -178,11 +178,19 @@ if [ -x "${SEM_BIN:-$HOME/.local/bin/sem}" ]; then
   "$SEM_BIN" entities --json > .codex/frames/sem-entities.json 2>/dev/null || true
 
   {
-    printf '# Sem frame\n\n'
-    printf '## Semantic diff\n\n'
+    printf '# Sem frame
+
+'
+    printf '## Semantic diff
+
+'
     sed -n '1,120p' .codex/frames/sem-diff.md 2>/dev/null || true
-    printf '\n\n'
-    printf '## Entity index\n\n'
+    printf '
+
+'
+    printf '## Entity index
+
+'
     if command -v jq >/dev/null 2>&1 && [ -s .codex/frames/sem-entities.json ]; then
       jq -r '
         if type == "array" then .[] else . end
@@ -192,11 +200,12 @@ if [ -x "${SEM_BIN:-$HOME/.local/bin/sem}" ]; then
           + " `" + ((.entityName // .name // "unknown")|tostring) + "`"
       ' .codex/frames/sem-entities.json 2>/dev/null | sed -n '1,120p'
     else
-      printf -- '- sem entities captured; jq unavailable or JSON shape unknown\n'
+      printf -- '- sem entities captured; jq unavailable or JSON shape unknown
+'
     fi
   } > .codex/frames/sem-summary.md
 fi
-````
+```
 
 ## Guarded Commit Use
 
@@ -218,61 +227,4 @@ Review current changes semantically.
 What functions changed in this slice?
 Find the blast radius of update_profile_config.
 Get focused context for render_domain.
-Show entity history for compose_seed.
-Map entities under init/src/gen.
 ```
-
-## When not to use this skill
-
-Do not use this skill for:
-
-* simple file lookup
-* simple literal search
-* checking whether a file exists
-* reading Markdown-only docs
-* shell-only tasks where `sh -n`, `git diff`, or `repo-search` is enough
-* generated artifacts unless the task is specifically about generated output
-
-Use `repo-search` for targeted literal lookup.
-
-Use `git log`, `git status`, and `git diff --stat` for cheap Git state.
-
-Use `tokei` or `onefetch` for high-level repo summaries.
-
-## Output policy
-
-When reporting `sem` findings, summarize in this shape:
-
-```txt
-semantic diff:
-  added:
-  modified:
-  deleted:
-  renamed/moved:
-
-affected entities:
-  - file:
-    entity:
-    change:
-    risk:
-
-impact:
-  dependencies:
-  dependents:
-  tests:
-
-recommended next slice:
-```
-
-## Safety
-
-Do not run:
-
-```sh
-sem setup
-sem unsetup
-```
-
-unless explicitly requested.
-
-`sem setup` changes the default Git diff behavior and installs a pre-commit hook, so it is not part of normal repo-intel or Codex session startup.

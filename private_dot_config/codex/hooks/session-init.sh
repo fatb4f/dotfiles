@@ -1,22 +1,27 @@
 #!/usr/bin/env sh
-# generated Codex SessionStart hook
+# managed Codex hook
+# Quota profile: write frame files, inject only a compact pointer.
 # shellcheck shell=sh
 set -eu
 
-input="$(cat)"
+: "${HOME:?HOME is required}"
 
-: "${XDG_STATE_HOME:=$HOME/.local/state}"
-: "${XDG_CONFIG_HOME:=$HOME/.config}"
-: "${CODEX_HOME:=$XDG_CONFIG_HOME/codex}"
+xdg_state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+codex_state="${CODEX_STATE:-$xdg_state_home/codex}"
 
-export XDG_STATE_HOME XDG_CONFIG_HOME CODEX_HOME CODEX_HOOK_INPUT="$input"
+mkdir -p "$codex_state"
+chmod 700 "$codex_state" 2>/dev/null || true
+
+input_file=$(mktemp "${TMPDIR:-/tmp}/codex-hook.XXXXXX")
+trap 'rm -f "$input_file"' EXIT HUP INT TERM
+cat > "$input_file"
 
 if ! command -v python3 >/dev/null 2>&1; then
   printf '%s\n' '{"continue":true}'
   exit 0
 fi
 
-python3 - <<'PY'
+CODEX_HOOK_INPUT_FILE="$input_file" CODEX_STATE="$codex_state" python3 - <<'PY_SESSION'
 import json
 import os
 import re
@@ -24,7 +29,7 @@ import subprocess
 import time
 from pathlib import Path
 
-raw = os.environ.get("CODEX_HOOK_INPUT", "")
+raw = Path(os.environ["CODEX_HOOK_INPUT_FILE"]).read_text(encoding="utf-8", errors="replace")
 try:
     event = json.loads(raw or "{}")
 except Exception as exc:
@@ -35,9 +40,9 @@ source = event.get("source") or ""
 model = event.get("model") or ""
 cwd = event.get("cwd") or os.getcwd()
 
-xdg_state = Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state")))
-state_dir = xdg_state / "_404" / "codex"
+state_dir = Path(os.environ["CODEX_STATE"]).expanduser()
 state_dir.mkdir(parents=True, exist_ok=True)
+
 
 def run_git(args, repo_cwd):
     try:
@@ -72,26 +77,14 @@ frames_dir.mkdir(parents=True, exist_ok=True)
 
 session_frame = frames_dir / "session-frame.md"
 session_log = state_dir / "session-init.jsonl"
-pre_log = state_dir / "pre-tool-use.jsonl"
-post_log = state_dir / "post-tool-use.jsonl"
+
 
 def mask_remote(url: str) -> str:
     return re.sub(r"(https?://)([^/@:]+)(:[^/@]+)?@", r"\1***@", url)
 
+
 def lines(text: str, limit: int):
     return [line for line in text.splitlines() if line.strip()][:limit]
-
-def read_jsonl(path: Path):
-    if not path.exists():
-        return []
-    rows = []
-    with path.open("r", encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            try:
-                rows.append(json.loads(line))
-            except Exception:
-                continue
-    return rows
 
 branch = run_git(["branch", "--show-current"], repo_root) or "detached-or-unknown"
 head = run_git(["rev-parse", "--short", "HEAD"], repo_root) or "unknown"
@@ -109,35 +102,15 @@ for line in remotes_raw.splitlines():
             remotes.append(item)
             seen_remotes.add(item)
 
-branches_raw = run_git([
-    "for-each-ref",
-    "--sort=-committerdate",
-    "--format=%(refname:short) %(committerdate:short) %(subject)",
-    "refs/heads",
-    "refs/remotes",
-], repo_root)
-
 commits_raw = run_git([
     "log",
     "--date=short",
     "--pretty=format:%h %ad %s",
     "-n",
-    "16",
+    "12",
 ], repo_root)
 
-previous_sid = ""
-session_rows = [row for row in read_jsonl(session_log) if row.get("event") == "SessionStart"]
-for row in session_rows:
-    row_sid = row.get("session_id") or ""
-    if row_sid and row_sid != sid:
-        previous_sid = row_sid
-
-pre_rows = [r for r in read_jsonl(pre_log) if r.get("session_id") == previous_sid][-24:]
-post_rows = [r for r in read_jsonl(post_log) if r.get("session_id") == previous_sid][-24:]
-
-def md_command(cmd: str, limit=220):
-    cmd = (cmd or "").replace("`", "\\`").replace("\n", " ")
-    return cmd[:limit]
+dirty_count = len([line for line in status.splitlines() if line.strip()])
 
 parts = [
     "# Codex session frame",
@@ -155,43 +128,30 @@ parts = [
     f"- branch: `{branch}`",
     f"- head: `{head}`",
     f"- upstream: `{upstream}`",
+    f"- dirty_paths: `{dirty_count}`",
     "",
     "## Remotes",
     "",
 ]
 
-parts += remotes[:12] if remotes else ["- none"]
-parts += ["", "## Recent branches", ""]
-parts += [f"- `{line}`" for line in lines(branches_raw, 20)] or ["- none"]
+parts += remotes[:8] if remotes else ["- none"]
 parts += ["", "## Recent commits", ""]
-parts += [f"- `{line}`" for line in lines(commits_raw, 16)] or ["- none"]
+parts += [f"- `{line}`" for line in lines(commits_raw, 12)] or ["- none"]
 parts += ["", "## Working tree", ""]
-parts += [f"- `{line}`" for line in lines(status, 80)] if status else ["- clean: true"]
-parts += ["", "## Previous session history", ""]
-
-if previous_sid:
-    parts += [f"- previous session: `{previous_sid}`", "", "### Previous Bash decisions", ""]
-    parts += [
-        f"- [{r.get('decision') or 'unknown'}] `{md_command(r.get('command'))}`"
-        for r in pre_rows
-    ] or ["- none"]
-    parts += ["", "### Previous tool results", ""]
-    parts += [
-        f"- {r.get('tool_name') or 'tool'}: {r.get('response_type') or 'unknown'}"
-        + (f" — `{md_command(r.get('command'), 180)}`" if r.get("command") else "")
-        for r in post_rows
-    ] or ["- none"]
-else:
-    parts += ["- no previous session found"]
-
+parts += [f"- `{line}`" for line in lines(status, 60)] if status else ["- clean: true"]
 parts += [
+    "",
+    "## Tool history",
+    "",
+    "- local evidence may exist under `$CODEX_STATE`",
+    "- do not load previous tool history unless the user asks for forensic review",
     "",
     "## Operating rule",
     "",
-    "- Use this frame before broad repo inspection.",
+    "- Use frame files before broad repo inspection.",
     "- Prefer git log, repo-frame, and context-frame over transcript resume.",
     "- Do not crawl from `$HOME`.",
-    "- Ask for an exact slice if the next task is broad.",
+    "- If the task is broad, produce a bounded slice before reading the repo.",
 ]
 
 session_frame.write_text("\n".join(parts) + "\n", encoding="utf-8")
@@ -206,14 +166,12 @@ with session_log.open("a", encoding="utf-8") as fh:
         "cwd": cwd,
         "repo_root": repo_root,
         "frame": str(session_frame),
-        "previous_session": previous_sid,
+        "dirty_paths": dirty_count,
     }, sort_keys=True) + "\n")
 
-excerpt = "\n".join(parts[:180])
 ctx = (
-    "Compact startup context loaded from `.codex/frames/session-frame.md`.\n"
-    "Use it before repo-wide discovery. Do not resume old transcript unless explicitly requested.\n\n"
-    + excerpt
+    "Codex startup frame refreshed at `.codex/frames/session-frame.md`. "
+    "Read frame files before broad repo discovery; do not resume old transcript unless explicitly requested."
 )
 
 print(json.dumps({
@@ -223,4 +181,4 @@ print(json.dumps({
         "additionalContext": ctx,
     },
 }))
-PY
+PY_SESSION

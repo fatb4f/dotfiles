@@ -66,17 +66,8 @@ binds {
     Mod+Escape { toggle-keyboard-shortcuts-inhibit; }
 
     // Core Noctalia binds.
-    Mod+Space { spawn-sh "qs -c noctalia-shell ipc call launcher toggle"; }
-    Mod+S { spawn-sh "qs -c noctalia-shell ipc call controlCenter toggle"; }
-    Mod+Comma { spawn-sh "qs -c noctalia-shell ipc call settings toggle"; }
-
-    XF86MonBrightnessUp allow-when-locked=true {
-        spawn "/usr/bin/brightnessctl" "-d" "intel_backlight" "set" "+5%";
-    }
-
-    XF86MonBrightnessDown allow-when-locked=true {
-        spawn "/usr/bin/brightnessctl" "-d" "intel_backlight" "set" "5%-";
-    }
+    Mod+Space { spawn "noctalia-ipc" "launcher" "toggle"; }
+    Mod+S { spawn "noctalia-ipc" "controlCenter" "toggle"; }
+    Mod+Comma { spawn "noctalia-ipc" "settings" "toggle"; }
+    Mod+L allow-inhibiting=false { spawn "session-lock"; }
 }
-
-spawn-at-startup "qs" "-c" "noctalia-shell"
