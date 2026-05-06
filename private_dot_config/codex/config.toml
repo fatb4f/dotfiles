@@ -3,7 +3,7 @@
 profile = "slim"
 
 [features]
-codex_hooks = true
+codex_hooks = false
 shell_tool = true
 shell_snapshot = true
 
@@ -35,38 +35,3 @@ include_only = [
 exclude = ["*TOKEN*", "*SECRET*", "*KEY*", "*PASSWORD*"]
 experimental_use_profile = false
 ignore_default_excludes = false
-
-[[hooks.SessionStart]]
-matcher = "startup|resume|clear"
-
-[[hooks.SessionStart.hooks]]
-type = "command"
-command = "sh -c 'exec \"${XDG_CONFIG_HOME:-$HOME/.config}/codex/hooks/session-init.sh\"'"
-timeout = 10
-statusMessage = "Capturing Codex session frame"
-
-[[hooks.PreToolUse]]
-matcher = "^Bash$"
-
-[[hooks.PreToolUse.hooks]]
-type = "command"
-command = "sh -c 'exec \"${XDG_CONFIG_HOME:-$HOME/.config}/codex/hooks/pre-tool-use.sh\"'"
-timeout = 10
-statusMessage = "Checking Bash command"
-
-[[hooks.PostToolUse]]
-matcher = "^Bash$"
-
-[[hooks.PostToolUse.hooks]]
-type = "command"
-command = "sh -c 'exec \"${XDG_CONFIG_HOME:-$HOME/.config}/codex/hooks/post-tool-use.sh\"'"
-timeout = 10
-statusMessage = "Recording Bash result"
-
-[[hooks.Stop]]
-
-[[hooks.Stop.hooks]]
-type = "command"
-command = "sh -c 'exec \"${XDG_CONFIG_HOME:-$HOME/.config}/codex/hooks/stop.sh\"'"
-timeout = 10
-statusMessage = "Refreshing Codex context frame"

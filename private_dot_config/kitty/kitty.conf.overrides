@@ -4,11 +4,14 @@
 # - Keep all user key bindings here.
 # - binds.txt has been normalized into concrete map directives below.
 
-# Host/display override
-# Force X11 on this system until the Wayland EGL library is available.
-linux_display_server x11
-
-# Mapping behavior
+# Prefer native Wayland under niri.
+# Falls back only if Kitty cannot initialize Wayland.
+linux_display_server auto
+touch_scroll_multiplier 1.0
+pixel_scroll yes
+momentum_scroll 0.90
+wheel_scroll_multiplier 5.0
+wheel_scroll_min_lines 1
 map_timeout 8.0
 
 # Shared action aliases
