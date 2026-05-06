@@ -1,0 +1,170 @@
+# Kitty local override bucket.
+# Contract:
+# - Keep local/host display quirks here.
+# - Keep all user key bindings here.
+# - binds.txt has been normalized into concrete map directives below.
+
+# Host/display override
+# Force X11 on this system until the Wayland EGL library is available.
+linux_display_server x11
+
+# Mapping behavior
+map_timeout 8.0
+
+# Shared action aliases
+action_alias launch_tab_zsh launch --type=tab --cwd=current zsh -l
+action_alias nvim_screen launch --type=overlay --cwd=current --stdin-source=@screen nvim -R -
+action_alias nvim_scrollback_ansi launch --type=overlay --cwd=current --stdin-source=@screen_scrollback --stdin-add-formatting nvim -R -
+action_alias nvim_selection launch --type=overlay --cwd=current --stdin-source=@selection nvim -R -
+action_alias nvim_last_command launch --type=overlay --cwd=current --stdin-source=@last_cmd_output --stdin-add-formatting nvim -R -
+action_alias nvim_first_command_on_screen launch --type=overlay --cwd=current --stdin-source=@first_cmd_output_on_screen --stdin-add-formatting nvim -R -
+action_alias broadcast_focused_tab launch --type=overlay --allow-remote-control kitty +kitten broadcast --match-tab state:focused
+
+# -----------------------------------------------------------------------------
+# Global bindings
+# -----------------------------------------------------------------------------
+map ctrl+shift+escape command_palette
+map ctrl+shift+c copy_to_clipboard
+map ctrl+shift+v paste_from_clipboard
+map shift+insert paste_from_clipboard
+map ctrl+shift+backspace signal_child SIGINT
+map ctrl+shift+tab launch_tab_zsh
+map ctrl+alt+u kitten unicode_input
+map ctrl+shift+delete clear_terminal reset active
+map ctrl+shift+alt+c goto_session codex
+map ctrl+shift+alt+w goto_session work
+map ctrl+alt+r load_config_file
+map ctrl+shift+alt+, edit_config_file
+map ctrl+shift+alt+d debug_config
+
+# Smart splits: Kitty owns Alt navigation/resizing unless Neovim marked the
+# focused window with the IS_NVIM user var. Conditional no_op passes through.
+map alt+h neighboring_window left
+map alt+j neighboring_window down
+map alt+k neighboring_window up
+map alt+l neighboring_window right
+map alt+shift+h resize_window narrower
+map alt+shift+j resize_window shorter
+map alt+shift+k resize_window taller
+map alt+shift+l resize_window wider
+
+map --when-focus-on var:IS_NVIM alt+h no_op
+map --when-focus-on var:IS_NVIM alt+j no_op
+map --when-focus-on var:IS_NVIM alt+k no_op
+map --when-focus-on var:IS_NVIM alt+l no_op
+map --when-focus-on var:IS_NVIM alt+shift+h no_op
+map --when-focus-on var:IS_NVIM alt+shift+j no_op
+map --when-focus-on var:IS_NVIM alt+shift+k no_op
+map --when-focus-on var:IS_NVIM alt+shift+l no_op
+
+# -----------------------------------------------------------------------------
+# Modal entrypoints
+# -----------------------------------------------------------------------------
+map --new-mode workspace --on-action end --on-unknown end --timeout 8.0 ctrl+space>w
+map --new-mode tabs --on-action end --on-unknown end --timeout 8.0 ctrl+space>t
+map --new-mode scrollback --on-action end --on-unknown end --timeout 8.0 ctrl+space>s
+map --new-mode hints --on-action end --on-unknown end --timeout 8.0 ctrl+space>h
+map --new-mode paths --on-action end --on-unknown end --timeout 8.0 ctrl+space>p
+map --new-mode launchers --on-action end --on-unknown end --timeout 8.0 ctrl+space>l
+map --new-mode signals --on-action end --on-unknown end --timeout 8.0 ctrl+space>x
+
+# Common modal exits/help
+map --mode workspace esc pop_keyboard_mode
+map --mode workspace ctrl+c pop_keyboard_mode
+map --mode workspace shift+/ command_palette
+map --mode tabs esc pop_keyboard_mode
+map --mode tabs ctrl+c pop_keyboard_mode
+map --mode tabs shift+/ command_palette
+map --mode scrollback esc pop_keyboard_mode
+map --mode scrollback ctrl+c pop_keyboard_mode
+map --mode scrollback shift+/ command_palette
+map --mode hints esc pop_keyboard_mode
+map --mode hints ctrl+c pop_keyboard_mode
+map --mode hints shift+/ command_palette
+map --mode paths esc pop_keyboard_mode
+map --mode paths ctrl+c pop_keyboard_mode
+map --mode paths shift+/ command_palette
+map --mode launchers esc pop_keyboard_mode
+map --mode launchers ctrl+c pop_keyboard_mode
+map --mode launchers shift+/ command_palette
+map --mode signals esc pop_keyboard_mode
+map --mode signals ctrl+c pop_keyboard_mode
+map --mode signals shift+/ command_palette
+
+# -----------------------------------------------------------------------------
+# Workspace mode: Ctrl+Space > w
+# -----------------------------------------------------------------------------
+map --mode workspace h neighboring_window left
+map --mode workspace j neighboring_window down
+map --mode workspace k neighboring_window up
+map --mode workspace l neighboring_window right
+map --mode workspace v launch --cwd=current --location=vsplit
+map --mode workspace s launch --cwd=current --location=hsplit
+map --mode workspace b layout_action bias 50 62 70 80
+map --mode workspace m toggle_layout stack
+map --mode workspace r layout_action rotate
+map --mode workspace e reset_window_sizes
+map --mode workspace q close_window
+map --mode workspace 1 first_window
+map --mode workspace 2 second_window
+map --mode workspace 3 third_window
+map --mode workspace 4 fourth_window
+map --mode workspace 5 fifth_window
+map --mode workspace 6 sixth_window
+map --mode workspace 7 seventh_window
+map --mode workspace 8 eighth_window
+map --mode workspace 9 ninth_window
+map --mode workspace 0 tenth_window
+
+# -----------------------------------------------------------------------------
+# Tabs mode: Ctrl+Space > t
+# -----------------------------------------------------------------------------
+map --mode tabs t new_tab_with_cwd
+map --mode tabs n next_tab
+map --mode tabs p previous_tab
+map --mode tabs q close_tab
+map --mode tabs w close_window
+
+# -----------------------------------------------------------------------------
+# Scrollback mode: Ctrl+Space > s
+# -----------------------------------------------------------------------------
+map --mode scrollback s nvim_screen
+map --mode scrollback a nvim_scrollback_ansi
+map --mode scrollback c nvim_selection
+map --mode scrollback g nvim_last_command
+map --mode scrollback n show_last_non_empty_command_output
+map --mode scrollback f nvim_first_command_on_screen
+map --mode scrollback r show_scrollback
+
+# -----------------------------------------------------------------------------
+# Hints mode: Ctrl+Space > h
+# -----------------------------------------------------------------------------
+map --mode hints u open_url_with_hints
+map --mode hints p kitten hints --type path --program -
+map --mode hints o kitten hints --type path
+map --mode hints l kitten hints --type line --program -
+map --mode hints w kitten hints --type word --program -
+map --mode hints h kitten hints --type hash --program -
+map --mode hints n kitten hints --type linenum
+map --mode hints y kitten hints --type hyperlink
+
+# -----------------------------------------------------------------------------
+# Paths mode: Ctrl+Space > p
+# -----------------------------------------------------------------------------
+map --mode paths f kitten choose-files
+map --mode paths d kitten choose-files --mode=dir
+
+# -----------------------------------------------------------------------------
+# Launchers mode: Ctrl+Space > l
+# -----------------------------------------------------------------------------
+map --mode launchers y launch --type=tab --cwd=current yazi
+
+# -----------------------------------------------------------------------------
+# Signals mode: Ctrl+Space > x
+# -----------------------------------------------------------------------------
+map --mode signals b broadcast_focused_tab
+map --mode signals c copy_to_clipboard
+map --mode signals v paste_from_clipboard
+map --mode signals x signal_child SIGINT
+map --mode signals u kitten unicode_input
+map --mode signals d clear_terminal reset active

@@ -43,7 +43,8 @@ binds {
     Mod+Shift+Q { close-window; }
     Mod+Shift+E { quit skip-confirmation=true; }
     Mod+Escape { toggle-keyboard-shortcuts-inhibit; }
-
+    Mod+M { maximize-window-to-edges; }
+    Mod+Shift+F { fullscreen-window; }
     // Core Noctalia binds.
     Mod+Space { spawn "noctalia-ipc" "launcher" "toggle"; }
     Mod+S { spawn "noctalia-ipc" "controlCenter" "toggle"; }
