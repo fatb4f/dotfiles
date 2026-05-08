@@ -24,7 +24,7 @@
 .config/codex/auth.json
 .config/codex/version.json
 .config/gh/hosts.yml
-.gemini/**
+.gemini/oauth_creds.json
 .local/share/gnupg/**
 
 # language/package stores

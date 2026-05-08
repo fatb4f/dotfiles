@@ -1,0 +1,122 @@
+{
+  "general": {
+    "vimMode": true,
+    "defaultApprovalMode": "default",
+    "enableAutoUpdate": false,
+    "enableNotifications": true,
+    "notificationMethod": "auto",
+    "plan": {
+      "enabled": true,
+      "modelRouting": true
+    },
+    "sessionRetention": {
+      "enabled": true,
+      "maxAge": "14d"
+    },
+    "topicUpdateNarration": true
+  },
+  "output": {
+    "format": "text"
+  },
+  "ui": {
+    "hideBanner": true,
+    "hideTips": true,
+    "compactToolOutput": true,
+    "showMemoryUsage": true,
+    "showLineNumbers": true,
+    "showCitations": true,
+    "showUserIdentity": false,
+    "footer": {
+      "hideCWD": false,
+      "hideSandboxStatus": false,
+      "hideModelInfo": false,
+      "hideContextPercentage": false
+    }
+  },
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "model": {
+    "name": "$GEMINI_MODEL",
+    "maxSessionTurns": 40,
+    "chatCompression": {
+      "contextPercentageThreshold": 0.6
+    },
+    "summarizeToolOutput": {
+      "run_shell_command": {
+        "tokenBudget": 4000
+      }
+    }
+  },
+  "context": {
+    "fileName": [
+      "GEMINI.md",
+      "AGENTS.md"
+    ],
+    "discoveryMaxDirs": 80,
+    "loadFromIncludeDirectories": false,
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true,
+      "enableRecursiveFileSearch": true
+    }
+  },
+  "tools": {
+    "sandbox": false,
+    "shell": {
+      "enableInteractiveShell": false,
+      "showColor": true
+    },
+    "useRipgrep": true,
+    "truncateToolOutputThreshold": 40000,
+    "disableLLMCorrection": true,
+    "allowed": [
+      "run_shell_command(git status)",
+      "run_shell_command(git diff)",
+      "run_shell_command(git log)",
+      "run_shell_command(git grep)",
+      "run_shell_command(just check)",
+      "run_shell_command(just audit)",
+      "run_shell_command(cue vet)"
+    ]
+  },
+  "security": {
+    "disableYoloMode": true,
+    "disableAlwaysAllow": true,
+    "enablePermanentToolApproval": false,
+    "blockGitExtensions": true,
+    "folderTrust": {
+      "enabled": true
+    },
+    "environmentVariableRedaction": {
+      "enabled": true
+    }
+    "auth": {
+      "selectedType": "oauth-personal"
+    }
+  },
+  "advanced": {
+    "autoConfigureMemory": true,
+    "ignoreLocalEnv": true,
+    "excludedEnvVars": [
+      "DEBUG",
+      "DEBUG_MODE",
+      "NODE_ENV",
+      "GITHUB_TOKEN",
+      "GH_TOKEN",
+      "OPENAI_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "GEMINI_API_KEY",
+      "GOOGLE_API_KEY",
+      "GOOGLE_APPLICATION_CREDENTIALS",
+      "*TOKEN*",
+      "*SECRET*",
+      "*PASSWORD*",
+      "*KEY*"
+    ]
+  },
+  "telemetry": {
+    "enabled": false,
+    "logPrompts": false
+  }
+}
