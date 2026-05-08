@@ -30,12 +30,11 @@ default_flags: "-Fgs --sort-by-type-dirs-first --max-depth 1"
 # Imports
 # Keep shared verbs separate from the skin, and select a skin
 # according to terminal luma.
-imports: [
-    "verbs.hjson"
-    "preview_transformers.hjson"
-    "special_paths.hjson"
-    "$XDG_STATE_HOME/broot/current-skin.hjson"
-]
+#imports: [
+#    "verbs.hjson"
+#    "preview_transformers.hjson"
+#    "special_paths.hjson"
+#]
 
 ###############################################################
 # Terminal's title

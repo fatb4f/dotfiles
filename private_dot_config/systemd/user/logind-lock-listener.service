@@ -1,3 +1,8 @@
+# Owner: user-session
+# Class: session-companion
+# Start: wayland-session@niri.desktop.target.wants
+# Enablement: enabled for wayland-session@niri.desktop.target
+
 [Unit]
 Description=Bridge logind Lock/Unlock signals to locker and halt timer
 Documentation=man:loginctl(1) man:org.freedesktop.login1(5)

@@ -1,0 +1,18 @@
+# ~/.config/zsh/fn/up
+
+emulate -L zsh
+
+local n="${1:-1}"
+local dest="."
+local i
+
+[[ "$n" == <-> ]] || {
+  print -u2 -- "usage: up [levels]"
+  return 2
+}
+
+for (( i = 0; i < n; i++ )); do
+  dest="../$dest"
+done
+
+cd "$dest"

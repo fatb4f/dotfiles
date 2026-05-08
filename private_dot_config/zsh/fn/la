@@ -1,0 +1,16 @@
+emulate -L zsh
+
+local level="${1:-1}"
+local target="${2:-.}"
+
+[[ "$level" == <-> ]] || {
+  print -u2 -- "usage: la [depth] [path]"
+  return 2
+}
+
+if command -v eza >/dev/null 2>&1; then
+  command eza -T -a -L "$level" --group-directories-first --icons=auto -- "$target"
+else
+  print -u2 -- 'la: eza not found'
+  return 127
+fi

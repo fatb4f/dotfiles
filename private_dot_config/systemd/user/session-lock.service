@@ -1,3 +1,8 @@
+# Owner: lock-power
+# Class: runtime-triggered
+# Start: logind-lock-listener/session scripts
+# Enablement: never enable directly
+
 [Unit]
 Description=Graphical session locker
 Documentation=man:swaylock(1)

@@ -1,0 +1,31 @@
+emulate -L zsh
+
+[[ -o interactive ]] || return 0
+
+local -A dirs
+
+dirs=(
+  dl    "$HOME/.local/user/Downloads"
+  work  "$HOME/.local/src"
+)
+
+if [[ -n "${DOTS_SOURCE_DIR:-}" ]]; then
+  dirs+=(
+    dots    "$DOTS_SOURCE_DIR"
+    niri    "$DOTS_SOURCE_DIR/private_dot_config/niri"
+    zsh     "$DOTS_SOURCE_DIR/private_dot_config/zsh"
+    units   "$DOTS_SOURCE_DIR/private_dot_config/systemd/user"
+    kitty   "$DOTS_SOURCE_DIR/private_dot_config/kitty"
+    yazi    "$DOTS_SOURCE_DIR/private_dot_config/yazi"
+    nvim    "$DOTS_SOURCE_DIR/private_dot_config/nvim"
+    lvim    "$DOTS_SOURCE_DIR/private_dot_config/nvim/lua"
+  )
+fi
+
+local name path
+for name path in "${(@kv)dirs}"; do
+  [[ -n "$path" ]] || continue
+  hash -d "$name=$path"
+done
+
+zstyle ':dotfiles:named-dirs' loaded true

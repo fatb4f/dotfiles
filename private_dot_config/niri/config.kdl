@@ -39,15 +39,17 @@ layout {
 prefer-no-csd
 
 binds {
-    Mod+Return { spawn "kitty"; }
-    Mod+Shift+Q { close-window; }
-    Mod+Shift+E { quit skip-confirmation=true; }
-    Mod+Escape { toggle-keyboard-shortcuts-inhibit; }
-    Mod+M { maximize-window-to-edges; }
-    Mod+Shift+F { fullscreen-window; }
-    // Core Noctalia binds.
-    Mod+Space { spawn "noctalia-ipc" "launcher" "toggle"; }
-    Mod+S { spawn "noctalia-ipc" "controlCenter" "toggle"; }
-    Mod+Comma { spawn "noctalia-ipc" "settings" "toggle"; }
+    Mod+D         { spawn "fuzzel"; }
+    Mod+Escape    { toggle-keyboard-shortcuts-inhibit; }
+    Mod+M         { maximize-window-to-edges; }
+    Mod+S         { spawn "noctalia-ipc" "controlCenter" "toggle"; }
+
     Mod+L allow-inhibiting=false { spawn "session-lock"; }
 }
+
+environment {
+  QT_QPA_PLATFORMTHEME "qt6ct"
+}
+
+include "./noctalia.kdl"
+

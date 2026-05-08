@@ -1,5 +1,11 @@
+# Owner: lock-power
+# Class: runtime-triggered
+# Start: locked-session-halt.timer
+# Enablement: never enable directly
+
 [Unit]
 Description=Power off abandoned locked session
+Documentation=man:systemctl(1)
 
 [Service]
 Type=oneshot

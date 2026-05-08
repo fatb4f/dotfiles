@@ -1,5 +1,11 @@
+# Owner: lock-power
+# Class: runtime-triggered
+# Start: logind-lock-listener/session scripts
+# Enablement: never enable directly
+
 [Unit]
 Description=Power off if session remains locked too long
+Documentation=man:systemd.timer(5)
 
 [Timer]
 OnActiveSec=20min
