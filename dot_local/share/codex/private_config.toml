@@ -12,7 +12,7 @@ shell_tool = true
 shell_snapshot = false
 
 [history]
-persistence = "save-all"
+persistence = "none"
 max_bytes = 10485760
 
 [profiles.slim]
@@ -34,7 +34,7 @@ include_only = [
   "LOGNAME",
   "PWD",
   "LANG",
-  "LC_*",
+  "LC_.*",
 
   "XDG_CONFIG_HOME",
   "XDG_DATA_HOME",
@@ -45,22 +45,22 @@ include_only = [
   "CODEX_STATE",
   "CODEX_CACHE",
   "CODEX_SQLITE_HOME",
-
-  #"TOOL_PATH_HOME",
-  #"XDG_DATA_BIN",
-  #"DOTS_HOME",
-  #"DOTS_PROFILE",
-  #"DOTS_AGENT_SURFACE",
 ]
-exclude = ["*TOKEN*", "*SECRET*", "*KEY*", "*PASSWORD*"]
+exclude = [".*TOKEN.*", ".*SECRET.*", ".*KEY.*", ".*PASSWORD.*"]
 experimental_use_profile = false
 ignore_default_excludes = false
 
-[projects."/home/_404/.codex"]
-trust_level = "trusted"
-
 [tui]
-status_line = ["model-with-reasoning", "current-dir", "model", "context-used", "five-hour-limit", "weekly-limit", "context-window-size", "used-tokens", "total-input-tokens", "total-output-tokens"]
+status_line = [
+  "model-with-reasoning",
+  "current-dir",
+  "model",
+  "context-used",
+  "five-hour-limit",
+  "weekly-limit",
+  "context-window-size",
+  "used-tokens",
+  "total-input-tokens",
+  "total-output-tokens",
+]
 
-[tui.model_availability_nux]
-"gpt-5.5" = 1
