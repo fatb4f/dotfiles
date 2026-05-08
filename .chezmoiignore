@@ -21,9 +21,15 @@
 .config/user-dirs.dirs
 
 # auth/secrets/tool local state
-.config/codex/auth.json
-.config/codex/version.json
 .config/gh/hosts.yml
+.local/share/codex/auth.json
+.local/share/codex/version.json
+.local/share/codex/installation_id
+.local/share/codex/models_cache.json
+.local/share/codex/cache/**
+.local/share/codex/tmp/**
+.local/share/codex/.tmp/**
+.local/share/codex/shell_snapshots/**
 .gemini/oauth_creds.json
 .local/share/gnupg/**
 
