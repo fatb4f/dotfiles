@@ -42,14 +42,10 @@ map ctrl+shift+alt+d debug_config
 
 # Smart splits: Kitty owns Alt navigation/resizing unless Neovim marked the
 # focused window with the IS_NVIM user var. Conditional no_op passes through.
-map alt+h neighboring_window left
-map alt+j neighboring_window down
-map alt+k neighboring_window up
-map alt+l neighboring_window right
-map alt+shift+h resize_window narrower
-map alt+shift+j resize_window shorter
-map alt+shift+k resize_window taller
-map alt+shift+l resize_window wider
+map ctrl+h neighboring_window left
+map ctrl+j neighboring_window down
+map ctrl+k neighboring_window up
+map ctrl+l neighboring_window right
 
 map --when-focus-on var:IS_NVIM alt+h no_op
 map --when-focus-on var:IS_NVIM alt+j no_op

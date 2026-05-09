@@ -16,14 +16,27 @@ input {
         scroll-method "two-finger"
         click-method "clickfinger"
     }
-
-    // Make Mod deterministic on the Chromebook keyboard.
-    mod-key "Alt"
-    mod-key-nested "Super"
 }
 
 layout {
-    gaps 8
+    gaps 12
+    center-focused-column "on-overflow"
+    always-center-single-column
+    default-column-display "normal"
+    default-column-width { proportion 0.5; }
+
+    preset-column-widths {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+        proportion 1.0
+    }
+
+    preset-window-heights {
+        proportion 0.33333
+        proportion 0.5
+        proportion 0.66667
+    }
 
     focus-ring {
         width 3
@@ -31,21 +44,49 @@ layout {
         inactive-color "#505050"
     }
 
-    border {
+    border { off; }
+    shadow { off; }
+
+    insert-hint {
+        on
+        color "#ffc87f80"
+    }
+}
+
+include "binds.kdl"
+include "workspaces.kdl"
+
+animations {
+    off
+}
+
+gestures {
+    hot-corners {
         off
     }
 }
 
-prefer-no-csd
-
-binds {
-    Mod+D         { spawn "fuzzel"; }
-    Mod+Escape    { toggle-keyboard-shortcuts-inhibit; }
-    Mod+M         { maximize-window-to-edges; }
-    Mod+S         { spawn "noctalia-ipc" "controlCenter" "toggle"; }
-
-    Mod+L allow-inhibiting=false { spawn "session-lock"; }
+output "HDMI-A-1" {
+    mode "1920x1080@60.000"
+    scale 1
+    position x=1536 y=0
+    focus-at-startup
+    layout {
+      background-color "#000000"
+    }
 }
+
+output "eDP-1" {
+    mode "1920x1080@60.004"
+    scale 1.25
+    position x=0 y=0
+    focus-at-startup
+    layout {
+      background-color "#000000"
+    }
+}
+
+prefer-no-csd
 
 environment {
   QT_QPA_PLATFORMTHEME "qt6ct"
