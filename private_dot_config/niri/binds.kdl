@@ -8,37 +8,10 @@ binds {
     Mod+O repeat=false { toggle-overview; }
     Mod+Q repeat=false { close-window; }
 
-    // --- Focus: niri graph ---
-    Mod+H { focus-column-left; }
-    Mod+L { focus-column-right; }
-    Mod+J { focus-window-or-workspace-down; }
-    Mod+K { focus-window-or-workspace-up; }
-
-    // --- Move: niri graph ---
-    Mod+Ctrl+H { move-column-left; }
-    Mod+Ctrl+L { move-column-right; }
-    Mod+Ctrl+J { move-window-down-or-to-workspace-down; }
-    Mod+Ctrl+K { move-window-up-or-to-workspace-up; }
-
-    // --- Workspace navigation ---
-    Mod+U { focus-workspace-down; }
-    Mod+I { focus-workspace-up; }
-    Mod+Ctrl+U { move-column-to-workspace-down; }
-    Mod+Ctrl+I { move-column-to-workspace-up; }
-    Mod+Tab { focus-workspace-previous; }
-
     // --- Named workspace shortcuts ---
     Mod+1 { focus-workspace "browser"; }
     Mod+2 { focus-workspace "terminal"; }
-    Mod+Ctrl+1 { move-column-to-workspace "browser"; }
-    Mod+Ctrl+2 { move-column-to-workspace "terminal"; }
-
-    // --- Column/window composition ---
-    Mod+BracketLeft { consume-or-expel-window-left; }
-    Mod+BracketRight { consume-or-expel-window-right; }
-    Mod+Comma { consume-window-into-column; }
-    Mod+Period { expel-window-from-column; }
-    Mod+W { toggle-column-tabbed-display; }
+    Mod+Shift+N { move-workspace-to-monitor-next; }
 
     // --- Minimal layout repair ---
     Mod+C { center-column; }
