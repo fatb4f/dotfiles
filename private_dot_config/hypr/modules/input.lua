@@ -5,9 +5,6 @@ hl.config({
 
 		touchpad = {
 			natural_scroll = true,
-			scroll_method = "2fg",
-			["tap-to-click"] = true,
-			["tap-and-drag"] = true,
 			disable_while_typing = true,
 			clickfinger_behavior = true,
 		},
