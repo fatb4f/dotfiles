@@ -2,6 +2,11 @@ local model = require("generated.model")
 local binds = require("generated.binds")
 
 local commands = model.commands or {}
+local unpack = table.unpack or unpack
+
+local function die(message)
+	error("hypr binds: " .. message, 2)
+end
 
 local function command_for(bind)
 	local command = bind.command
@@ -13,23 +18,121 @@ local function command_for(bind)
 	return commands[command] or command
 end
 
-for _, bind in ipairs(binds) do
-	if bind.action == "exec" then
-		hl.bind(bind.chord, hl.dsp.exec_cmd(command_for(bind)))
-	elseif bind.action == "close" then
-		hl.bind(bind.chord, hl.dsp.window.close())
-	elseif bind.action == "maximize" then
-		hl.bind(
-			bind.chord,
-			hl.dsp.window.fullscreen({
-				mode = "maximized",
-				action = "toggle",
-			})
-		)
+local function resolve_path(root, path)
+	if type(path) ~= "string" or path == "" then
+		die("dispatcher must be a non-empty string")
 	end
+
+	local node = root
+
+	for segment in path:gmatch("[^.]+") do
+		if type(node) ~= "table" then
+			die("dispatcher path is not traversable: " .. path)
+		end
+
+		node = node[segment]
+
+		if node == nil then
+			die("unknown dispatcher: " .. path)
+		end
+	end
+
+	if type(node) ~= "function" then
+		die("dispatcher is not callable: " .. path)
+	end
+
+	return node
 end
 
-hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
-hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
+local legacy = {
+	exec = function(bind)
+		return {
+			chord = bind.chord,
+			action = "dsp",
+			dispatcher = "exec_cmd",
+			command = bind.command,
+			flags = bind.flags,
+		}
+	end,
 
-hl.bind("SUPER + SHIFT + E", hl.dsp.exec_cmd("uwsm stop"))
+	close = function(bind)
+		return {
+			chord = bind.chord,
+			action = "dsp",
+			dispatcher = "window.close",
+			flags = bind.flags,
+		}
+	end,
+
+	maximize = function(bind)
+		return {
+			chord = bind.chord,
+			action = "dsp",
+			dispatcher = "window.fullscreen",
+			args = {
+				{
+					mode = "maximized",
+					action = "toggle",
+				},
+			},
+			flags = bind.flags,
+		}
+	end,
+}
+
+local function normalize(bind)
+	if type(bind) ~= "table" then
+		die("bind must be a table")
+	end
+
+	if bind.action == "dsp" then
+		return bind
+	end
+
+	local adapter = legacy[bind.action]
+
+	if adapter == nil then
+		die("unsupported bind action: " .. tostring(bind.action))
+	end
+
+	return adapter(bind)
+end
+
+local function args_for(bind)
+	if bind.command ~= nil then
+		local command = command_for(bind)
+
+		if command == nil or command == "" then
+			die("empty command for chord: " .. tostring(bind.chord))
+		end
+
+		return { command }
+	end
+
+	return bind.args or {}
+end
+
+local function compile_dispatcher(bind)
+	local dispatcher = resolve_path(hl.dsp, bind.dispatcher)
+	local args = args_for(bind)
+
+	return dispatcher(unpack(args))
+end
+
+for _, raw_bind in ipairs(binds) do
+	local bind = normalize(raw_bind)
+
+	if type(bind.chord) ~= "string" or bind.chord == "" then
+		die("bind is missing chord")
+	end
+
+	if bind.action ~= "dsp" then
+		die("unsupported normalized bind action: " .. tostring(bind.action))
+	end
+
+	if bind.dispatcher == nil then
+		die("bind is missing dispatcher for chord: " .. bind.chord)
+	end
+
+	hl.bind(bind.chord, compile_dispatcher(bind), bind.flags)
+end
