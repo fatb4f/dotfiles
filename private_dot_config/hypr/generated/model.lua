@@ -1,13 +1,13 @@
 return {
-  mod = "SUPER",
+	mod = "SUPER",
 
-  apps = {
-    terminal = "kitty",
-    launcher = "fuzzel",
-    browser = "chromium",
-  },
+	commands = {
+		terminal = "uwsm-app -- kitty",
+		menu = os.getenv("HOME") .. "/.local/bin/app-launcher",
+		browser = "uwsm-app -- chromium",
+	},
 
-  layout = {
-    default = "master",
-  },
+	layout = {
+		default = "master",
+	},
 }

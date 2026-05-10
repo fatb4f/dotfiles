@@ -1,5 +1,4 @@
 -- ~/.config/hypr/hyprland.lua
---
 -- Thin native Lua Hyprland loader.
 
 require("modules.apps")

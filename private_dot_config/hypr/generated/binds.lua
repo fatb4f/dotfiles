@@ -1,6 +1,6 @@
 return {
-  { chord = "SUPER + Return", action = "exec", command = "uwsm-app -- kitty" },
-  { chord = "SUPER + Space",  action = "exec", command = "fuzzel" },
-  { chord = "SUPER + Q",      action = "close" },
-  { chord = "SUPER + F",      action = "maximize" },
+	{ key = "Return", mod = "main", action = "exec", command = "terminal" },
+	{ key = "Space", mod = "main", action = "exec", command = "menu" },
+	{ key = "Q", mod = "main", action = "close" },
+	{ key = "F", mod = "main", action = "maximize" },
 }
