@@ -1,0 +1,25 @@
+{
+  "workspace": {
+    "library": [
+      "/usr/share/hypr/stubs"
+    ],
+    "checkThirdParty": false
+  },
+  "diagnostics": {
+    "globals": ["hl"]
+  },
+  "runtime": {
+    "version": "Lua 5.4",
+    "path": [
+      "?.lua",
+      "?/init.lua",
+      "modules/?.lua",
+      "modules/?/init.lua",
+      "generated/?.lua",
+      "layouts/?.lua"
+    ]
+  },
+  "telemetry": {
+    "enable": false
+  }
+}

@@ -1,0 +1,3 @@
+-- Environment boundary:
+-- Under UWSM, prefer ~/.config/uwsm/env and ~/.config/uwsm/env-hyprland.
+-- Keep Hyprland-local env here only when it is compositor-specific.
