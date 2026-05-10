@@ -4,11 +4,12 @@ return {
 		persistent = true,
 		default = true,
 		layout = "master",
+		on_created_empty = "browser",
 	},
 	{
 		workspace = "name:terminal",
 		persistent = true,
 		layout = "master",
-		on_created_empty = "uwsm-app -- kitty",
+		on_created_empty = "terminal",
 	},
 }
