@@ -1,6 +1,3 @@
--- ~/.config/hypr/hyprland.lua
--- Thin native Lua Hyprland loader.
-
 require("modules.apps")
 require("modules.monitors")
 require("modules.env")
