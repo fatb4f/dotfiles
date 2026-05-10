@@ -1,25 +1,25 @@
 hl.config({
-  general = {
-    gaps_in = 5,
-    gaps_out = 10,
-    border_size = 2,
-    layout = "master",
-  },
+	general = {
+		gaps_in = 12,
+		gaps_out = 12,
+		border_size = 3,
+		layout = "master",
+	},
 
-  decoration = {
-    rounding = 8,
+	decoration = {
+		rounding = 0,
 
-    blur = {
-      enabled = false,
-    },
+		blur = {
+			enabled = false,
+		},
 
-    shadow = {
-      enabled = false,
-    },
-  },
+		shadow = {
+			enabled = false,
+		},
+	},
 
-  misc = {
-    disable_hyprland_logo = true,
-    force_default_wallpaper = 0,
-  },
+	misc = {
+		disable_hyprland_logo = true,
+		force_default_wallpaper = 0,
+	},
 })
