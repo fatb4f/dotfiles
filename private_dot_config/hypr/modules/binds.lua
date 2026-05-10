@@ -2,6 +2,7 @@ local model = require("generated.model")
 local binds = require("generated.binds")
 
 local commands = model.commands or {}
+local mod = model.mod or "SUPER"
 local unpack = table.unpack or unpack
 
 local function die(message)
@@ -16,6 +17,14 @@ local function command_for(bind)
 	end
 
 	return commands[command] or command
+end
+
+local function chord_for(bind)
+	if type(bind.chord) ~= "string" or bind.chord == "" then
+		die("bind is missing chord")
+	end
+
+	return bind.chord:gsub("%$mod", mod)
 end
 
 local function resolve_path(root, path)
@@ -113,6 +122,14 @@ local function args_for(bind)
 end
 
 local function compile_dispatcher(bind)
+	if bind.action ~= "dsp" then
+		die("unsupported normalized bind action: " .. tostring(bind.action))
+	end
+
+	if bind.dispatcher == nil then
+		die("bind is missing dispatcher for chord: " .. tostring(bind.chord))
+	end
+
 	local dispatcher = resolve_path(hl.dsp, bind.dispatcher)
 	local args = args_for(bind)
 
@@ -122,17 +139,5 @@ end
 for _, raw_bind in ipairs(binds) do
 	local bind = normalize(raw_bind)
 
-	if type(bind.chord) ~= "string" or bind.chord == "" then
-		die("bind is missing chord")
-	end
-
-	if bind.action ~= "dsp" then
-		die("unsupported normalized bind action: " .. tostring(bind.action))
-	end
-
-	if bind.dispatcher == nil then
-		die("bind is missing dispatcher for chord: " .. bind.chord)
-	end
-
-	hl.bind(bind.chord, compile_dispatcher(bind), bind.flags)
+	hl.bind(chord_for(bind), compile_dispatcher(bind), bind.flags)
 end
