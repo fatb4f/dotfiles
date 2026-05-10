@@ -3,7 +3,6 @@ hl.config({
 		gaps_in = 12,
 		gaps_out = 12,
 		border_size = 3,
-		layout = "master",
 	},
 
 	decoration = {
