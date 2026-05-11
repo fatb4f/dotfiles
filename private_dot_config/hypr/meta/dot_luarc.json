@@ -14,9 +14,7 @@
       "?.lua",
       "?/init.lua",
       "modules/?.lua",
-      "modules/?/init.lua",
-      "generated/?.lua",
-      "layouts/?.lua"
+      "modules/?/init.lua"
     ]
   },
   "telemetry": {

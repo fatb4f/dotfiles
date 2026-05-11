@@ -1,10 +1,13 @@
-local monitors = require("generated.monitors")
+hl.monitor({
+	output = "eDP-1",
+	mode = "preferred",
+	position = "0x0",
+	scale = 1,
+})
 
-for _, monitor in ipairs(monitors) do
-  hl.monitor({
-    output = monitor.output,
-    mode = monitor.mode or "preferred",
-    position = monitor.position or "auto",
-    scale = monitor.scale or 1,
-  })
-end
+hl.monitor({
+	output = "HDMI-A-1",
+	mode = "preferred",
+	position = "1920x0",
+	scale = 1,
+})

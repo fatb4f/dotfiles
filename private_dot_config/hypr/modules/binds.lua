@@ -1,143 +1,30 @@
-local model = require("generated.model")
-local binds = require("generated.binds")
+local home = os.getenv("HOME")
+local menu = home .. "/.local/bin/app-launcher"
 
-local commands = model.commands or {}
-local mod = model.mod or "SUPER"
-local unpack = table.unpack or unpack
+-- launch
+hl.bind("SUPER + Return", hl.dsp.exec_cmd("uwsm-app -- kitty"))
+hl.bind("SUPER + B", hl.dsp.exec_cmd("uwsm-app -- chromium"))
+hl.bind("SUPER + Space", hl.dsp.exec_cmd(menu))
 
-local function die(message)
-	error("hypr binds: " .. message, 2)
-end
+-- window state
+hl.bind("SUPER + Q", hl.dsp.window.close())
 
-local function command_for(bind)
-	local command = bind.command
+-- master layout current workspace
+hl.bind("SUPER + Tab", hl.dsp.layout("swapnext loop"))
+hl.bind("SUPER + SHIFT + Tab", hl.dsp.layout("swapprev loop"))
 
-	if command == nil then
-		return nil
-	end
+-- focus monitor
+hl.bind("SUPER + H", hl.dsp.focus({ monitor = "l" }))
+hl.bind("SUPER + L", hl.dsp.focus({ monitor = "r" }))
 
-	return commands[command] or command
-end
+-- move focused workspace to monitor
+hl.bind("SUPER + CTRL + H", hl.dsp.workspace.move({ monitor = "eDP-1", follow = true }))
+hl.bind("SUPER + CTRL + L", hl.dsp.workspace.move({ monitor = "HDMI-A-1", follow = true }))
 
-local function chord_for(bind)
-	if type(bind.chord) ~= "string" or bind.chord == "" then
-		die("bind is missing chord")
-	end
+-- explicit move focused window to named monitor
+hl.bind("SUPER + SHIFT + H", hl.dsp.window.move({ monitor = "eDP-1", follow = true }))
+hl.bind("SUPER + SHIFT + L", hl.dsp.window.move({ monitor = "HDMI-A-1", follow = true }))
 
-	return bind.chord:gsub("%$mod", mod)
-end
-
-local function resolve_path(root, path)
-	if type(path) ~= "string" or path == "" then
-		die("dispatcher must be a non-empty string")
-	end
-
-	local node = root
-
-	for segment in path:gmatch("[^.]+") do
-		if type(node) ~= "table" then
-			die("dispatcher path is not traversable: " .. path)
-		end
-
-		node = node[segment]
-
-		if node == nil then
-			die("unknown dispatcher: " .. path)
-		end
-	end
-
-	if type(node) ~= "function" then
-		die("dispatcher is not callable: " .. path)
-	end
-
-	return node
-end
-
-local legacy = {
-	exec = function(bind)
-		return {
-			chord = bind.chord,
-			action = "dsp",
-			dispatcher = "exec_cmd",
-			command = bind.command,
-			flags = bind.flags,
-		}
-	end,
-
-	close = function(bind)
-		return {
-			chord = bind.chord,
-			action = "dsp",
-			dispatcher = "window.close",
-			flags = bind.flags,
-		}
-	end,
-
-	maximize = function(bind)
-		return {
-			chord = bind.chord,
-			action = "dsp",
-			dispatcher = "window.fullscreen",
-			args = {
-				{
-					mode = "maximized",
-					action = "toggle",
-				},
-			},
-			flags = bind.flags,
-		}
-	end,
-}
-
-local function normalize(bind)
-	if type(bind) ~= "table" then
-		die("bind must be a table")
-	end
-
-	if bind.action == "dsp" then
-		return bind
-	end
-
-	local adapter = legacy[bind.action]
-
-	if adapter == nil then
-		die("unsupported bind action: " .. tostring(bind.action))
-	end
-
-	return adapter(bind)
-end
-
-local function args_for(bind)
-	if bind.command ~= nil then
-		local command = command_for(bind)
-
-		if command == nil or command == "" then
-			die("empty command for chord: " .. tostring(bind.chord))
-		end
-
-		return { command }
-	end
-
-	return bind.args or {}
-end
-
-local function compile_dispatcher(bind)
-	if bind.action ~= "dsp" then
-		die("unsupported normalized bind action: " .. tostring(bind.action))
-	end
-
-	if bind.dispatcher == nil then
-		die("bind is missing dispatcher for chord: " .. tostring(bind.chord))
-	end
-
-	local dispatcher = resolve_path(hl.dsp, bind.dispatcher)
-	local args = args_for(bind)
-
-	return dispatcher(unpack(args))
-end
-
-for _, raw_bind in ipairs(binds) do
-	local bind = normalize(raw_bind)
-
-	hl.bind(chord_for(bind), compile_dispatcher(bind), bind.flags)
-end
+-- mouse
+hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
+hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })

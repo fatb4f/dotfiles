@@ -1,2 +1,0 @@
--- Placeholder for hl.curve(...) / hl.animation(...).
--- Add explicit animation contract later.

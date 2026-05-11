@@ -1,2 +1,0 @@
--- Placeholder for hl.permission(...).
--- Keep explicit permissions here once needed.
