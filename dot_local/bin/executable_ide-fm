@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${IDE_ROOT:=$PWD}"
+: "${IDE_FM:=yazi}"
+: "${EDITOR:=nvim-open-here}"
+
+export IDE_ROOT EDITOR
+cd "$IDE_ROOT"
+
+case "$IDE_FM" in
+	yazi)
+		exec yazi "$IDE_ROOT"
+		;;
+	lf)
+		exec lf "$IDE_ROOT"
+		;;
+	broot|br)
+		exec broot "$IDE_ROOT"
+		;;
+	*)
+		echo "ide-fm: unsupported file manager: $IDE_FM" >&2
+		exit 64
+		;;
+esac
