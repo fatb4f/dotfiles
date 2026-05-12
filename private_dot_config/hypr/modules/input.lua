@@ -13,7 +13,7 @@ hl.config({
 	cursor = {
 		no_warps = false,
 		persistent_warps = false,
-		warp_on_change_workspace = 0,
+		warp_on_change_workspace = 1,
 		warp_back_after_non_mouse_input = false,
 		hotspot_padding = 1,
 	},

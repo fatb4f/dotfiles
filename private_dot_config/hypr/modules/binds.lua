@@ -10,8 +10,8 @@ hl.bind("SUPER + Space", hl.dsp.exec_cmd(menu))
 hl.bind("SUPER + Q", hl.dsp.window.close())
 
 -- master layout current workspace
-hl.bind("SUPER + Tab", hl.dsp.layout("swapnext loop"))
-hl.bind("SUPER + SHIFT + Tab", hl.dsp.layout("swapprev loop"))
+hl.bind("SUPER + Tab", hl.dsp.layout("rollnext"))
+hl.bind("SUPER + SHIFT + Tab", hl.dsp.layout("rollprev"))
 
 -- focus monitor
 hl.bind("SUPER + H", hl.dsp.focus({ monitor = "l" }))

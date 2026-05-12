@@ -1,16 +1,13 @@
-# Owner: lock-power
-# Class: runtime-triggered
-# Start: logind-lock-listener/session scripts
-# Enablement: never enable directly
+# ~/.config/systemd/user/session-lock.service
 
 [Unit]
 Description=Graphical session locker
-Documentation=man:swaylock(1)
-PartOf=wayland-session@niri.desktop.target
-After=wayland-session@niri.desktop.target
-Requisite=wayland-session@niri.desktop.target
+Documentation=man:loginctl(1)
+PartOf=graphical-session.target
+After=graphical-session.target
+Requisite=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/swaylock-logind-session
+ExecStart=%h/.local/bin/wayland-lock-session
 Restart=no
