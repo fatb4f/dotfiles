@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+role="${1:?usage: ide-term <role> <title> <command...>}"
+title="${2:?usage: ide-term <role> <title> <command...>}"
+shift 2
+
+: "${IDE_ROOT:=$PWD}"
+: "${IDE_SESSION:=ide}"
+: "${IDE_NVIM:=${XDG_RUNTIME_DIR:-/tmp}/nvim-${IDE_SESSION}.sock}"
+: "${EDITOR:=nvim-open-here}"
+
+class="hyprwm-${role}"
+terminal="${IDE_TERMINAL:-${TERMINAL:-kitty}}"
+
+export IDE_ROOT IDE_SESSION IDE_NVIM IDE_ROLE="$role" EDITOR
+cd "$IDE_ROOT"
+
+case "$terminal" in
+	kitty)
+		exec kitty --class "$class" --title "$title" --working-directory "$IDE_ROOT" env \
+			IDE_ROOT="$IDE_ROOT" \
+			IDE_SESSION="$IDE_SESSION" \
+			IDE_NVIM="$IDE_NVIM" \
+			IDE_ROLE="$role" \
+			EDITOR="$EDITOR" \
+			"$@"
+		;;
+	wezterm)
+		exec wezterm start --cwd "$IDE_ROOT" --class "$class" -- \
+			env \
+			IDE_ROOT="$IDE_ROOT" \
+			IDE_SESSION="$IDE_SESSION" \
+			IDE_NVIM="$IDE_NVIM" \
+			IDE_ROLE="$role" \
+			EDITOR="$EDITOR" \
+			"$@"
+		;;
+	foot)
+		exec foot --app-id "$class" --title "$title" \
+			env \
+			IDE_ROOT="$IDE_ROOT" \
+			IDE_SESSION="$IDE_SESSION" \
+			IDE_NVIM="$IDE_NVIM" \
+			IDE_ROLE="$role" \
+			EDITOR="$EDITOR" \
+			"$@"
+		;;
+	alacritty)
+		exec alacritty --class "$class" --title "$title" --working-directory "$IDE_ROOT" -e \
+			env \
+			IDE_ROOT="$IDE_ROOT" \
+			IDE_SESSION="$IDE_SESSION" \
+			IDE_NVIM="$IDE_NVIM" \
+			IDE_ROLE="$role" \
+			EDITOR="$EDITOR" \
+			"$@"
+		;;
+	*)
+		echo "ide-term: unsupported terminal: $terminal" >&2
+		exit 64
+		;;
+esac
