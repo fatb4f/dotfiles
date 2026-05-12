@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+role="${1:?usage: ide-role <editor|files|tests|debug|repl|logs>}"
+
+: "${IDE_ROOT:=$PWD}"
+IDE_ROOT="$(realpath "$IDE_ROOT")"
+: "${IDE_SESSION:=ide-$(printf '%s' "$IDE_ROOT" | sha1sum | cut -d' ' -f1 | cut -c1-12)}"
+: "${IDE_NVIM:=${XDG_RUNTIME_DIR:-/tmp}/nvim-${IDE_SESSION}.sock}"
+export IDE_ROOT IDE_SESSION IDE_NVIM EDITOR="${EDITOR:-nvim-open-here}"
+
+class="hyprwm-${role}"
+title="HYPRWM[${IDE_SESSION}]:${role}"
+
+focus_existing() {
+	local address
+	address="$({ hyprctl clients -j 2>/dev/null || true; } \
+		| jq -r --arg class "$class" --arg title "$title" '
+			.[]
+			| select(.class == $class or .initialClass == $class or .title == $title or .initialTitle == $title)
+			| .address
+		' \
+		| head -n 1)"
+
+	if [[ -n "$address" && "$address" != "null" ]]; then
+		hyprctl dispatch focuswindow "address:${address}" >/dev/null
+		return 0
+	fi
+
+	return 1
+}
+
+payload_for_role() {
+	case "$role" in
+		editor)
+			printf '%s\n' "nvim --listen '$IDE_NVIM' '$IDE_ROOT'"
+			;;
+		files)
+			printf '%s\n' "ide-fm"
+			;;
+		tests)
+			printf '%s\n' "bash -lc 'if command -v just >/dev/null 2>&1; then just test; else printf %s\\n \"no just recipe; staying open\"; fi; exec \"\$SHELL\"'"
+			;;
+		debug)
+			printf '%s\n' "bash -lc 'printf %s\\n \"debug role\"; exec \"\$SHELL\"'"
+			;;
+		repl)
+			printf '%s\n' "bash -lc 'if command -v python >/dev/null 2>&1; then python; else exec \"\$SHELL\"; fi'"
+			;;
+		logs)
+			printf '%s\n' "bash -lc 'journalctl --user -f; exec \"\$SHELL\"'"
+			;;
+		*)
+			echo "ide-role: unknown role: $role" >&2
+			exit 64
+			;;
+	esac
+}
+
+if focus_existing; then
+	exit 0
+fi
+
+cmd="$(payload_for_role)"
+
+# Spawn via UWSM so role clients are normal graphical-session children.
+# ide-term normalizes terminal-specific class/title/env handling.
+hyprctl dispatch exec "uwsm-app -- ide-term '$role' '$title' $cmd" >/dev/null
