@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+sock="${IDE_NVIM:-${NVIM_LISTEN_ADDRESS:-}}"
+
+if [[ -z "$sock" ]]; then
+	echo "nvim-open-here: IDE_NVIM/NVIM_LISTEN_ADDRESS is not set" >&2
+	exit 64
+fi
+
+if [[ ! -S "$sock" ]]; then
+	echo "nvim-open-here: nvim socket does not exist: $sock" >&2
+	exit 69
+fi
+
+if [[ "$#" -gt 0 ]]; then
+	nvim --server "$sock" --remote-silent "$@"
+fi
+
+if command -v hyprctl >/dev/null 2>&1; then
+	ide-role editor >/dev/null 2>&1 || true
+fi
