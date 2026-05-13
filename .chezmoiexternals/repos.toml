@@ -1,0 +1,32 @@
+{{- $srcRoot := "dot_local/src" -}}
+{{- $githubRoot := joinPath $srcRoot "github.com" -}}
+
+[fatb4f_exercism]
+targetPath = {{ joinPath $githubRoot "fatb4f/exercism" | quote }}
+
+type = "git-repo"
+url = "https://github.com/fatb4f/exercism.git"
+[fatb4f_knowledge]
+targetPath = {{ joinPath $githubRoot "fatb4f/knowledge" | quote }}
+
+type = "git-repo"
+url = "https://github.com/fatb4f/knowledge.git"
+[weirdtreething_alsa_ucm_conf_cros]
+targetPath = {{ joinPath $githubRoot "WeirdTreeThing/alsa-ucm-conf-cros" | quote }}
+
+type = "git-repo"
+url = "https://github.com/WeirdTreeThing/alsa-ucm-conf-cros.git"
+[weirdtreething_chromebook_linux_audio]
+targetPath = {{ joinPath $githubRoot "WeirdTreeThing/chromebook-linux-audio" | quote }}
+
+type = "git-repo"
+url = "https://github.com/WeirdTreeThing/chromebook-linux-audio.git"
+[weirdtreething_cros_keyboard_map]
+targetPath = {{ joinPath $githubRoot "WeirdTreeThing/cros-keyboard-map" | quote }}
+
+type = "git-repo"
+url = "https://github.com/WeirdTreeThing/cros-keyboard-map.git"
+[weirdtreething_croskbd]
+targetPath = {{ joinPath $githubRoot "WeirdTreeThing/croskbd" | quote }}
+type = "git-repo"
+url = "https://github.com/WeirdTreeThing/croskbd.git"
