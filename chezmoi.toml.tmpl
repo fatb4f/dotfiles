@@ -1,0 +1,94 @@
+# ~/.config/chezmoi/chezmoi.toml
+# Conservative local baseline for a chezmoi-managed $HOME.
+
+sourceDir = "/home/_404/.local/share/chezmoi"
+workingTree = "/home/_404/.local/share/chezmoi"
+destDir = "/home/_404"
+cacheDir = "/home/_404/.cache/chezmoi"
+persistentState = "/home/_404/.local/state/chezmoi/chezmoi.boltdb"
+tempDir = "/home/_404/.cache/chezmoi/tmp"
+scriptTempDir = "/home/_404/.cache/chezmoi/scripts"
+
+mode = "file"
+umask = 0o022
+color = "auto"
+verbose = false
+
+# Keep source/target mutation explicit. Let your controller/wrappers own flow.
+interactive = false
+
+# Output data format for commands that emit structured data.
+format = "json"
+
+# Prefer external commands when present, but allow chezmoi's builtins as fallback.
+useBuiltinGit = "auto"
+useBuiltinAge = "auto"
+
+[template]
+options = ["missingkey=error"]
+
+[add]
+encrypt = false
+secrets = "error"
+templateSymlinks = false
+
+[edit]
+command = "nvim"
+hardlink = true
+apply = false
+watch = false
+
+[diff]
+command = "nvim"
+args = ["-d", "{{ .Destination }}", "{{ .Target }}"]
+pager = ""
+scriptContents = true
+reverse = false
+exclude = []
+
+[merge]
+command = "nvim"
+args = ["-d", "{{ .Destination }}", "{{ .Source }}", "{{ .Target }}"]
+
+[git]
+command = "git"
+autoAdd = false
+autoCommit = false
+autoPush = false
+lfs = false
+
+[status]
+pathStyle = "relative"
+exclude = []
+
+[update]
+apply = true
+recurseSubmodules = true
+
+[verify]
+exclude = []
+
+[gitHub]
+refreshPeriod = 60000000000
+
+[pinentry]
+options = ["allow-external-password-cache"]
+
+[interpreters]
+py = { command = "python3" }
+rb = { command = "ruby" }
+pl = { command = "perl" }
+nu = { command = "nu" }
+
+[warnings]
+configFileTemplateHasChanged = true
+
+# Optional later, only after the scripts exist and are idempotent.
+# Hooks run even under --dry-run, so do not point these at mutating commands.
+# [hooks.read-source-state.pre]
+# command = "/home/_404/.local/bin/dotctl"
+# args = ["chezmoi", "preflight"]
+#
+# [hooks.apply.post]
+# command = "/home/_404/.local/bin/dotctl"
+# args = ["chezmoi", "snapshot"]

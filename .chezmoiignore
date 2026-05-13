@@ -17,8 +17,6 @@
 # browser/application state
 .config/chromium/**
 .local/share/pki/**
-.config/user-dirs.locale
-.config/user-dirs.dirs
 
 # auth/secrets/tool local state
 .config/gh/hosts.yml
