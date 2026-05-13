@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+deny_file="$config_home/xdg-compliance/deny-config-paths.txt"
+
+status=0
+
+while IFS= read -r pattern; do
+  [[ -z "$pattern" || "$pattern" == \#* ]] && continue
+
+  while IFS= read -r hit; do
+    printf 'xdg-compliance: config leak: %s\n' "$hit" >&2
+    status=1
+  done < <(find "$config_home" -path "$config_home/$pattern" -print 2>/dev/null || true)
+done < "$deny_file"
+
+exit "$status"
