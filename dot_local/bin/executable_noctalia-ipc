@@ -1,2 +1,0 @@
-#!/bin/sh
-exec qs -c noctalia-shell ipc call "$@"
