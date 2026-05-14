@@ -4,4 +4,5 @@ prepend_keymap = [
   { on = "<Enter>", run = "open", desc = "Open selected files" },
   { on = [ "g", "." ], run = "hidden toggle", desc = "Toggle hidden files" },
   { on = [ "g", "i" ], run = "plugin lazygit", desc = "Launch lazygit" },
+  { on = ["C"], run = "plugin ouch", desc = "Compress with ouch" },
 ]

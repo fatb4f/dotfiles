@@ -38,18 +38,6 @@ hardlink = true
 apply = false
 watch = false
 
-[diff]
-command = "nvim"
-args = ["-d", "{{ .Destination }}", "{{ .Target }}"]
-pager = ""
-scriptContents = true
-reverse = false
-exclude = []
-
-[merge]
-command = "nvim"
-args = ["-d", "{{ .Destination }}", "{{ .Source }}", "{{ .Target }}"]
-
 [git]
 command = "git"
 autoAdd = false

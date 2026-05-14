@@ -1,0 +1,9 @@
+[".local/src/github.com/fatb4f/exercism"]
+  type = "git-repo"
+  url = "https://github.com/fatb4f/exercism.git"
+  refreshPeriod = "168h"
+
+[".local/src/github.com/fatb4f/knowledge"]
+  type = "git-repo"
+  url = "https://github.com/fatb4f/knowledge.git"
+  refreshPeriod = "168h"

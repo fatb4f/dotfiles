@@ -28,3 +28,20 @@ hl.bind("SUPER + SHIFT + L", hl.dsp.window.move({ monitor = "HDMI-A-1", follow =
 -- mouse
 hl.bind("SUPER + mouse:272", hl.dsp.window.drag(), { mouse = true })
 hl.bind("SUPER + mouse:273", hl.dsp.window.resize(), { mouse = true })
+
+-- XF86 display
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl set 10%+"))
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl set 10%-"))
+
+-- XF86 audio
+hl.bind(
+	"XF86AudioRaiseVolume",
+	hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"),
+	{ locked = true, repeatable = true }
+)
+hl.bind(
+	"XF86AudioLowerVolume",
+	hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"),
+	{ locked = true, repeatable = true }
+)
+hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { locked = true })
