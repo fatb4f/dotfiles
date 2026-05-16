@@ -1,6 +1,6 @@
 ---
 name: sem
-description: Use sem for deterministic semantic repository intelligence before broad code inspection. Trigger for entity-level diffs, changed functions/classes/methods, symbol context, impact/blast-radius checks, blame, history, and focused code-context extraction. Do not use for simple filename search, prose files, or tasks where git/tokei/onefetch are sufficient.
+description: Use sem for deterministic semantic repository intelligence before broad code inspection. Trigger for entity-level diffs, changed functions/classes/methods, symbol context, impact/blast-radius checks, blame, history, and focused code-context extraction.
 ---
 
 # Sem Repository Intelligence Skill
