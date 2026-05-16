@@ -24,13 +24,4 @@ change schema/domain seed or managed source
 -> run doctor/dry-run
 ```
 
-## Local commands
-
-Use only commands that exist in the current repository. Typical shape:
-
-```sh
-just gen
-just check-generated
-just dry-run
-just doctor
-```
+``

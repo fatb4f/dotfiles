@@ -29,14 +29,14 @@ keyword=$1
 root=${2:-.}
 mode=${REPO_RG_MODE:-literal}
 max_results=${REPO_RG_MAX_RESULTS:-200}
-rg_bin=${RG_BIN:-"$HOME/.local/bin/rg"}
+rg_bin=${RG_BIN:-"/usr/sbin/rg"}
 
 case "$max_results" in
-  ''|*[!0-9]*)
-    printf >&2 'error: REPO_RG_MAX_RESULTS must be a positive integer: %s
+'' | *[!0-9]*)
+  printf >&2 'error: REPO_RG_MAX_RESULTS must be a positive integer: %s
 ' "$max_results"
-    exit 64
-    ;;
+  exit 64
+  ;;
 esac
 [ "$max_results" -gt 0 ] || {
   printf >&2 'error: REPO_RG_MAX_RESULTS must be greater than zero
@@ -61,25 +61,25 @@ else
 fi
 
 case "$root" in
-  "$HOME")
-    printf >&2 'error: refusing to search $HOME directly; pass a repo or subdir root
+"$HOME")
+  printf >&2 'error: refusing to search $HOME directly; pass a repo or subdir root
 '
-    exit 64
-    ;;
+  exit 64
+  ;;
 esac
 
 case "$mode" in
-  literal)
-    set -- --fixed-strings
-    ;;
-  regex)
-    set --
-    ;;
-  *)
-    printf >&2 'error: invalid REPO_RG_MODE: %s
+literal)
+  set -- --fixed-strings
+  ;;
+regex)
+  set --
+  ;;
+*)
+  printf >&2 'error: invalid REPO_RG_MODE: %s
 ' "$mode"
-    exit 64
-    ;;
+  exit 64
+  ;;
 esac
 
-"$rg_bin"   "$@"   --line-number   --column   --hidden   --color=never   --glob '!.git/**'   --glob '!node_modules/**'   --glob '!__pycache__/**'   --glob '!.mypy_cache/**'   --glob '!.pytest_cache/**'   --glob '!target/**'   --glob '!dist/**'   --glob '!build/**'   -- "$keyword" "$root" | sed -n "1,${max_results}p"
+"$rg_bin" "$@" --line-number --column --hidden --color=never --glob '!.git/**' --glob '!node_modules/**' --glob '!__pycache__/**' --glob '!.mypy_cache/**' --glob '!.pytest_cache/**' --glob '!target/**' --glob '!dist/**' --glob '!build/**' -- "$keyword" "$root" | sed -n "1,${max_results}p"
