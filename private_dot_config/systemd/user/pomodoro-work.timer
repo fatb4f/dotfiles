@@ -1,0 +1,10 @@
+[Unit]
+Description=Pomodoro 25m work interval
+
+[Timer]
+OnActiveSec=25m
+AccuracySec=1s
+Unit=pomodoro-work.service
+
+[Install]
+WantedBy=default.target

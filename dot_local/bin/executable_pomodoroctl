@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pomodoro controller for Hyprland + hyprlock + hypridle.
+#
+# Authority:
+#   - Work cadence: systemd user timers.
+#   - Break auth refusal: /run/user/$UID/pomodoro/break-until checked by PAM gate.
+#   - Unlock cleanup: ~/.local/bin/session-unlock.
+#
+# Defaults:
+#   - 25m focus
+#   - 5m short break
+#   - 30m long break after 5 focus cycles
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/pomodoro"
+RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+RUNTIME_POMODORO_DIR="$RUNTIME_DIR/pomodoro"
+
+mkdir -p "$STATE_DIR" "$RUNTIME_POMODORO_DIR"
+
+CYCLE_FILE="$STATE_DIR/cycle"
+BREAK_UNTIL_FILE="$RUNTIME_POMODORO_DIR/break-until"
+
+WORK_MIN="${POMODORO_WORK_MIN:-25}"
+SHORT_BREAK_MIN="${POMODORO_SHORT_BREAK_MIN:-5}"
+LONG_BREAK_MIN="${POMODORO_LONG_BREAK_MIN:-30}"
+LONG_BREAK_AFTER="${POMODORO_LONG_BREAK_AFTER:-5}"
+
+notify() {
+  command -v notify-send >/dev/null 2>&1 || return 0
+  notify-send "Pomodoro" "$1"
+}
+
+cycle_get() {
+  if [[ -f "$CYCLE_FILE" ]]; then
+    cat "$CYCLE_FILE"
+  else
+    printf '0\n'
+  fi
+}
+
+cycle_set() {
+  printf '%s\n' "$1" > "$CYCLE_FILE"
+}
+
+session_id() {
+  if [[ -n "${XDG_SESSION_ID:-}" ]]; then
+    printf '%s\n' "$XDG_SESSION_ID"
+    return 0
+  fi
+
+  loginctl show-user "$USER" -p Display --value 2>/dev/null || true
+}
+
+lock_now() {
+  # Existing lock entrypoint. hypridle/logind should route this into hyprlock.
+  systemctl --user start session-lock.service
+}
+
+unlock_now() {
+  local sid
+  sid="$(session_id)"
+
+  if [[ -n "$sid" ]]; then
+    loginctl unlock-session "$sid" || true
+  else
+    loginctl unlock-sessions || true
+  fi
+}
+
+start_work_timer() {
+  systemctl --user restart pomodoro-work.timer
+}
+
+stop_break_timer() {
+  systemctl --user stop pomodoro-break-end.timer || true
+  systemctl --user stop pomodoro-break-end.service || true
+}
+
+break_remaining_seconds() {
+  [[ -f "$BREAK_UNTIL_FILE" ]] || {
+    printf '0\n'
+    return 0
+  }
+
+  local now until_ts
+  now="$(date +%s)"
+  until_ts="$(cat "$BREAK_UNTIL_FILE" 2>/dev/null || printf '0')"
+
+  if (( until_ts > now )); then
+    printf '%s\n' "$(( until_ts - now ))"
+  else
+    printf '0\n'
+  fi
+}
+
+break_active() {
+  local remaining
+  remaining="$(break_remaining_seconds)"
+  (( remaining > 0 ))
+}
+
+case "${1:-}" in
+  start)
+    cycle_set "$(cycle_get)"
+    rm -f "$BREAK_UNTIL_FILE"
+    notify "Pomodoro armed: ${WORK_MIN}m focus"
+    start_work_timer
+    ;;
+
+  stop)
+    rm -f "$BREAK_UNTIL_FILE"
+    systemctl --user stop pomodoro-work.timer || true
+    stop_break_timer
+    notify "Pomodoro stopped"
+    ;;
+
+  reset)
+    cycle_set 0
+    "$0" stop
+    ;;
+
+  work-end)
+    current="$(cycle_get)"
+    next="$((current + 1))"
+
+    if (( next >= LONG_BREAK_AFTER )); then
+      break_min="$LONG_BREAK_MIN"
+      break_label="long"
+      cycle_set 0
+    else
+      break_min="$SHORT_BREAK_MIN"
+      break_label="short"
+      cycle_set "$next"
+    fi
+
+    mkdir -p "$RUNTIME_POMODORO_DIR"
+    printf '%s\n' "$(( $(date +%s) + break_min * 60 ))" > "$BREAK_UNTIL_FILE"
+
+    notify "Focus complete. ${break_label} break: ${break_min}m"
+    lock_now
+
+    stop_break_timer
+
+    systemd-run --user \
+      --unit=pomodoro-break-end \
+      --description="Pomodoro break end" \
+      --on-active="${break_min}m" \
+      "$HOME/.local/bin/pomodoroctl" break-end
+    ;;
+
+  break-end)
+    rm -f "$BREAK_UNTIL_FILE"
+    stop_break_timer
+    systemctl --user stop locked-session-halt.timer || true
+
+    notify "Break complete. New ${WORK_MIN}m focus cycle"
+    unlock_now
+    start_work_timer
+    ;;
+
+  status)
+    printf 'cycle=%s\n' "$(cycle_get)"
+    if [[ -f "$BREAK_UNTIL_FILE" ]]; then
+      remaining="$(break_remaining_seconds)"
+      printf 'break_until=%s\n' "$(cat "$BREAK_UNTIL_FILE")"
+      printf 'break_remaining_seconds=%s\n' "$remaining"
+    else
+      printf 'break_until=\n'
+      printf 'break_remaining_seconds=0\n'
+    fi
+
+    systemctl --user list-units 'pomodoro*' --all || true
+    systemctl --user list-timers 'pomodoro*' --all || true
+    ;;
+
+  *)
+    cat >&2 <<'EOF'
+usage: pomodoroctl {
+  start      # arm focus timer
+  stop       # stop work/break timers and clear break gate
+  reset      # reset cycle count and stop
+  work-end   # transition focus -> break
+  break-end  # transition break -> focus
+  status     # inspect state and units
+}
+EOF
+    exit 64
+    ;;
+esac

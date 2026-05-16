@@ -1,5 +1,4 @@
 # chezmoi local/source state
-.config/chezmoi/**
 .local/share/chezmoi/**
 
 # caches/state/runtime

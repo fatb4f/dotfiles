@@ -1,13 +1,9 @@
-# ~/.config/systemd/user/session-lock.service
-
 [Unit]
-Description=Graphical session locker
-Documentation=man:loginctl(1)
+Description=Session lock
 PartOf=graphical-session.target
 After=graphical-session.target
 Requisite=graphical-session.target
 
 [Service]
-Type=simple
-ExecStart=%h/.local/bin/wayland-lock-session
-Restart=no
+Type=exec
+ExecStart=%h/.local/bin/session-lock --run-locker

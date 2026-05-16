@@ -1,21 +1,53 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-sid="${XDG_SESSION_ID:-}"
+hyprlock_config="${XDG_CONFIG_HOME:-$HOME/.config}/hypr/hyprlock.conf"
 
-if [[ -z "$sid" ]]; then
-  sid="$(loginctl show-user "$USER" -p Display --value 2>/dev/null || true)"
-fi
+lock_request() {
+  local sid="${XDG_SESSION_ID:-}"
 
-if [[ -n "$sid" ]]; then
-  loginctl lock-session "$sid" || true
-else
-  loginctl lock-session || true
-fi
+  if [[ -n "$sid" ]]; then
+    loginctl lock-session "$sid"
+  else
+    loginctl lock-session
+  fi
+}
 
-# Fallback: if no listener reacts quickly, keep manual lock usable.
-# systemd will not spawn duplicate session-lock.service instances.
-sleep 0.2
-if ! systemctl --user is-active --quiet session-lock.service; then
-  exec systemctl --user start session-lock.service
-fi
+run_locker() {
+  # Avoid duplicate hyprlock instances.
+  if pgrep -xu "$USER" hyprlock >/dev/null 2>&1; then
+    exit 0
+  fi
+
+  systemctl --user start locked-session-halt.timer || true
+
+  if [[ -f "$hyprlock_config" ]]; then
+    hyprlock \
+      --config "$hyprlock_config" \
+      --immediate-render \
+      --no-fade-in
+  else
+    hyprlock \
+      --immediate-render \
+      --no-fade-in
+  fi
+
+  # hyprlock exits after successful auth or termination.
+  # session-unlock owns unlock policy and cleanup.
+  "$HOME/.local/bin/session-unlock" || true
+}
+
+case "${1:-}" in
+"" | --request)
+  lock_request
+  ;;
+
+--run-locker)
+  run_locker
+  ;;
+
+*)
+  printf 'usage: session-lock [--request|--run-locker]\n' >&2
+  exit 64
+  ;;
+esac

@@ -6,9 +6,9 @@
 [Unit]
 Description=Bridge logind Lock/Unlock signals to locker and halt timer
 Documentation=man:loginctl(1) man:org.freedesktop.login1(5)
-PartOf=wayland-session@niri.desktop.target
-After=wayland-session@niri.desktop.target
-Requisite=wayland-session@niri.desktop.target
+PartOf=wayland-wm@hyprland.desktop.service
+After=wayland-wm@hyprland.desktop.service
+Requisite=wayland-wm@hyprland.desktop.service
 
 [Service]
 Type=simple
@@ -17,4 +17,4 @@ Restart=on-failure
 RestartSec=2
 
 [Install]
-WantedBy=wayland-session@niri.desktop.target
+WantedBy=wayland-wm@hyprland.desktop.service

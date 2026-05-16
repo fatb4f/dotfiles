@@ -1,0 +1,8 @@
+[Unit]
+Description=Pomodoro work interval complete
+After=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/pomodoroctl work-end
