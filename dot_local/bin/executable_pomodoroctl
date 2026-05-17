@@ -73,9 +73,13 @@ start_work_timer() {
   systemctl --user restart pomodoro-work.timer
 }
 
-stop_break_timer() {
+stop_break_timer_external() {
   systemctl --user stop pomodoro-break-end.timer || true
   systemctl --user stop pomodoro-break-end.service || true
+}
+
+clear_break_state() {
+  rm -f "$BREAK_UNTIL_FILE"
 }
 
 break_remaining_seconds() {
@@ -104,15 +108,15 @@ break_active() {
 case "${1:-}" in
   start)
     cycle_set "$(cycle_get)"
-    rm -f "$BREAK_UNTIL_FILE"
+    clear_break_state
     notify "Pomodoro armed: ${WORK_MIN}m focus"
     start_work_timer
     ;;
 
   stop)
-    rm -f "$BREAK_UNTIL_FILE"
+    clear_break_state
     systemctl --user stop pomodoro-work.timer || true
-    stop_break_timer
+    stop_break_timer_external
     notify "Pomodoro stopped"
     ;;
 
@@ -141,7 +145,7 @@ case "${1:-}" in
     notify "Focus complete. ${break_label} break: ${break_min}m"
     lock_now
 
-    stop_break_timer
+    stop_break_timer_external
 
     systemd-run --user \
       --unit=pomodoro-break-end \
@@ -151,8 +155,7 @@ case "${1:-}" in
     ;;
 
   break-end)
-    rm -f "$BREAK_UNTIL_FILE"
-    stop_break_timer
+    clear_break_state
     systemctl --user stop locked-session-halt.timer || true
 
     notify "Break complete. New ${WORK_MIN}m focus cycle"
