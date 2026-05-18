@@ -1,14 +1,9 @@
 [Unit]
 Description=Pomodoro cycle bootstrap
-PartOf=graphical-session.target
-After=graphical-session.target
-Requisite=graphical-session.target
+Documentation=man:systemd.service(5) man:systemd.timer(5)
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/pomodoroctl start
-ExecStop=%h/.local/bin/pomodoroctl stop
 RemainAfterExit=yes
+ExecStart=%h/.local/bin/pomodoroctl enter-work
 
-[Install]
-WantedBy=graphical-session.target

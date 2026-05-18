@@ -1,11 +1,11 @@
 [Unit]
-Description=Pomodoro 25m work interval
+Description=Pomodoro 5m short break interval
 Documentation=man:systemd.timer(5)
 
 [Timer]
-OnActiveSec=25min
+OnActiveSec=5min
 AccuracySec=1s
 RandomizedDelaySec=0
 Persistent=false
-Unit=pomodoro-work.service
+Unit=pomodoro-break.service
 

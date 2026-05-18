@@ -38,7 +38,7 @@
   },
   "model": {
     "name": "$GEMINI_MODEL",
-    "maxSessionTurns": 40,
+    "maxSessionTurns": -1,
     "chatCompression": {
       "contextPercentageThreshold": 0.6
     },
@@ -50,15 +50,15 @@
   },
   "context": {
     "fileName": [
-      "GEMINI.md",
-      "AGENTS.md"
+      "GEMINI.md"
     ],
-    "discoveryMaxDirs": 80,
+    "discoveryMaxDirs": 0,
     "loadFromIncludeDirectories": false,
     "fileFiltering": {
       "respectGitIgnore": true,
       "respectGeminiIgnore": true,
-      "enableRecursiveFileSearch": true
+      "enableRecursiveFileSearch": false,
+      "enableFuzzySearch": false
     }
   },
   "tools": {
@@ -90,7 +90,7 @@
     },
     "environmentVariableRedaction": {
       "enabled": true
-    }
+    },
     "auth": {
       "selectedType": "oauth-personal"
     }

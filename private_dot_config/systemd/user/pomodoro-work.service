@@ -1,8 +1,7 @@
 [Unit]
 Description=Pomodoro work interval complete
-After=graphical-session.target
-Requisite=graphical-session.target
+Documentation=man:systemd.service(5)
 
 [Service]
 Type=oneshot
-ExecStart=%h/.local/bin/pomodoroctl work-end
+ExecStart=%h/.local/bin/pomodoroctl finish-work

@@ -1,194 +1,325 @@
 #!/usr/bin/env bash
+# pomodoroctl: small systemd-user backed Pomodoro state machine.
+# Contract:
+#   work edge  -> one-shot 25m timer
+#   break edge -> one-shot 5m or 30m timer
+#   no timer should be rearmed from stale OnUnitActive/Inactive history
+
 set -euo pipefail
 
-# Pomodoro controller for Hyprland + hyprlock + hypridle.
-#
-# Authority:
-#   - Work cadence: systemd user timers.
-#   - Break auth refusal: /run/user/$UID/pomodoro/break-until checked by PAM gate.
-#   - Unlock cleanup: ~/.local/bin/session-unlock.
-#
-# Defaults:
-#   - 25m focus
-#   - 5m short break
-#   - 30m long break after 5 focus cycles
+WORK_SECONDS="${POMODORO_WORK_SECONDS:-1500}"
+SHORT_BREAK_SECONDS="${POMODORO_SHORT_BREAK_SECONDS:-300}"
+LONG_BREAK_SECONDS="${POMODORO_LONG_BREAK_SECONDS:-1800}"
+LONG_BREAK_EVERY="${POMODORO_LONG_BREAK_EVERY:-4}"
 
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/pomodoro"
-RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-RUNTIME_POMODORO_DIR="$RUNTIME_DIR/pomodoro"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/pomodoroctl"
+STATE_FILE="$STATE_DIR/state.env"
 
-mkdir -p "$STATE_DIR" "$RUNTIME_POMODORO_DIR"
+WORK_TIMER="pomodoro-work.timer"
+SHORT_BREAK_TIMER="pomodoro-short-break.timer"
+LONG_BREAK_TIMER="pomodoro-long-break.timer"
+CYCLE_SERVICE="pomodoro-cycle.service"
 
-CYCLE_FILE="$STATE_DIR/cycle"
-BREAK_UNTIL_FILE="$RUNTIME_POMODORO_DIR/break-until"
-
-WORK_MIN="${POMODORO_WORK_MIN:-25}"
-SHORT_BREAK_MIN="${POMODORO_SHORT_BREAK_MIN:-5}"
-LONG_BREAK_MIN="${POMODORO_LONG_BREAK_MIN:-30}"
-LONG_BREAK_AFTER="${POMODORO_LONG_BREAK_AFTER:-5}"
-
-notify() {
-  command -v notify-send >/dev/null 2>&1 || return 0
-  notify-send "Pomodoro" "$1"
+now_epoch() {
+  date +%s
 }
 
-cycle_get() {
-  if [[ -f "$CYCLE_FILE" ]]; then
-    cat "$CYCLE_FILE"
-  else
-    printf '0\n'
+iso_local_from_epoch() {
+  local epoch="$1"
+  if [[ -z "$epoch" || "$epoch" == "0" ]]; then
+    printf '\n'
+    return 0
+  fi
+  date --date="@$epoch" '+%Y-%m-%d %H:%M:%S %Z'
+}
+
+mkdir_state() {
+  mkdir -p "$STATE_DIR"
+}
+
+write_state() {
+  mkdir_state
+  cat >"$STATE_FILE" <<STATE
+PHASE=${PHASE:-idle}
+CYCLE=${CYCLE:-0}
+BREAK_KIND=${BREAK_KIND:-}
+WORK_STARTED_AT=${WORK_STARTED_AT:-0}
+WORK_UNTIL=${WORK_UNTIL:-0}
+BREAK_STARTED_AT=${BREAK_STARTED_AT:-0}
+BREAK_UNTIL=${BREAK_UNTIL:-0}
+LAST_TRANSITION_AT=${LAST_TRANSITION_AT:-0}
+STATE
+}
+
+load_state() {
+  PHASE=idle
+  CYCLE=0
+  BREAK_KIND=
+  WORK_STARTED_AT=0
+  WORK_UNTIL=0
+  BREAK_STARTED_AT=0
+  BREAK_UNTIL=0
+  LAST_TRANSITION_AT=0
+
+  if [[ -f "$STATE_FILE" ]]; then
+    # shellcheck disable=SC1090
+    source "$STATE_FILE"
+  fi
+
+  PHASE="${PHASE:-idle}"
+  CYCLE="${CYCLE:-0}"
+  BREAK_KIND="${BREAK_KIND:-}"
+  WORK_STARTED_AT="${WORK_STARTED_AT:-0}"
+  WORK_UNTIL="${WORK_UNTIL:-0}"
+  BREAK_STARTED_AT="${BREAK_STARTED_AT:-0}"
+  BREAK_UNTIL="${BREAK_UNTIL:-0}"
+  LAST_TRANSITION_AT="${LAST_TRANSITION_AT:-0}"
+}
+
+systemctl_user() {
+  if [[ "${POMODOROCTL_NO_SYSTEMD:-0}" == "1" ]]; then
+    return 0
+  fi
+  systemctl --user "$@"
+}
+
+stop_timers() {
+  systemctl_user stop "$WORK_TIMER" "$SHORT_BREAK_TIMER" "$LONG_BREAK_TIMER" 2>/dev/null || true
+}
+
+restart_timer() {
+  local timer="$1"
+  systemctl_user reset-failed "$timer" 2>/dev/null || true
+  systemctl_user restart "$timer"
+}
+
+notify_phase() {
+  local title="$1"
+  local body="$2"
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send "$title" "$body" >/dev/null 2>&1 || true
   fi
 }
 
-cycle_set() {
-  printf '%s\n' "$1" > "$CYCLE_FILE"
+enter_work() {
+  load_state
+  local now until
+  now="$(now_epoch)"
+  until=$((now + WORK_SECONDS))
+
+  PHASE=work
+  BREAK_KIND=
+  WORK_STARTED_AT="$now"
+  WORK_UNTIL="$until"
+  BREAK_STARTED_AT=0
+  BREAK_UNTIL=0
+  LAST_TRANSITION_AT="$now"
+  write_state
+
+  stop_timers
+  restart_timer "$WORK_TIMER"
+  notify_phase "Pomodoro" "Work interval started: ${WORK_SECONDS}s"
 }
 
-session_id() {
-  if [[ -n "${XDG_SESSION_ID:-}" ]]; then
-    printf '%s\n' "$XDG_SESSION_ID"
+enter_break() {
+  local kind="$1"
+  local seconds="$2"
+  load_state
+
+  local now until timer
+  now="$(now_epoch)"
+  until=$((now + seconds))
+
+  PHASE=break
+  BREAK_KIND="$kind"
+  BREAK_STARTED_AT="$now"
+  BREAK_UNTIL="$until"
+  WORK_STARTED_AT=0
+  WORK_UNTIL=0
+  LAST_TRANSITION_AT="$now"
+  write_state
+
+  case "$kind" in
+    short) timer="$SHORT_BREAK_TIMER" ;;
+    long) timer="$LONG_BREAK_TIMER" ;;
+    *)
+      printf 'unknown break kind: %s\n' "$kind" >&2
+      exit 64
+      ;;
+  esac
+
+  stop_timers
+  restart_timer "$timer"
+  notify_phase "Pomodoro" "${kind^} break started: ${seconds}s"
+}
+
+finish_work() {
+  load_state
+  if [[ "$PHASE" != "work" ]]; then
+    printf 'Ignoring work timer edge because phase=%s\n' "$PHASE" >&2
     return 0
   fi
 
-  loginctl show-user "$USER" -p Display --value 2>/dev/null || true
-}
+  local next_cycle kind seconds
+  next_cycle=$((CYCLE + 1))
+  CYCLE="$next_cycle"
 
-lock_now() {
-  # Existing lock entrypoint. hypridle/logind should route this into hyprlock.
-  systemctl --user start session-lock.service
-}
-
-unlock_now() {
-  local sid
-  sid="$(session_id)"
-
-  if [[ -n "$sid" ]]; then
-    loginctl unlock-session "$sid" || true
+  if (( next_cycle % LONG_BREAK_EVERY == 0 )); then
+    kind=long
+    seconds="$LONG_BREAK_SECONDS"
   else
-    loginctl unlock-sessions || true
+    kind=short
+    seconds="$SHORT_BREAK_SECONDS"
   fi
+
+  write_state
+  enter_break "$kind" "$seconds"
 }
 
-start_work_timer() {
-  systemctl --user restart pomodoro-work.timer
-}
-
-stop_break_timer_external() {
-  systemctl --user stop pomodoro-break-end.timer || true
-  systemctl --user stop pomodoro-break-end.service || true
-}
-
-clear_break_state() {
-  rm -f "$BREAK_UNTIL_FILE"
-}
-
-break_remaining_seconds() {
-  [[ -f "$BREAK_UNTIL_FILE" ]] || {
-    printf '0\n'
+finish_break() {
+  load_state
+  if [[ "$PHASE" != "break" ]]; then
+    printf 'Ignoring break timer edge because phase=%s\n' "$PHASE" >&2
     return 0
-  }
-
-  local now until_ts
-  now="$(date +%s)"
-  until_ts="$(cat "$BREAK_UNTIL_FILE" 2>/dev/null || printf '0')"
-
-  if (( until_ts > now )); then
-    printf '%s\n' "$(( until_ts - now ))"
-  else
-    printf '0\n'
   fi
+  enter_work
 }
 
-break_active() {
-  local remaining
-  remaining="$(break_remaining_seconds)"
-  (( remaining > 0 ))
+start_cycle() {
+  mkdir_state
+  if [[ "${POMODOROCTL_NO_SYSTEMD:-0}" == "1" ]]; then
+    enter_work
+    return 0
+  fi
+  systemctl_user reset-failed "$CYCLE_SERVICE" "$WORK_TIMER" "$SHORT_BREAK_TIMER" "$LONG_BREAK_TIMER" 2>/dev/null || true
+  systemctl_user restart "$CYCLE_SERVICE"
 }
 
-case "${1:-}" in
-  start)
-    cycle_set "$(cycle_get)"
-    clear_break_state
-    notify "Pomodoro armed: ${WORK_MIN}m focus"
-    start_work_timer
-    ;;
-
-  stop)
-    clear_break_state
-    systemctl --user stop pomodoro-work.timer || true
-    stop_break_timer_external
-    notify "Pomodoro stopped"
-    ;;
-
-  reset)
-    cycle_set 0
-    "$0" stop
-    ;;
-
-  work-end)
-    current="$(cycle_get)"
-    next="$((current + 1))"
-
-    if (( next >= LONG_BREAK_AFTER )); then
-      break_min="$LONG_BREAK_MIN"
-      break_label="long"
-      cycle_set 0
-    else
-      break_min="$SHORT_BREAK_MIN"
-      break_label="short"
-      cycle_set "$next"
-    fi
-
-    mkdir -p "$RUNTIME_POMODORO_DIR"
-    printf '%s\n' "$(( $(date +%s) + break_min * 60 ))" > "$BREAK_UNTIL_FILE"
-
-    notify "Focus complete. ${break_label} break: ${break_min}m"
-    lock_now
-
-    stop_break_timer_external
-
-    systemd-run --user \
-      --unit=pomodoro-break-end \
-      --description="Pomodoro break end" \
-      --on-active="${break_min}m" \
-      "$HOME/.local/bin/pomodoroctl" break-end
-    ;;
-
-  break-end)
-    clear_break_state
-    systemctl --user stop locked-session-halt.timer || true
-
-    notify "Break complete. New ${WORK_MIN}m focus cycle"
-    unlock_now
-    start_work_timer
-    ;;
-
-  status)
-    printf 'cycle=%s\n' "$(cycle_get)"
-    if [[ -f "$BREAK_UNTIL_FILE" ]]; then
-      remaining="$(break_remaining_seconds)"
-      printf 'break_until=%s\n' "$(cat "$BREAK_UNTIL_FILE")"
-      printf 'break_remaining_seconds=%s\n' "$remaining"
-    else
-      printf 'break_until=\n'
-      printf 'break_remaining_seconds=0\n'
-    fi
-
-    systemctl --user list-units 'pomodoro*' --all || true
-    systemctl --user list-timers 'pomodoro*' --all || true
-    ;;
-
-  *)
-    cat >&2 <<'EOF'
-usage: pomodoroctl {
-  start      # arm focus timer
-  stop       # stop work/break timers and clear break gate
-  reset      # reset cycle count and stop
-  work-end   # transition focus -> break
-  break-end  # transition break -> focus
-  status     # inspect state and units
+stop_cycle() {
+  stop_timers
+  if [[ "${1:-}" != "--keep-anchor" ]]; then
+    systemctl_user stop "$CYCLE_SERVICE" 2>/dev/null || true
+  fi
+  mkdir_state
+  PHASE=idle
+  CYCLE=0
+  BREAK_KIND=
+  WORK_STARTED_AT=0
+  WORK_UNTIL=0
+  BREAK_STARTED_AT=0
+  BREAK_UNTIL=0
+  LAST_TRANSITION_AT="$(now_epoch)"
+  write_state
 }
-EOF
-    exit 64
-    ;;
-esac
+
+skip_current() {
+  load_state
+  case "$PHASE" in
+    work) finish_work ;;
+    break) finish_break ;;
+    idle) start_cycle ;;
+    *)
+      printf 'unknown phase: %s\n' "$PHASE" >&2
+      exit 65
+      ;;
+  esac
+}
+
+remaining_seconds() {
+  local until="$1"
+  local now remaining
+  now="$(now_epoch)"
+  remaining=$((until - now))
+  if (( remaining < 0 )); then
+    remaining=0
+  fi
+  printf '%s\n' "$remaining"
+}
+
+status() {
+  load_state
+
+  local break_remaining work_remaining
+  break_remaining=0
+  work_remaining=0
+  if [[ "$PHASE" == "break" && "$BREAK_UNTIL" =~ ^[0-9]+$ ]]; then
+    break_remaining="$(remaining_seconds "$BREAK_UNTIL")"
+  fi
+  if [[ "$PHASE" == "work" && "$WORK_UNTIL" =~ ^[0-9]+$ ]]; then
+    work_remaining="$(remaining_seconds "$WORK_UNTIL")"
+  fi
+
+  # Preserve the old high-signal fields first, then add timing evidence.
+  printf 'cycle=%s\n' "$CYCLE"
+  printf 'phase=%s\n' "$PHASE"
+  printf 'break_kind=%s\n' "$BREAK_KIND"
+  printf 'break_until=%s\n' "$(iso_local_from_epoch "$BREAK_UNTIL")"
+  printf 'break_remaining_seconds=%s\n' "$break_remaining"
+  printf 'work_until=%s\n' "$(iso_local_from_epoch "$WORK_UNTIL")"
+  printf 'work_remaining_seconds=%s\n' "$work_remaining"
+  printf 'last_transition_at=%s\n' "$(iso_local_from_epoch "$LAST_TRANSITION_AT")"
+  printf '\n'
+
+  if [[ "${POMODOROCTL_NO_SYSTEMD:-0}" == "1" ]]; then
+    return 0
+  fi
+
+  systemctl --user --no-pager --plain list-units \
+    "$CYCLE_SERVICE" \
+    "pomodoro-work.service" \
+    "pomodoro-break.service" \
+    "$WORK_TIMER" \
+    "$SHORT_BREAK_TIMER" \
+    "$LONG_BREAK_TIMER" || true
+
+  printf '\n'
+
+  systemctl --user --no-pager --plain list-timers \
+    "$WORK_TIMER" \
+    "$SHORT_BREAK_TIMER" \
+    "$LONG_BREAK_TIMER" || true
+}
+
+usage() {
+  cat <<'USAGE'
+Usage: pomodoroctl COMMAND
+
+Commands:
+  start              start/restart the Pomodoro cycle at a work interval
+  stop               stop timers and reset state
+  status             print state plus related systemd units/timers
+  skip               advance the current phase immediately
+  enter-work         internal: enter work phase and arm work timer
+  finish-work        internal: work timer expired; enter short/long break
+  finish-break       internal: break timer expired; enter next work phase
+
+Environment overrides:
+  POMODORO_WORK_SECONDS=1500
+  POMODORO_SHORT_BREAK_SECONDS=300
+  POMODORO_LONG_BREAK_SECONDS=1800
+  POMODORO_LONG_BREAK_EVERY=4
+  POMODOROCTL_NO_SYSTEMD=1
+USAGE
+}
+
+main() {
+  local cmd="${1:-status}"
+  shift || true
+
+  case "$cmd" in
+    start) start_cycle "$@" ;;
+    stop|reset) stop_cycle "$@" ;;
+    status) status "$@" ;;
+    skip|next) skip_current "$@" ;;
+    enter-work|start-work) enter_work "$@" ;;
+    finish-work|work-done|work-expired) finish_work "$@" ;;
+    finish-break|break-done|break-expired) finish_break "$@" ;;
+    -h|--help|help) usage ;;
+    *)
+      usage >&2
+      exit 64
+      ;;
+  esac
+}
+
+main "$@"

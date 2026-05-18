@@ -8,6 +8,6 @@ Description=Power off if session remains locked too long
 Documentation=man:systemd.timer(5)
 
 [Timer]
-OnActiveSec=20min
+OnActiveSec=60min
 AccuracySec=15s
 Unit=locked-session-halt.service
