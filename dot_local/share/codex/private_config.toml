@@ -13,7 +13,6 @@ sqlite_home = "/home/_404/.local/state/codex/sqlite"
 allow_login_shell = false
 
 [features]
-codex_hooks = false
 shell_tool = true
 shell_snapshot = false
 
@@ -77,22 +76,40 @@ default_permissions = ":workspace"
 model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 
-[profiles.bashly.sandbox_workspace_write]
-network_access = true
-writable_roots = [
-  "/home/_404/.local/src/github.com/fatb4f/bashly.sh",
-]
-
 [profiles.agent-sdk]
 approval_policy = "never"
 sandbox_mode = "workspace-write"
 default_permissions = ":workspace"
-model = "gpt-5.4-mini"
+model = "gpt-5.5"
 model_reasoning_effort = "medium"
 
-[profiles.agent-sdk.sandbox_workspace_write]
+[sandbox_workspace_write]
 network_access = true
 writable_roots = [
-  "/home/_404/.local/src/fatb4f/agent-sdk",
   "/home/_404/.local/share/chezmoi",
-]
+  "/home/_404/.local/share/codex",
+  "/home/_404/.local/share/go/pkg/mod",
+  "/home/_404/.cache/go-build",
+  ]
+
+[mcp_servers.gopls]
+command = "/usr/bin/gopls"
+args = ["mcp"]
+enabled = true
+startup_timeout_sec = 20
+tool_timeout_sec = 120
+
+[mcp_servers.gopls.tools.go_workspace]
+approval_mode = "approve"
+
+[mcp_servers.gopls.tools.go_vulncheck]
+approval_mode = "approve"
+
+[mcp_servers.gopls.tools.go_file_context]
+approval_mode = "approve"
+
+[mcp_servers.gopls.tools.go_diagnostics]
+approval_mode = "approve"
+
+[mcp_servers.gopls.tools.go_symbol_references]
+approval_mode = "approve"
