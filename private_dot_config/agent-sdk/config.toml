@@ -1,0 +1,89 @@
+# ~/.config/agent-sdk/config.toml
+# Local Agent SDK control-plane configuration.
+# Codex config is written separately by:
+#   agentctl add-agent codex
+
+[paths]
+# Source repo root for agent-sdk.
+project_root = "/home/_404/.local/share/src/agent-sdk"
+
+# Source skill manifests live here.
+source_skill_tree = "/home/_404/.local/share/src/agent-sdk/skills"
+
+# Projected/runtime skill tree owned by agent-sdk.
+projected_skill_tree = "/home/_404/.local/share/agent-sdk/skills"
+
+# Optional upstream/cache state for fetched docs.
+state_root = "/home/_404/.local/share/agent-sdk"
+cache_root = "/home/_404/.cache/agent-sdk"
+
+[mcp]
+# Read-only MCP server over the projected skill tree.
+server_name = "agent-sdk"
+command = "agent-sdk-mcp"
+args = [
+  "serve",
+  "--skill-tree",
+  "/home/_404/.local/share/agent-sdk/skills",
+]
+
+# MCP must discover projected skills through projection-manifest.json.
+skill_tree = "/home/_404/.local/share/agent-sdk/skills"
+read_only = true
+
+enabled_tools = [
+  "agent_sdk_projection_status",
+  "agent_sdk_skill_list",
+  "agent_sdk_skill_read",
+  "agent_sdk_reference_read",
+]
+
+[codex]
+# Codex-owned config. This is not the projection destination.
+config_path = "/home/_404/.local/share/codex/config.toml"
+
+# Written/updated by:
+#   agentctl add-agent codex
+mcp_server_name = "agent-sdk"
+
+# First activation sequence:
+#   agentctl project-skills
+#   agentctl add-agent codex
+#   agentctl add-agent codex --check
+#   agent-sdk-mcp doctor
+activation_order = [
+  "agentctl project-skills",
+  "agentctl add-agent codex",
+  "agentctl add-agent codex --check",
+  "agent-sdk-mcp doctor",
+]
+
+[projection]
+command = "agentctl project-skills"
+
+# v0 projection rebuilds the projected skill tree from source manifests.
+source_manifest_only = true
+
+# Runtime skill surface expected after projection.
+expected_skills = [
+  "agent-sdk",
+  "bashly",
+  "cue",
+  "source-repo",
+]
+
+# Source-only files must never appear in projected skill directories.
+forbidden_projected_artifacts = [
+  "manifest.cue",
+  "skill.cue",
+  "projection.cue",
+  "workflow.cue",
+  "skills.cue",
+  "SKILLS_MANIFEST_README.md",
+  "skills-reference-manifest.report.json",
+]
+
+[doctor]
+require_projection_manifest = true
+require_read_only_mcp = true
+reject_codex_owned_skill_tree = true
