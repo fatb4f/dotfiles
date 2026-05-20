@@ -1,7 +1,0 @@
-= view_marker
-
-if Settings.compact_short_flags || Settings.conjoined_flag_args
-  = render :normalize_input_function
-else
-  = render :normalize_input_simple
-end

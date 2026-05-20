@@ -1,9 +1,0 @@
----
-get:
-- "--force"
-- "--help"
-- "--verbose"
-- "--version"
-- "-h"
-- "-v"
-- "<file>"

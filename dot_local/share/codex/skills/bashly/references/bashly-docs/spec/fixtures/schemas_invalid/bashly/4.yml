@@ -1,4 +1,0 @@
-environment_variables:
-- name: api_key
-  x_valid: allowed
-  invalid: not allowed

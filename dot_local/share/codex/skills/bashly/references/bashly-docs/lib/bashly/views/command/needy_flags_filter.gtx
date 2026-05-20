@@ -1,9 +1,0 @@
-if needy_flags.any?
-  = view_marker
-
-  needy_flags.each do |flag|
-    = flag.render(:needs)
-  end
-
-  >
-end

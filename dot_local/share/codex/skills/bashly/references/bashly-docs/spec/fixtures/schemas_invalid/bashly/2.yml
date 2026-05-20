@@ -1,4 +1,0 @@
-args:
-- name: path
-  x_valid: allowed
-  invalid: not allowed

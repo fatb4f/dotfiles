@@ -1,7 +1,0 @@
-if validatables.any?
-  = view_marker
-
-  validatables.each do |arg_or_flag|
-    = arg_or_flag.render(:validations)
-  end
-end

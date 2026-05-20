@@ -1,1 +1,0 @@
-#<Bashly::ConfigurationError: [spec/fixtures/libraries_validation/files_array.yml] database.files must be an array>

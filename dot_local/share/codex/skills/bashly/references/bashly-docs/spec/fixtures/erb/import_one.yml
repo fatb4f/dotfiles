@@ -1,2 +1,0 @@
-file: import_one.yml
-erb: <%= 'C1-10P'.gsub('1-1', 'H').gsub('0', 'O') %>

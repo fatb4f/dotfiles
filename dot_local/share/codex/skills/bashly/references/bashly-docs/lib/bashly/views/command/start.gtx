@@ -1,5 +1,0 @@
-= view_marker
-
-> command_line_args=("$@")
-> {{ Settings.function_name :initialize }}
-> {{ Settings.function_name :run }} "${command_line_args[@]}"

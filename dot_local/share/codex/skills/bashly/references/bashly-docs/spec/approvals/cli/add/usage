@@ -1,4 +1,0 @@
-Usage:
-  bashly add [--source NAME] LIBRARY [ARGS...] [--force --quiet]
-  bashly add [--source NAME] --list
-  bashly add (-h|--help)

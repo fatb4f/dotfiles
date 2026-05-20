@@ -1,7 +1,0 @@
-= view_marker
-
-> {{ function_name }}_command() {
-= render(:variables).indent(2)
-= load_user_file(filename).indent 2
-> }
->

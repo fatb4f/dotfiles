@@ -1,4 +1,0 @@
---require spec_helper
---format progress
---pattern "*_spec.sh"
---env TEST="a b c"

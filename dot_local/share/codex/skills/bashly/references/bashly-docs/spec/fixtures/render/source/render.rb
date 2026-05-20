@@ -1,1 +1,0 @@
-puts 'render script executed'

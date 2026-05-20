@@ -1,9 +1,0 @@
-Generate the bash script to STDOUT
-
-Usage:
-  bashly preview
-  bashly preview (-h|--help)
-
-Options:
-  -h --help
-    Show this help
