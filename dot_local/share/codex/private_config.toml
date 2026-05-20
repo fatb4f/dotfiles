@@ -113,3 +113,6 @@ approval_mode = "approve"
 
 [mcp_servers.gopls.tools.go_symbol_references]
 approval_mode = "approve"
+
+[mcp_servers.gopls.tools.go_search]
+approval_mode = "approve"

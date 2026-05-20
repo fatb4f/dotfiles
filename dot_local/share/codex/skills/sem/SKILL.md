@@ -28,6 +28,7 @@ Prefer the explicitly installed binary:
 
 ```sh
 SEM_BIN="${SEM_BIN:-$HOME/.local/bin/sem}"
+SEM_DIFF="${SEM_DIFF:-$HOME/.local/bin/sem-diff-wrapper}"
 ```
 
 Fallback only when safe:
@@ -63,8 +64,8 @@ GNU Parallel can also provide a `sem` binary, so do not assume `sem` on PATH is 
 Use after staging an intended changeset.
 
 ```sh
-git diff --cached | "$SEM_BIN" diff --patch --format json > .codex/frames/sem-staged-diff.json
-git diff --cached | "$SEM_BIN" diff --patch --format markdown > .codex/frames/sem-staged-diff.md
+git diff --cached | "$SEM_BIN" diff --patch --format json
+git diff --cached | "$SEM_BIN" diff --patch --format markdown
 ```
 
 ### Commit-range semantic diff
@@ -72,7 +73,7 @@ git diff --cached | "$SEM_BIN" diff --patch --format markdown > .codex/frames/se
 Use when comparing accepted slices.
 
 ```sh
-"$SEM_BIN" diff --from HEAD~5 --to HEAD --format json > .codex/frames/sem-range-diff.json
+"$SEM_BIN" diff --from HEAD~5 --to HEAD --format json
 ```
 
 ### Entity listing
@@ -80,13 +81,13 @@ Use when comparing accepted slices.
 Use instead of broad source crawling when mapping code structure.
 
 ```sh
-"$SEM_BIN" entities --json > .codex/frames/sem-entities.json
+"$SEM_BIN" entities --json
 ```
 
 For a specific file or subtree:
 
 ```sh
-"$SEM_BIN" entities path/to/file_or_dir --json > .codex/frames/sem-entities.json
+"$SEM_BIN" entities path/to/file_or_dir --json
 ```
 
 ### Entity context
@@ -94,8 +95,8 @@ For a specific file or subtree:
 Use when a symbol, function, class, method, module, or config entity is named.
 
 ```sh
-"$SEM_BIN" context SYMBOL --budget 4000 > .codex/frames/sem-context.md
-"$SEM_BIN" context SYMBOL --budget 4000 --json > .codex/frames/sem-context.json
+"$SEM_BIN" context SYMBOL --budget 4000
+"$SEM_BIN" context SYMBOL --budget 4000
 ```
 
 ### Impact / blast radius
@@ -103,31 +104,31 @@ Use when a symbol, function, class, method, module, or config entity is named.
 Use before modifying a named symbol or after a semantic diff identifies changed entities.
 
 ```sh
-"$SEM_BIN" impact SYMBOL --json > .codex/frames/sem-impact.json
+"$SEM_BIN" impact SYMBOL --json
 ```
 
 Direct dependencies only:
 
 ```sh
-"$SEM_BIN" impact SYMBOL --deps --json > .codex/frames/sem-impact-deps.json
+"$SEM_BIN" impact SYMBOL --deps --json
 ```
 
 Direct dependents only:
 
 ```sh
-"$SEM_BIN" impact SYMBOL --dependents --json > .codex/frames/sem-impact-dependents.json
+"$SEM_BIN" impact SYMBOL --dependents --json
 ```
 
 Tests only:
 
 ```sh
-"$SEM_BIN" impact SYMBOL --tests --json > .codex/frames/sem-impact-tests.json
+"$SEM_BIN" impact SYMBOL --tests --json
 ```
 
 Disambiguate by file when needed:
 
 ```sh
-"$SEM_BIN" impact SYMBOL --file path/to/file --json > .codex/frames/sem-impact.json
+"$SEM_BIN" impact SYMBOL --file path/to/file --json
 ```
 
 ### Entity blame
@@ -135,7 +136,7 @@ Disambiguate by file when needed:
 Use when the user asks who/what last changed a function, class, or method.
 
 ```sh
-"$SEM_BIN" blame path/to/file --json > .codex/frames/sem-blame.json
+"$SEM_BIN" blame path/to/file --json
 ```
 
 ### Entity history
@@ -143,13 +144,13 @@ Use when the user asks who/what last changed a function, class, or method.
 Use when the user asks how a symbol evolved.
 
 ```sh
-"$SEM_BIN" log SYMBOL --limit 20 --json > .codex/frames/sem-log.json
+"$SEM_BIN" log SYMBOL --limit 20 --json
 ```
 
 Verbose history only when explicitly needed:
 
 ```sh
-"$SEM_BIN" log SYMBOL --limit 20 -v > .codex/frames/sem-log.md
+"$SEM_BIN" log SYMBOL --limit 20 -v
 ```
 
 ## Integration with repo-intel

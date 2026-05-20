@@ -1,3 +1,7 @@
+---
+name: agent-sdk 
+description: agent-sdk 
+---
 # agent-sdk
 
 Use this skill when working with repositories or runtime homes managed by `agent-sdk`.
