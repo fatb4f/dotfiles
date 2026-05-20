@@ -1,0 +1,188 @@
+[
+	{
+		"description": "propertyNames validation",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"propertyNames": {
+				"maxLength": 3
+			}
+		},
+		"skip": {
+			"v3": "extract error: cannot compile resulting schema: reference \"strings\" in label expression refers to field against which it would be matched:\n    generated.cue:6:3\n",
+			"v3-roundtrip": "inital extract failed"
+		},
+		"tests": [
+			{
+				"description": "all property names valid",
+				"data": {
+					"f": {},
+					"foo": {}
+				},
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "some property names invalid",
+				"data": {
+					"foo": {},
+					"foobar": {}
+				},
+				"valid": false,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "object without properties is valid",
+				"data": {},
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "ignores arrays",
+				"data": [
+					1,
+					2,
+					3,
+					4
+				],
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "ignores strings",
+				"data": "foobar",
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "ignores other non-objects",
+				"data": 12,
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "propertyNames validation with pattern",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"propertyNames": {
+				"pattern": "^a+$"
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "matching property names valid",
+				"data": {
+					"a": {},
+					"aa": {},
+					"aaa": {}
+				},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "non-matching property name is invalid",
+				"data": {
+					"aaA": {}
+				},
+				"valid": false,
+				"skip": {
+					"v3": "unexpected success",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "object without properties is valid",
+				"data": {},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "propertyNames with boolean schema true",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"propertyNames": true
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "object with any properties is valid",
+				"data": {
+					"foo": 1
+				},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty object is valid",
+				"data": {},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "propertyNames with boolean schema false",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"propertyNames": false
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "object with any properties is invalid",
+				"data": {
+					"foo": 1
+				},
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty object is valid",
+				"data": {},
+				"valid": true,
+				"skip": {
+					"v3": "disallowed:\n    generated.cue:4:3\n    generated.cue:3:1\n    instance.json:1:1\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	}
+]

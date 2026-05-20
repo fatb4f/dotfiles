@@ -1,0 +1,27 @@
+-- cue.mod/modules.cue --
+-- file1.cue --
+@extern("testfn")
+
+package scopetest
+
+#Bar: float
+#Baz: {
+	#Quux: string
+	spam: eggs: bool
+}
+
+foo: _ @testfn(int)
+bar: _ @testfn(#Bar)
+baz: {
+	quux: _ @testfn(#Baz.#Quux)
+	eggs: _ @testfn(#Baz.spam.eggs)
+}
+-- out/extern --
+{
+	foo: int
+	bar: float
+	baz: {
+		quux: string
+		eggs: bool
+	}
+}

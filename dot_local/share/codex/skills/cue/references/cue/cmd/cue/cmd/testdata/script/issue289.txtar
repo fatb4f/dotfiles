@@ -1,0 +1,13 @@
+exec cue import test.yaml -p kube -l 'strings.ToCamel(kind)' -l metadata.name -f
+cmp stdout expect-stdout
+
+-- test.yaml --
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-nginx
+spec:
+  type: NodePort
+---
+# EMPTY FILE
+-- expect-stdout --

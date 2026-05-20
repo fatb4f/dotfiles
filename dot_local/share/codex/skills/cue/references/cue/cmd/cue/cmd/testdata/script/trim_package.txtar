@@ -1,0 +1,37 @@
+exec cue mod init
+
+exec cue trim -o - ./...
+cmp stdout expect-stdout
+
+-- a.cue --
+package p
+
+x: y: int
+x: z: int
+-- b/b.cue --
+package p
+
+x: y: 7
+-- c/c.cue --
+package p
+
+x: z: 6
+-- expect-stdout --
+package p
+
+x: y: int
+x: z: int
+package p
+
+x: y: int
+x: z: int
+package p
+
+x: y: 7
+package p
+
+x: y: int
+x: z: int
+package p
+
+x: z: 6

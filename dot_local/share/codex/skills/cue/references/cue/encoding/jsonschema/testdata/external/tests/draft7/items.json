@@ -1,0 +1,658 @@
+[
+	{
+		"description": "a schema given for items",
+		"schema": {
+			"items": {
+				"type": "integer"
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "valid items",
+				"data": [
+					1,
+					2,
+					3
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "wrong type of items",
+				"data": [
+					1,
+					"x"
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "ignores non-arrays",
+				"data": {
+					"foo": "bar"
+				},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "JavaScript pseudo-array is valid",
+				"data": {
+					"0": "invalid",
+					"length": 1
+				},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "an array of schemas for items",
+		"schema": {
+			"items": [
+				{
+					"type": "integer"
+				},
+				{
+					"type": "string"
+				}
+			]
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "correct types",
+				"data": [
+					1,
+					"foo"
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "wrong types",
+				"data": [
+					"foo",
+					1
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "incomplete array of items",
+				"data": [
+					1
+				],
+				"valid": true,
+				"skip": {
+					"v3": "6 errors in empty disjunction:\nconflicting values [1] and bool (mismatched types list and bool):\n    generated.cue:2:1\n    generated.cue:2:8\n    instance.json:1:1\nconflicting values [1] and null (mismatched types list and null):\n    generated.cue:2:1\n    instance.json:1:1\nconflicting values [1] and number (mismatched types list and number):\n    generated.cue:2:1\n    generated.cue:2:15\n    instance.json:1:1\nconflicting values [1] and string (mismatched types list and string):\n    generated.cue:2:1\n    generated.cue:2:24\n    instance.json:1:1\nconflicting values [1] and {...} (mismatched types list and struct):\n    generated.cue:2:1\n    generated.cue:2:54\n    instance.json:1:1\nincompatible list lengths (1 and 3):\n    generated.cue:2:33\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array with additional items",
+				"data": [
+					1,
+					"foo",
+					true
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array",
+				"data": [],
+				"valid": true,
+				"skip": {
+					"v3": "6 errors in empty disjunction:\nconflicting values [] and bool (mismatched types list and bool):\n    generated.cue:2:1\n    generated.cue:2:8\n    instance.json:1:1\nconflicting values [] and null (mismatched types list and null):\n    generated.cue:2:1\n    instance.json:1:1\nconflicting values [] and number (mismatched types list and number):\n    generated.cue:2:1\n    generated.cue:2:15\n    instance.json:1:1\nconflicting values [] and string (mismatched types list and string):\n    generated.cue:2:1\n    generated.cue:2:24\n    instance.json:1:1\nconflicting values [] and {...} (mismatched types list and struct):\n    generated.cue:2:1\n    generated.cue:2:54\n    instance.json:1:1\nincompatible list lengths (0 and 3):\n    generated.cue:2:33\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "JavaScript pseudo-array is valid",
+				"data": {
+					"0": "invalid",
+					"1": "valid",
+					"length": 2
+				},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "items with boolean schema (true)",
+		"schema": {
+			"items": true
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "any array is valid",
+				"data": [
+					1,
+					"foo",
+					true
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is valid",
+				"data": [],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "items with boolean schema (false)",
+		"schema": {
+			"items": false
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "any non-empty array is invalid",
+				"data": [
+					1,
+					"foo",
+					true
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is valid",
+				"data": [],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "items with boolean schemas",
+		"schema": {
+			"items": [
+				true,
+				false
+			]
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "array with one item is valid",
+				"data": [
+					1
+				],
+				"valid": true,
+				"skip": {
+					"v3": "7 errors in empty disjunction:\nconflicting values [1] and bool (mismatched types list and bool):\n    generated.cue:2:1\n    generated.cue:2:8\n    instance.json:1:1\nconflicting values [1] and null (mismatched types list and null):\n    generated.cue:2:1\n    instance.json:1:1\nconflicting values [1] and number (mismatched types list and number):\n    generated.cue:2:1\n    generated.cue:2:15\n    instance.json:1:1\nconflicting values [1] and string (mismatched types list and string):\n    generated.cue:2:1\n    generated.cue:2:24\n    instance.json:1:1\nconflicting values [1] and {...} (mismatched types list and struct):\n    generated.cue:2:1\n    generated.cue:2:65\n    instance.json:1:1\nincompatible list lengths (1 and 3):\n    generated.cue:2:33\n1: disallowed:\n    generated.cue:2:37\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array with two items is invalid",
+				"data": [
+					1,
+					"foo"
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is valid",
+				"data": [],
+				"valid": true,
+				"skip": {
+					"v3": "6 errors in empty disjunction:\nconflicting values [] and bool (mismatched types list and bool):\n    generated.cue:2:1\n    generated.cue:2:8\n    instance.json:1:1\nconflicting values [] and null (mismatched types list and null):\n    generated.cue:2:1\n    instance.json:1:1\nconflicting values [] and number (mismatched types list and number):\n    generated.cue:2:1\n    generated.cue:2:15\n    instance.json:1:1\nconflicting values [] and string (mismatched types list and string):\n    generated.cue:2:1\n    generated.cue:2:24\n    instance.json:1:1\nconflicting values [] and {...} (mismatched types list and struct):\n    generated.cue:2:1\n    generated.cue:2:65\n    instance.json:1:1\nincompatible list lengths (0 and 3):\n    generated.cue:2:33\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "items and subitems",
+		"schema": {
+			"definitions": {
+				"item": {
+					"type": "array",
+					"additionalItems": false,
+					"items": [
+						{
+							"$ref": "#/definitions/sub-item"
+						},
+						{
+							"$ref": "#/definitions/sub-item"
+						}
+					]
+				},
+				"sub-item": {
+					"type": "object",
+					"required": [
+						"foo"
+					]
+				}
+			},
+			"type": "array",
+			"additionalItems": false,
+			"items": [
+				{
+					"$ref": "#/definitions/item"
+				},
+				{
+					"$ref": "#/definitions/item"
+				},
+				{
+					"$ref": "#/definitions/item"
+				}
+			]
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "valid items",
+				"data": [
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					]
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "too many items",
+				"data": [
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					]
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "too many sub-items",
+				"data": [
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					]
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "wrong item",
+				"data": [
+					{
+						"foo": null
+					},
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					]
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "wrong sub-item",
+				"data": [
+					[
+						{},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						},
+						{
+							"foo": null
+						}
+					]
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "fewer items is valid",
+				"data": [
+					[
+						{
+							"foo": null
+						}
+					],
+					[
+						{
+							"foo": null
+						}
+					]
+				],
+				"valid": true,
+				"skip": {
+					"v3": "incompatible list lengths (2 and 3):\n    generated.cue:2:1\n0: incompatible list lengths (1 and 2):\n    generated.cue:9:8\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "nested items",
+		"schema": {
+			"type": "array",
+			"items": {
+				"type": "array",
+				"items": {
+					"type": "array",
+					"items": {
+						"type": "array",
+						"items": {
+							"type": "number"
+						}
+					}
+				}
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "valid nested array",
+				"data": [
+					[
+						[
+							[
+								1
+							]
+						],
+						[
+							[
+								2
+							],
+							[
+								3
+							]
+						]
+					],
+					[
+						[
+							[
+								4
+							],
+							[
+								5
+							],
+							[
+								6
+							]
+						]
+					]
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "nested array with invalid type",
+				"data": [
+					[
+						[
+							[
+								"1"
+							]
+						],
+						[
+							[
+								2
+							],
+							[
+								3
+							]
+						]
+					],
+					[
+						[
+							[
+								4
+							],
+							[
+								5
+							],
+							[
+								6
+							]
+						]
+					]
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "not deep enough",
+				"data": [
+					[
+						[
+							1
+						],
+						[
+							2
+						],
+						[
+							3
+						]
+					],
+					[
+						[
+							4
+						],
+						[
+							5
+						],
+						[
+							6
+						]
+					]
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "single-form items with null instance elements",
+		"schema": {
+			"items": {
+				"type": "null"
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "allows null elements",
+				"data": [
+					null
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "array-form items with null instance elements",
+		"schema": {
+			"items": [
+				{
+					"type": "null"
+				}
+			]
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "allows null elements",
+				"data": [
+					null
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	}
+]

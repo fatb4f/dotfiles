@@ -1,0 +1,322 @@
+[
+	{
+		"description": "contains keyword validation",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"contains": {
+				"minimum": 5
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "array with item matching schema (5) is valid",
+				"data": [
+					3,
+					4,
+					5
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array with item matching schema (6) is valid",
+				"data": [
+					3,
+					4,
+					6
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array with two items matching schema (5, 6) is valid",
+				"data": [
+					3,
+					4,
+					5,
+					6
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array without items matching schema is invalid",
+				"data": [
+					2,
+					3,
+					4
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is invalid",
+				"data": [],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "not array is valid",
+				"data": {},
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "contains keyword with const keyword",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"contains": {
+				"const": 5
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "array with item 5 is valid",
+				"data": [
+					3,
+					4,
+					5
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array with two items 5 is valid",
+				"data": [
+					3,
+					4,
+					5,
+					5
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "array without item 5 is invalid",
+				"data": [
+					1,
+					2,
+					3,
+					4
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "contains keyword with boolean schema true",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"contains": true
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "any non-empty array is valid",
+				"data": [
+					"foo"
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is invalid",
+				"data": [],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "contains keyword with boolean schema false",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"contains": false
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "any non-empty array is invalid",
+				"data": [
+					"foo"
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is invalid",
+				"data": [],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "non-arrays are valid",
+				"data": "contains does not apply to strings",
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "items + contains",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"items": {
+				"multipleOf": 2
+			},
+			"contains": {
+				"multipleOf": 3
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "matches items, does not match contains",
+				"data": [
+					2,
+					4,
+					8
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "does not match items, matches contains",
+				"data": [
+					3,
+					6,
+					9
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "matches both items and contains",
+				"data": [
+					6,
+					12
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "matches neither items nor contains",
+				"data": [
+					1,
+					5
+				],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "contains with false if subschema",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"contains": {
+				"if": false,
+				"else": true
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "any non-empty array is valid",
+				"data": [
+					"foo"
+				],
+				"valid": true,
+				"skip": {
+					"v3": "disallowed:\n    generated.cue:5:58\n    generated.cue:5:1\n    instance.json:1:1\n",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "empty array is invalid",
+				"data": [],
+				"valid": false,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	},
+	{
+		"description": "contains with null instance elements",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2019-09/schema",
+			"contains": {
+				"type": "null"
+			}
+		},
+		"skip": {
+			"v3-roundtrip": "generation only supported in version https://json-schema.org/draft/2020-12/schema"
+		},
+		"tests": [
+			{
+				"description": "allows null items",
+				"data": [
+					null
+				],
+				"valid": true,
+				"skip": {
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	}
+]

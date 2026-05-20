@@ -1,0 +1,23 @@
+-- in.cue --
+// Note: in dynamic mode, [d] does not get picked up
+// because the disjunction is not resolved.
+a: b: [ d, ...e] & [ 1, 2, ...]
+
+d: int
+e: int
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+3:    d         => d
+3:    e         => e
+-- out/dependencies/dynamic --
+line  reference    path of resulting vertex
+3:    d         => d
+3:    e         => e
+-- out/dependencies-v3/stats/field --
+// COUNT: 0
+-- out/dependencies-v3/stats/all --
+// COUNT: 2
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 4

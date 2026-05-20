@@ -1,0 +1,293 @@
+// Copyright 2020 CUE Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package adt_test
+
+import (
+	"flag"
+	"fmt"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+
+	"golang.org/x/tools/txtar"
+
+	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/cuecontext"
+	"cuelang.org/go/cue/errors"
+	"cuelang.org/go/internal"
+	"cuelang.org/go/internal/core/adt"
+	"cuelang.org/go/internal/core/debug"
+	"cuelang.org/go/internal/core/eval"
+	"cuelang.org/go/internal/core/runtime"
+	"cuelang.org/go/internal/cuedebug"
+	"cuelang.org/go/internal/cueexperiment"
+	"cuelang.org/go/internal/cuetdtest"
+	"cuelang.org/go/internal/cuetxtar"
+	_ "cuelang.org/go/pkg"
+)
+
+var (
+	todo = flag.Bool("todo", false, "run tests marked with #todo-compile")
+)
+
+// TestEvalV2 tests the old implementation of the evaluator.
+// Note that [TestEvalV3] with CUE_UPDATE=1 assumes it runs after this test
+// for the sake of comparing results between the two evaluator versions.
+// As such, these two tests are not parallel at the top level.
+//
+// Note that this also means that CUE_UPDATE=1 is broken under `go test -shuffle`.
+func TestEvalV2(t *testing.T) {
+	t.Skip("TODO: this will become the main test after EvalV3 promotes")
+	test := cuetxtar.TxTarTest{
+		Root: "../../../cue/testdata",
+		Name: "eval",
+	}
+	cuedebug.Init()
+	dbg := cuedebug.Flags
+	cueexperiment.Init()
+	exp := cueexperiment.Flags
+	if *todo {
+		test.ToDo = nil
+	}
+	test.Run(t, func(t *cuetxtar.Test) {
+		t.Parallel()
+		runEvalTest(t, internal.EvalV3, dbg, exp)
+	})
+}
+
+func TestEvalV3(t *testing.T) {
+	adt.DebugDeps = true // check unmatched dependencies.
+
+	// TxTarTest.run dispatches inline archives (those with @test attributes)
+	// to the inline runner automatically; non-inline archives use golden-file
+	// comparison as before.  No separate RunInlineTests call is needed.
+	//
+	// Fallback lets existing out/eval golden-file sections pass until
+	// out/evalalpha sections are generated with CUE_UPDATE=1.
+	test := cuetxtar.TxTarTest{
+		Root:     "../../../cue/testdata",
+		Name:     "evalalpha",
+		Fallback: "eval", // Allow eval golden files to pass these tests.
+		Inline:   true,   // Dispatch @test archives to inline runner.
+	}
+
+	cuedebug.Init()
+	dbg := cuedebug.Flags
+	cueexperiment.Init()
+	exp := cueexperiment.Flags
+
+	if *todo {
+		test.ToDo = nil
+	}
+
+	test.Run(t, func(t *cuetxtar.Test) {
+		t.Parallel()
+		runEvalTest(t, internal.EvalV3, dbg, exp)
+	})
+}
+
+func runEvalTest(t *cuetxtar.Test, version internal.EvaluatorVersion, dbg cuedebug.Config, exp cueexperiment.Config) (errorCount int64) {
+	a := t.Instance()
+	r := runtime.NewWithSettings(version, dbg)
+	r.SetGlobalExperiments(&exp)
+
+	v, err := r.Build(nil, a)
+	if err != nil {
+		t.WriteErrors(err)
+		return
+	}
+
+	e := eval.New(r)
+	ctx := e.NewContext(v)
+	v.Finalize(ctx)
+
+	switch counts := ctx.Stats(); {
+	case version == internal.DevVersion:
+		// V2 is no longer supported. Write stats to out/eval/stats (the
+		// fallback name) directly — no evalalpha diff section is generated.
+		// If out/evalalpha/stats or its diff section exist in the archive,
+		// remove them so that CUE_UPDATE=1 cleans them up.
+		hasStats := slices.ContainsFunc(t.Archive.Files, func(f txtar.File) bool {
+			return f.Name == "out/eval/stats" || f.Name == "out/evalalpha/stats"
+		})
+		if hasStats {
+			t.Archive.Files = slices.DeleteFunc(t.Archive.Files, func(f txtar.File) bool {
+				return f.Name == "out/evalalpha/stats" ||
+					f.Name == "diff/-out/evalalpha/stats<==>+out/eval/stats"
+			})
+			w := t.WriterFallback("stats")
+			fmt.Fprintln(w, counts)
+		}
+
+	default:
+		w := t.Writer("stats")
+		fmt.Fprintln(w, counts)
+	}
+
+	// if n := stats.Leaks(); n > 0 {
+	// 	t.Skipf("%d leaks reported", n)
+	// }
+
+	if b := adt.Validate(ctx, v, &adt.ValidateConfig{
+		AllErrors: true,
+	}); b != nil {
+		fmt.Fprintln(t, "Errors:")
+		t.WriteErrors(b.Err)
+		fmt.Fprintln(t, "")
+		fmt.Fprintln(t, "Result:")
+	}
+
+	// Write all errors (including incomplete) with [code] prefixes to the
+	// documentary errors.txt section (only updated if the section exists).
+	cuetxtar.PrintErrors(t.WriterDoc("errors.txt"), v, &errors.Config{
+		Cwd:     t.Dir,
+		ToSlash: true,
+	})
+
+	if v == nil {
+		return
+	}
+
+	t.Write(debug.AppendNode(nil, r, v, &debug.Config{Cwd: t.Dir}))
+	return
+}
+
+func TestIssue3985(t *testing.T) {
+	// We run the evaluator twice with different versions of the evaluator. Each
+	// results in the use of emptyNode. Ensure that the it does not get
+	// assigned a nodeContext.
+	cuecontext.New(cuecontext.EvaluatorVersion(cuecontext.EvalV3)).CompileString(`a!: _, b: [for c in a if a != _|_ {}]`)
+
+}
+
+// TestX is for debugging. Do not delete.
+func TestX(t *testing.T) {
+	adt.DebugDeps = true
+	// adt.OpenGraphs = true
+
+	flags := cuedebug.Config{
+		Sharing: true, // Uncomment to turn sharing off.
+		LogEval: 1,    // Uncomment to turn logging off
+	}
+	cueexperiment.Init()
+	exps := cueexperiment.Flags
+
+	version := internal.EvalV3
+
+	in := `
+-- cue.mod/module.cue --
+module: "mod.test"
+
+language: version: "v0.15.0"
+
+-- in.cue --
+	`
+
+	if strings.HasSuffix(strings.TrimSpace(in), ".cue --") {
+		t.Skip()
+	}
+
+	a := txtar.Parse([]byte(in))
+	instance := cuetxtar.Load(a, t.TempDir())[0]
+	if instance.Err != nil {
+		t.Fatal(instance.Err)
+	}
+
+	r := runtime.NewWithSettings(version, flags)
+	r.SetGlobalExperiments(&exps)
+
+	v, err := r.Build(nil, instance)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	e := eval.New(r)
+	ctx := e.NewContext(v)
+	ctx.Config = flags
+	v.Finalize(ctx)
+
+	out := debug.NodeString(r, v, nil)
+	if adt.OpenGraphs {
+		for p, g := range ctx.ErrorGraphs {
+			path := filepath.Join(".debug/TestX", p)
+			adt.OpenNodeGraph("TestX", path, in, out, g)
+		}
+	}
+
+	if b := adt.Validate(ctx, v, &adt.ValidateConfig{
+		AllErrors: true,
+	}); b != nil {
+		t.Log(errors.Details(b.Err, nil))
+	}
+
+	t.Error(out)
+
+	t.Log(ctx.Stats())
+}
+
+// TestY is for debugging inline tests. Do not delete.
+func TestY(t *testing.T) {
+	in := `
+-- cue.mod/module.cue --
+module: "mod.test"
+
+language: version: "v0.15.0"
+
+-- in.cue --
+// s1: !="b" & =~"c"     @test(eq, =~"c")
+// s2: !=null @test(eq, !=null)
+a: 1 @test(shareID=A)
+b: c: a @test(shareID=A)
+	`
+
+	if strings.HasSuffix(strings.TrimSpace(in), ".cue --") {
+		t.Skip()
+	}
+
+	m := &cuetdtest.M{
+		Flags: cuedebug.Config{
+			Sharing: true, // Comment out to test without sharing.
+			// LogEval: 1, // Uncomment to enable evaluator logging.
+		},
+	}
+
+	archive := txtar.Parse([]byte(in))
+	runner := cuetxtar.NewInlineRunner(t, m, archive, t.TempDir())
+	runner.Run()
+}
+
+func BenchmarkUnifyAPI(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		ctx := cuecontext.New()
+		v := ctx.CompileString("")
+		for j := range 500 {
+			if j == 400 {
+				b.StartTimer()
+			}
+			v = v.FillPath(cue.ParsePath(fmt.Sprintf("i_%d", i)), i)
+		}
+	}
+}
+
+func TestIssue2293(t *testing.T) {
+	ctx := cuecontext.New()
+	c := `a: {}, a`
+	v1 := ctx.CompileString(c)
+	v2 := ctx.CompileString(c)
+
+	v1.Unify(v2)
+}

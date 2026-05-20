@@ -1,0 +1,21 @@
+# This checks that @if tags work for files specified on the command line.
+
+# passes - no module
+exec cue export -t foo .:foo
+exec cue export -t foo foo.cue
+
+# set up module
+exec cue mod init
+
+# passes - with module
+exec cue export -t foo .:foo
+
+# passes - with module
+# (failed previously due to #3250).
+exec cue export -t foo foo.cue
+
+-- foo.cue --
+@if(foo)
+package foo
+
+x: 1

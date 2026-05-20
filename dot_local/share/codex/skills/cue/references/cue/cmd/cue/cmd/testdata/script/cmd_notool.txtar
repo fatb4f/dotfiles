@@ -1,0 +1,20 @@
+! exec cue cmd notool
+! stdout .
+cmp stderr cmd_baddisplay.out
+
+-- cmd_baddisplay.out --
+could not find command "notool"
+Ensure custom commands are defined in a "_tool.cue" file.
+Run 'cue help cmd' to list available custom commands.
+-- task.cue --
+package home
+
+import "tool/cli"
+
+message: "Hello world!"
+
+command: notool: cli.Print & {
+	task: display: {
+		text: 42
+	}
+}

@@ -1,0 +1,64 @@
+-- in.cue --
+root: {
+	a: {
+		$id:    "valToOut"
+		$after: c.$id
+	}
+	b: {
+		$id:    "valToOut"
+		$after: a.$id
+		out:    "foo"
+	}
+	c: {
+		$id: "valToOut"
+		in:  b.out
+	}
+}
+-- out/run/errors --
+error: cyclic task dependency:
+	task root.a refers to
+	task root.c refers to
+	task root.b refers to
+	task root.a:
+    ./testdata/in.cue:2:2
+    ./testdata/in.cue:6:2
+    ./testdata/in.cue:11:2
+-- out/run/t0 --
+graph TD
+  t0("root.a [Waiting]")
+  t0-->t2
+  t1("root.b [Waiting]")
+  t1-->t0
+  t2("root.c [Waiting]")
+  t2-->t1
+
+-- out/run-v3/stats/totals --
+Leaks:  0
+Freed:  0
+Reused: 0
+Allocs: 0
+Retain: 0
+
+Unifications: 0
+Conjuncts:    0
+Disjuncts:    0
+ResolveDep:   3
+-- diff/-out/run-v3/stats/totals<==>+out/run/stats/totals --
+diff old new
+--- old
++++ new
+@@ -7,3 +7,4 @@
+ Unifications: 0
+ Conjuncts:    0
+ Disjuncts:    0
++ResolveDep:   3
+-- out/run/stats/totals --
+Leaks:  0
+Freed:  0
+Reused: 0
+Allocs: 0
+Retain: 0
+
+Unifications: 0
+Conjuncts:    0
+Disjuncts:    0

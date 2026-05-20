@@ -1,0 +1,48 @@
+[
+	{
+		"description": "refs to future drafts are processed as future drafts",
+		"schema": {
+			"type": "object",
+			"allOf": [
+				{
+					"properties": {
+						"foo": true
+					}
+				},
+				{
+					"$ref": "http://localhost:1234/draft2019-09/dependentRequired.json"
+				}
+			]
+		},
+		"skip": {
+			"v3": "extract error: cannot compile resulting schema: invalid import path: \"localhost:1234/draft2019-09/dependentRequired.json:dependentRequired\":\n    generated.cue:1:8\n",
+			"v3-roundtrip": "inital extract failed"
+		},
+		"tests": [
+			{
+				"description": "missing bar is invalid",
+				"comment": "if the implementation is not processing the $ref as a 2019-09 schema, this test will fail",
+				"data": {
+					"foo": "any value"
+				},
+				"valid": false,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "present bar is valid",
+				"data": {
+					"foo": "any value",
+					"bar": "also any value"
+				},
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	}
+]

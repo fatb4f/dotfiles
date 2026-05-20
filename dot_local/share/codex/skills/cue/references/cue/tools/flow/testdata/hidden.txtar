@@ -1,0 +1,254 @@
+#FindHiddenTasks: true
+-- in.cue --
+root: {
+	a: {
+		$id: "valToOut"
+		val: "foo"
+		out: string
+	}
+	_b: {
+		$id:    "valToOut"
+		$after: a
+		val:    "bar"
+		out:    string
+	}
+	c: {
+		$id: "valToOut"
+		out: a.out + _b.out
+	}
+	// These tasks should _not_ run, because they are definitions.
+	_#c: {
+		$id: "valToOut"
+		out: c.out + "baz"
+	}
+	#d: {
+		$id: "valToOut"
+		out: c.out + "baz"
+	}
+}
+-- out/run/errors --
+-- out/run/t0 --
+graph TD
+  t0("root.a [Ready]")
+  t1("root._b [Waiting]")
+  t1-->t0
+  t2("root.c [Waiting]")
+  t2-->t0
+  t2-->t1
+
+-- out/run/t1 --
+graph TD
+  t0("root.a [Terminated]")
+  t1("root._b [Ready]")
+  t1-->t0
+  t2("root.c [Waiting]")
+  t2-->t0
+  t2-->t1
+
+-- out/run/t1/value --
+{
+	$id: "valToOut"
+	val: "foo"
+	out: "foo"
+}
+-- out/run/t2 --
+graph TD
+  t0("root.a [Terminated]")
+  t1("root._b [Terminated]")
+  t1-->t0
+  t2("root.c [Ready]")
+  t2-->t0
+  t2-->t1
+
+-- out/run/t2/value --
+{
+	$id: "valToOut"
+	$after: {
+		$id: "valToOut"
+		val: "foo"
+		out: "foo"
+	}
+	val: "bar"
+	out: "bar"
+}
+-- out/run/t3 --
+graph TD
+  t0("root.a [Terminated]")
+  t1("root._b [Terminated]")
+  t1-->t0
+  t2("root.c [Terminated]")
+  t2-->t0
+  t2-->t1
+
+-- out/run/t3/value --
+{
+	$id: "valToOut"
+	out: "foobar"
+}
+-- out/run-v3/t1/stats --
+Leaks:  0
+Freed:  20
+Reused: 9
+Allocs: 11
+Retain: 0
+
+Unifications: 20
+Conjuncts:    25
+Disjuncts:    0
+ResolveDep:   3
+
+NumCloseIDs: 1
+-- diff/-out/run-v3/t1/stats<==>+out/run/t1/stats --
+diff old new
+--- old
++++ new
+@@ -1,9 +1,12 @@
+ Leaks:  0
+-Freed:  23
+-Reused: 18
+-Allocs: 5
++Freed:  20
++Reused: 9
++Allocs: 11
+ Retain: 0
+ 
+-Unifications: 23
+-Conjuncts:    44
+-Disjuncts:    23
++Unifications: 20
++Conjuncts:    25
++Disjuncts:    0
++ResolveDep:   3
++
++NumCloseIDs: 1
+-- out/run/t1/stats --
+Leaks:  0
+Freed:  23
+Reused: 18
+Allocs: 5
+Retain: 0
+
+Unifications: 23
+Conjuncts:    44
+Disjuncts:    23
+-- out/run-v3/t2/stats --
+Leaks:  0
+Freed:  20
+Reused: 20
+Allocs: 0
+Retain: 0
+
+Unifications: 20
+Conjuncts:    30
+Disjuncts:    0
+ResolveDep:   4
+
+NumCloseIDs: 2
+-- diff/-out/run-v3/t2/stats<==>+out/run/t2/stats --
+diff old new
+--- old
++++ new
+@@ -1,9 +1,12 @@
+ Leaks:  0
+-Freed:  23
+-Reused: 23
++Freed:  20
++Reused: 20
+ Allocs: 0
+ Retain: 0
+ 
+-Unifications: 23
+-Conjuncts:    37
+-Disjuncts:    23
++Unifications: 20
++Conjuncts:    30
++Disjuncts:    0
++ResolveDep:   4
++
++NumCloseIDs: 2
+-- out/run/t2/stats --
+Leaks:  0
+Freed:  23
+Reused: 23
+Allocs: 0
+Retain: 0
+
+Unifications: 23
+Conjuncts:    37
+Disjuncts:    23
+-- out/run-v3/t3/stats --
+Leaks:  0
+Freed:  0
+Reused: 0
+Allocs: 0
+Retain: 0
+
+Unifications: 0
+Conjuncts:    0
+Disjuncts:    0
+ResolveDep:   2
+-- diff/-out/run-v3/t3/stats<==>+out/run/t3/stats --
+diff old new
+--- old
++++ new
+@@ -7,3 +7,4 @@
+ Unifications: 0
+ Conjuncts:    0
+ Disjuncts:    0
++ResolveDep:   2
+-- out/run/t3/stats --
+Leaks:  0
+Freed:  0
+Reused: 0
+Allocs: 0
+Retain: 0
+
+Unifications: 0
+Conjuncts:    0
+Disjuncts:    0
+-- out/run-v3/stats/totals --
+Leaks:  0
+Freed:  40
+Reused: 29
+Allocs: 11
+Retain: 0
+
+Unifications: 40
+Conjuncts:    55
+Disjuncts:    0
+ResolveDep:   9
+
+NumCloseIDs: 3
+-- diff/-out/run-v3/stats/totals<==>+out/run/stats/totals --
+diff old new
+--- old
++++ new
+@@ -1,9 +1,12 @@
+ Leaks:  0
+-Freed:  46
+-Reused: 41
+-Allocs: 5
++Freed:  40
++Reused: 29
++Allocs: 11
+ Retain: 0
+ 
+-Unifications: 46
+-Conjuncts:    81
+-Disjuncts:    46
++Unifications: 40
++Conjuncts:    55
++Disjuncts:    0
++ResolveDep:   9
++
++NumCloseIDs: 3
+-- out/run/stats/totals --
+Leaks:  0
+Freed:  46
+Reused: 41
+Allocs: 5
+Retain: 0
+
+Unifications: 46
+Conjuncts:    81
+Disjuncts:    46

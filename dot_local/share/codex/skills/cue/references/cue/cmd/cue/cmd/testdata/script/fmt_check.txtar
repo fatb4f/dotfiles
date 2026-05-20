@@ -1,0 +1,67 @@
+cd standalone
+
+# succeeds with no output when file is formatted
+exec cue fmt --check formatted.cue
+! stdout .
+
+stdin formatted.cue
+exec cue fmt --check -
+! stdout .
+
+# fails and displays non formatted files
+! exec cue fmt --check not_formatted.cue another/not_formatted.cue
+cmpenv stdout expected-output
+
+# files are not modified with --check
+# running twice returns the same file list
+! exec cue fmt --check not_formatted.cue another/not_formatted.cue
+cmpenv stdout expected-output
+
+# stdin fails with indicative output
+stdin not_formatted.cue
+! exec cue fmt --check -
+cmp stdout stdin-expected-output
+
+# fails with indicative output when both stdin and files provided
+stdin not_formatted.cue
+! exec cue fmt --check - another/not_formatted.cue
+cmpenv stdout stdin-mixed-expected-output
+
+cd ../module
+
+# files are printed relative to CWD
+! exec cue fmt --check ./...
+cmpenv stdout stdout.golden
+cd example
+! exec cue fmt --check ./...
+cmp stdout stdout.golden
+
+-- standalone/formatted.cue --
+foo: "bar"
+-- standalone/not_formatted.cue --
+foo:      "bar"
+-- standalone/another/not_formatted.cue --
+bar:   "baz"
+x:   1
+-- standalone/expected-output --
+not_formatted.cue
+another${/}not_formatted.cue
+-- standalone/stdin-expected-output --
+-
+-- standalone/stdin-mixed-expected-output --
+-
+another${/}not_formatted.cue
+-- module/cue.mod/module.cue --
+module: "example.com"
+language: version: "v0.9.0"
+-- module/not_formatted.cue --
+package module
+foo:    "bar"
+-- module/stdout.golden --
+not_formatted.cue
+example${/}not_formatted.cue
+-- module/example/not_formatted.cue --
+package module
+foo:      "bar"
+-- module/example/stdout.golden --
+not_formatted.cue

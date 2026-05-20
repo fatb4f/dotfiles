@@ -1,0 +1,34 @@
+exec cue cmd http
+cmp stdout cmd_http.out
+-- cmd_http.out --
+{"Version":"v1.0.0","Time":"2018-10-22T18:45:39Z"}
+
+-- .gomodproxy/externalmod.test_imports_v1.0.0/.mod --
+module externalmod.test/imports
+
+-- .gomodproxy/externalmod.test_imports_v1.0.0/.info --
+{"Version":"v1.0.0","Time":"2018-10-22T18:45:39Z"}
+-- .gomodproxy/externalmod.test_imports_v1.0.0/go.mod --
+module externalmod.test/imports
+-- task_tool.cue --
+package home
+
+import (
+	"tool/cli"
+	h "tool/http"
+	"tool/os"
+)
+
+command: http: {
+	env: os.Getenv & {
+        GOPROXY: string
+	}
+	task: http: h.Get & {
+		url: env.GOPROXY + "/externalmod.test/imports/@v/v1.0.0.info"
+
+		response: body: string // TODO: allow this to be a struct, parsing the body.
+	}
+	task: print: cli.Print & {
+		text: task.http.response.body
+	}
+}

@@ -1,0 +1,43 @@
+-- in.cue --
+a: b: {
+    for i, x in c
+    let y = x
+    if y > 0 {
+        "\(e)\(i)": x + d
+    }
+    x: {
+        for x in [1] { foo: f.g }
+    }
+}
+
+c: [1, 2]
+d: 2
+e: "t"
+f: {
+    g: 3
+}
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+2:    c         => c
+5:    e         => e
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+2:    c         => c
+5:    e         => e
+5:    d         => d
+8:    f.g       => f.g
+-- out/dependencies/dynamic --
+line  reference    path of resulting vertex
+2:    c         => c
+5:    e         => e
+8:    f.g       => f.g
+5:    x         => c[0]
+5:    d         => d
+5:    x         => c[1]
+5:    d         => d
+-- out/dependencies-v3/stats/field --
+// COUNT: 5
+-- out/dependencies-v3/stats/all --
+// COUNT: 13
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 23

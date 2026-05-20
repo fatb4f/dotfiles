@@ -1,0 +1,83 @@
+#Issue: 1405
+
+# TODO:
+# One X.enabled should be a.#combined.enabled
+
+-- in.cue --
+a: {
+	command: alias: {
+		// TODO: fix inner referene.
+		val: (instance & outer & {enabled: true}).value
+		echo: cmd: val
+	}
+
+	#base: {
+		enabled: bool | *false
+		value?:  string
+	}
+
+	#combined: X=#base & {
+		if X.enabled {
+			value: "123456"
+		}
+	}
+
+	instance: #combined & {enabled: true}
+}
+
+outer: k: l: int
+
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+4:    outer     => outer
+-- diff/dependencies-v3/todo/p1 --
+bring in line with evalv2.
+Also, this drops some entries from the dynamic case that seem perhaps too
+aggressive.
+-- out/dependencies-v3/dynamic --
+line  reference    path of resulting vertex
+14:   X.enabled => a.instance.enabled
+4:    outer     => outer
+5:    val       => a.command.alias.val
+13:   #base     => a.#base
+19:   #combined => a.#combined
+14:   X.enabled => a.instance.enabled
+-- diff/-out/dependencies-v3/dynamic<==>+out/dependencies/dynamic --
+diff old new
+--- old
++++ new
+@@ -1,9 +1,7 @@
+-line  reference                                     path of resulting vertex
+-14:   X.enabled                                  => a.instance.enabled
+-4:    outer                                      => outer
+-4:    (instance & outer & {enabled: true}).value => a.instance.value
+-4:    outer                                      => outer
+-5:    val                                        => a.command.alias.val
+-13:   #base                                      => a.#base
+-19:   #combined                                  => a.#combined
+-14:   X.enabled                                  => a.instance.enabled
++line  reference    path of resulting vertex
++14:   X.enabled => a.instance.enabled
++4:    outer     => outer
++5:    val       => a.command.alias.val
++13:   #base     => a.#base
++19:   #combined => a.#combined
++14:   X.enabled => a.instance.enabled
+-- out/dependencies/dynamic --
+line  reference                                     path of resulting vertex
+14:   X.enabled                                  => a.instance.enabled
+4:    outer                                      => outer
+4:    (instance & outer & {enabled: true}).value => a.instance.value
+4:    outer                                      => outer
+5:    val                                        => a.command.alias.val
+13:   #base                                      => a.#base
+19:   #combined                                  => a.#combined
+14:   X.enabled                                  => a.instance.enabled
+-- out/dependencies-v3/stats/field --
+// COUNT: 0
+-- out/dependencies-v3/stats/all --
+// COUNT: 8
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 18

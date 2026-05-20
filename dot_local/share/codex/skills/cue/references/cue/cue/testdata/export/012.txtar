@@ -1,0 +1,32 @@
+raw: true
+#inlinetest:exclude skip — tests export format, not evaluator semantics
+-- in.cue --
+{a: *"foo" | *"bar" | *string | int, b: a[2:3]}
+-- out/compile --
+--- in.cue
+{
+  {
+    a: (*"foo"|*"bar"|*string|int)
+    b: 〈0;a〉[2:3]
+  }
+}
+-- out/eval/stats --
+Leaks:  0
+Freed:  7
+Reused: 0
+Allocs: 7
+Retain: 0
+
+Unifications: 3
+Conjuncts:    8
+Disjuncts:    4
+
+NumCloseIDs: 1
+-- out/evalalpha --
+(struct){
+  a: ((int|string)){ |(*(string){ "foo" }, *(string){ "bar" }, *(string){ string }, (int){ int }) }
+  b: (_|_){
+    // [incomplete] b: non-concrete slice subject a:
+    //     ./in.cue:1:41
+  }
+}

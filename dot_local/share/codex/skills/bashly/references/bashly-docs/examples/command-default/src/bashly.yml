@@ -1,0 +1,28 @@
+name: ftp
+help: Sample application that uses the default command option
+version: 0.1.0
+
+commands:
+- name: upload
+  alias: u
+  help: Upload a file
+
+  # By setting the `upload` command as the default command, it will be executed
+  # when the command line is not recognized.
+  # Running `ftp upload something` is the same as `ftp something`
+  default: true
+
+  args:
+  - name: source
+    required: true
+    help: File to upload
+
+- name: download
+  alias: d
+  help: Download a file
+
+  args:
+  - name: source
+    required: true
+    help: File to download
+

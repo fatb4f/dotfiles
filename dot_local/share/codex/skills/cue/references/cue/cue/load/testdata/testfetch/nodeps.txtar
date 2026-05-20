@@ -1,0 +1,14 @@
+-- out/modfetch/result --
+{
+	a: "hello"
+}
+-- cue.mod/module.cue --
+module: "main.org"
+language: version: "v0.9.0-main"
+
+-- main.cue --
+package main
+
+a: "hello"
+-- out/modfetch/instance-info --
+main.org@v0:main module=main.org@v0 version=v0.9.0-main

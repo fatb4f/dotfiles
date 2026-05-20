@@ -1,0 +1,83 @@
+-- type.yaml --
+openapi: 3.0.0
+info:
+  title: Users schema
+  version: v1beta1
+  contact:
+    name: The CUE Authors
+    url: https://cuelang.org
+
+components:
+  schemas:
+    User:
+      description: "A User uses something."
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          $ref: "#/components/schemas/PhoneNumber"
+    PhoneNumber:
+      description: "The number to dial."
+      type: string
+
+-- out.cue --
+// Users schema
+package foo
+
+info: {
+	title:   *"Users schema" | string
+	version: *"v1beta1" | string
+	contact: {
+		name: "The CUE Authors"
+		url:  "https://cuelang.org"
+	}
+}
+// The number to dial.
+#PhoneNumber: string
+
+// A User uses something.
+#User: {
+	id?:      int
+	name?:    string
+	address?: #PhoneNumber
+	...
+}
+-- out/TestGenerateOpenAPI/out.json --
+{
+   "openapi": "3.0.0",
+   "info": {
+      "title": "Users schema",
+      "version": "v1beta1",
+      "contact": {
+         "name": "The CUE Authors",
+         "url": "https://cuelang.org"
+      }
+   },
+   "paths": {},
+   "components": {
+      "schemas": {
+         "PhoneNumber": {
+            "description": "The number to dial.",
+            "type": "string"
+         },
+         "User": {
+            "description": "A User uses something.",
+            "type": "object",
+            "properties": {
+               "id": {
+                  "type": "integer"
+               },
+               "name": {
+                  "type": "string"
+               },
+               "address": {
+                  "$ref": "#/components/schemas/PhoneNumber"
+               }
+            }
+         }
+      }
+   }
+}

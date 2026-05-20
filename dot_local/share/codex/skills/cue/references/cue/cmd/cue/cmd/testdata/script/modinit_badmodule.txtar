@@ -1,0 +1,4 @@
+! exec cue mod init bad
+cmp stderr want-stderr
+-- want-stderr --
+malformed module path "bad": missing dot in first path element

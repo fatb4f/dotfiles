@@ -1,0 +1,17 @@
+# TODO(evalv3): something feels off here; evalv2 did not produce
+# an extra and duplicate "close" builtin call at the top level.
+
+exec cue def jsonschema: schema.json
+cmp stdout expect-stdout
+
+-- schema.json --
+{
+  "$id": "https://2.test.example/object                                                                                                                                                                   ",
+  "type": "object",
+  "additionalProperties": false
+}
+-- expect-stdout --
+close({
+	@jsonschema(id="https://2.test.example/object%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20%20")
+	close({})
+})

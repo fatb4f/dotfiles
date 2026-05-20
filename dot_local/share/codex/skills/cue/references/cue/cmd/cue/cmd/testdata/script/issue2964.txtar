@@ -1,0 +1,5 @@
+exec cue mod init test.example
+! exec cue export anypath
+cmp stderr want-stderr
+-- want-stderr --
+standard library import path "anypath" cannot be imported as a CUE package

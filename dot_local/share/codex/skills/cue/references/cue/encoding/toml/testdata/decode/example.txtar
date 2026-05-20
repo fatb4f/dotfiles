@@ -1,0 +1,309 @@
+-- example.toml --
+# This is a TOML document.
+# Copied from various examples from the TOML spec website.
+
+title = "TOML Example"
+
+[owner]
+name = "Tom Preston-Werner"
+dob = 1979-05-27T07:32:00-08:00
+
+[database]
+enabled = true
+ports = [ 8000, 8001, 8002 ]
+data = [ ["delta", "phi"], [3.14] ]
+temp_targets = { cpu = 79.5, case = 72.0 }
+
+[servers]
+
+[servers.alpha]
+ip = "10.0.0.1"
+role = "frontend"
+
+[servers.beta]
+ip = "10.0.0.2"
+role = "backend"
+
+[[products]]
+name = "Hammer"
+sku = 738594937
+
+[[products]]  # empty table within the array
+
+[[products]]
+name = "Nail"
+sku = 284758393
+
+color = "gray"
+-- out/decode/example.toml/positions --
+*ast.StructLit{
+	Elts: []ast.Decl{
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:4:1", newline)
+			}
+			Value: *ast.BasicLit{
+				ValuePos: token.Pos("example.toml:4:9")
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:6:2", newline)
+			}
+			Value: *ast.StructLit{
+				Lbrace: token.Pos("-", blank)
+				Elts: []ast.Decl{
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:7:1", newline)
+						}
+						Value: *ast.BasicLit{
+							ValuePos: token.Pos("example.toml:7:8")
+						}
+					}
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:8:1", newline)
+						}
+					}
+				}
+				Rbrace: token.Pos("-", newline)
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:10:2", newline)
+			}
+			Value: *ast.StructLit{
+				Lbrace: token.Pos("-", blank)
+				Elts: []ast.Decl{
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:11:1", newline)
+						}
+					}
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:12:1", newline)
+						}
+						Value: *ast.ListLit{
+							Elts: []ast.Expr{
+								*ast.BasicLit{
+									ValuePos: token.Pos("example.toml:12:11")
+								}
+								*ast.BasicLit{
+									ValuePos: token.Pos("example.toml:12:17")
+								}
+								*ast.BasicLit{
+									ValuePos: token.Pos("example.toml:12:23")
+								}
+							}
+						}
+					}
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:13:1", newline)
+						}
+						Value: *ast.ListLit{
+							Elts: []ast.Expr{
+								*ast.ListLit{
+									Elts: []ast.Expr{
+										*ast.BasicLit{
+											ValuePos: token.Pos("example.toml:13:11")
+										}
+										*ast.BasicLit{
+											ValuePos: token.Pos("example.toml:13:20")
+										}
+									}
+								}
+								*ast.ListLit{
+									Elts: []ast.Expr{
+										*ast.BasicLit{
+											ValuePos: token.Pos("example.toml:13:29")
+										}
+									}
+								}
+							}
+						}
+					}
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:14:1", newline)
+						}
+						Value: *ast.StructLit{
+							Lbrace: token.Pos("example.toml:14:16")
+							Elts: []ast.Decl{
+								*ast.Field{
+									Label: *ast.Ident{
+										NamePos: token.Pos("example.toml:14:18", blank)
+									}
+									Value: *ast.BasicLit{
+										ValuePos: token.Pos("example.toml:14:24")
+									}
+								}
+								*ast.Field{
+									Label: *ast.Ident{
+										NamePos: token.Pos("example.toml:14:30", blank)
+									}
+									Value: *ast.BasicLit{
+										ValuePos: token.Pos("example.toml:14:37")
+									}
+								}
+							}
+							Rbrace: token.Pos("-", blank)
+						}
+					}
+				}
+				Rbrace: token.Pos("-", newline)
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:16:2", newline)
+			}
+			Value: *ast.StructLit{
+				Lbrace: token.Pos("-", blank)
+				Rbrace: token.Pos("-", newline)
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:18:2", newline)
+			}
+			Value: *ast.StructLit{
+				Elts: []ast.Decl{
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:18:10", blank)
+						}
+						Value: *ast.StructLit{
+							Lbrace: token.Pos("-", blank)
+							Elts: []ast.Decl{
+								*ast.Field{
+									Label: *ast.Ident{
+										NamePos: token.Pos("example.toml:19:1", newline)
+									}
+									Value: *ast.BasicLit{
+										ValuePos: token.Pos("example.toml:19:6")
+									}
+								}
+								*ast.Field{
+									Label: *ast.Ident{
+										NamePos: token.Pos("example.toml:20:1", newline)
+									}
+									Value: *ast.BasicLit{
+										ValuePos: token.Pos("example.toml:20:8")
+									}
+								}
+							}
+							Rbrace: token.Pos("-", newline)
+						}
+					}
+				}
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:22:2", newline)
+			}
+			Value: *ast.StructLit{
+				Elts: []ast.Decl{
+					*ast.Field{
+						Label: *ast.Ident{
+							NamePos: token.Pos("example.toml:22:10", blank)
+						}
+						Value: *ast.StructLit{
+							Lbrace: token.Pos("-", blank)
+							Elts: []ast.Decl{
+								*ast.Field{
+									Label: *ast.Ident{
+										NamePos: token.Pos("example.toml:23:1", newline)
+									}
+									Value: *ast.BasicLit{
+										ValuePos: token.Pos("example.toml:23:6")
+									}
+								}
+								*ast.Field{
+									Label: *ast.Ident{
+										NamePos: token.Pos("example.toml:24:1", newline)
+									}
+									Value: *ast.BasicLit{
+										ValuePos: token.Pos("example.toml:24:8")
+									}
+								}
+							}
+							Rbrace: token.Pos("-", newline)
+						}
+					}
+				}
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				NamePos: token.Pos("example.toml:26:3", newline)
+			}
+			Value: *ast.ListLit{
+				Lbrack: token.Pos("-", blank)
+				Elts: []ast.Expr{
+					*ast.StructLit{
+						Lbrace: token.Pos("-", newline)
+						Elts: []ast.Decl{
+							*ast.Field{
+								Label: *ast.Ident{
+									NamePos: token.Pos("example.toml:27:1", newline)
+								}
+								Value: *ast.BasicLit{
+									ValuePos: token.Pos("example.toml:27:8")
+								}
+							}
+							*ast.Field{
+								Label: *ast.Ident{
+									NamePos: token.Pos("example.toml:28:1", newline)
+								}
+								Value: *ast.BasicLit{
+									ValuePos: token.Pos("example.toml:28:7")
+								}
+							}
+						}
+						Rbrace: token.Pos("-", newline)
+					}
+					*ast.StructLit{
+						Lbrace: token.Pos("-", newline)
+						Rbrace: token.Pos("-", newline)
+					}
+					*ast.StructLit{
+						Lbrace: token.Pos("-", newline)
+						Elts: []ast.Decl{
+							*ast.Field{
+								Label: *ast.Ident{
+									NamePos: token.Pos("example.toml:33:1", newline)
+								}
+								Value: *ast.BasicLit{
+									ValuePos: token.Pos("example.toml:33:8")
+								}
+							}
+							*ast.Field{
+								Label: *ast.Ident{
+									NamePos: token.Pos("example.toml:34:1", newline)
+								}
+								Value: *ast.BasicLit{
+									ValuePos: token.Pos("example.toml:34:7")
+								}
+							}
+							*ast.Field{
+								Label: *ast.Ident{
+									NamePos: token.Pos("example.toml:36:1", newline)
+								}
+								Value: *ast.BasicLit{
+									ValuePos: token.Pos("example.toml:36:9")
+								}
+							}
+						}
+						Rbrace: token.Pos("-", newline)
+					}
+				}
+				Rbrack: token.Pos("-", newline)
+			}
+		}
+	}
+}

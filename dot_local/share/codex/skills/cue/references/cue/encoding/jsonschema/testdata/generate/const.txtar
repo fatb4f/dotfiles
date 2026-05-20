@@ -1,0 +1,168 @@
+-- test.cue --
+package test
+
+int?: 2
+string?: "something"
+bool?: true
+float?: 1.5
+null?: null
+
+// Test different forms of const as mentioned in constValueOf doc comment:
+unaryEquals?: ==42
+closedStruct?: close({a!: "foo", b!: 123})
+closedStructWithNull?: close({a!: null})
+listWithUnaryEquals?: [==1, ==2, ==3]
+listConcrete?: ["a", "b", "c"]
+-- datatest/tests.cue --
+package datatest
+
+ok1: data: {
+	bool: true
+	float: 1.5
+	int: 2
+	null: null
+	string: "something"
+	unaryEquals: 42
+	closedStruct: {a: "foo", b: 123}
+	listWithUnaryEquals: [1, 2, 3]
+	listConcrete: ["a", "b", "c"]
+}
+errorFloatForInt: {
+	data: {
+		int: 2.0
+		// TODO perhaps this shouldn't be an error?
+		// jsonschema doesn't distinguish between floats and ints like CUE does.
+		// See https://cuelang.org/issue/4121 and https://cuelang.org/issue/253.
+	}
+	error: true
+}
+errorNonBool: {
+	data: bool: "foo"
+	error: true
+}
+errorNonEqualFloat: {
+	data: float: 1.6
+	error: true
+}
+errorNonEqualInt: {
+	data: int: 9
+	error: true
+}
+errorNonNull: {
+	data: null: 1
+	error: true
+}
+errorNonString: {
+	data: string: "other"
+	error: true
+}
+errorNonUnaryEquals: {
+	data: unaryEquals: 99
+	error: true
+}
+errorNonClosedStructFieldA: {
+	data: closedStruct: {a: "bar", b: 123}
+	error: true
+}
+errorNonClosedStructFieldB: {
+	data: closedStruct: {a: "foo", b: 456}
+	error: true
+}
+errorClosedStructExtraField: {
+	data: closedStruct: {a: "foo", b: 123, c: "extra"}
+	error: true
+}
+errorListWrongElement: {
+	data: listWithUnaryEquals: [1, 99, 3]
+	error: true
+}
+errorListWrongLength: {
+	data: listConcrete: ["a", "b"]
+	error: true
+}
+-- out/generate-v3/schema --
+{
+	$schema: "https://json-schema.org/draft/2020-12/schema"
+	type:    "object"
+	properties: {
+		bool: {
+			const: true
+		}
+		closedStruct: {
+			const: {
+				a: "foo"
+				b: 123
+			}
+		}
+		closedStructWithNull: {
+			const: {
+				a: null
+			}
+		}
+		float: {
+			const: 1.5
+		}
+		int: {
+			const: 2
+		}
+		listConcrete: {
+			const: ["a", "b", "c"]
+		}
+		listWithUnaryEquals: {
+			const: [1, 2, 3]
+		}
+		null: {
+			type: "null"
+		}
+		string: {
+			const: "something"
+		}
+		unaryEquals: {
+			description: "Test different forms of const as mentioned in constValueOf doc comment:"
+			const:       42
+		}
+	}
+}
+-- out/generate-v3/errorFloatForInt --
+errorFloatForInt.data.int: conflicting values 2.0 and 2 (mismatched types float and int):
+    ./datatest/tests.cue:16:8
+    1:229
+-- out/generate-v3/errorNonBool --
+errorNonBool.data.bool: conflicting values "foo" and true (mismatched types string and bool):
+    ./datatest/tests.cue:24:14
+    1:97
+-- out/generate-v3/errorNonEqualFloat --
+errorNonEqualFloat.data.float: conflicting values 1.5 and 1.6:
+    ./datatest/tests.cue:28:15
+    1:209
+-- out/generate-v3/errorNonEqualInt --
+errorNonEqualInt.data.int: conflicting values 2 and 9:
+    ./datatest/tests.cue:32:13
+    1:229
+-- out/generate-v3/errorNonNull --
+errorNonNull.data.null: conflicting values 1 and null (mismatched types int and null):
+    ./datatest/tests.cue:36:14
+-- out/generate-v3/errorNonString --
+errorNonString.data.string: conflicting values "something" and "other":
+    ./datatest/tests.cue:40:16
+    1:352
+-- out/generate-v3/ok1 --
+-- out/generate-v3/errorClosedStructExtraField --
+errorClosedStructExtraField.data.closedStruct.c: field not allowed:
+    ./datatest/tests.cue:56:41
+-- out/generate-v3/errorListWrongElement --
+errorListWrongElement.data.listWithUnaryEquals.1: conflicting values 2 and 99:
+    ./datatest/tests.cue:60:33
+-- out/generate-v3/errorListWrongLength --
+errorListWrongLength.data.listConcrete: incompatible list lengths (2 and 3):
+    1:256
+-- out/generate-v3/errorNonClosedStructFieldA --
+errorNonClosedStructFieldA.data.closedStruct.a: conflicting values "foo" and "bar":
+    ./datatest/tests.cue:48:26
+-- out/generate-v3/errorNonClosedStructFieldB --
+errorNonClosedStructFieldB.data.closedStruct.b: conflicting values 123 and 456:
+    ./datatest/tests.cue:52:36
+-- out/generate-v3/errorNonUnaryEquals --
+errorNonUnaryEquals.data.unaryEquals: conflicting values 42 and 99:
+    ./datatest/tests.cue:44:21
+    1:476

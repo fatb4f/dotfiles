@@ -1,0 +1,72 @@
+#includePointers
+-- file.cue --
+package p
+
+a: b
+b: 3
+-- out/debugprint/file.cue --
+*ast.File@TESTPTR{
+	Filename: "file.cue"
+	Decls: []ast.Decl{
+		*ast.Package@TESTPTR{
+			PackagePos: token.Pos("file.cue:1:1", nospace)
+			Name: *ast.Ident@TESTPTR{
+				NamePos: token.Pos("file.cue:1:9", blank)
+				Name: "p"
+			}
+		}
+		*ast.Field@TESTPTR{
+			Label: *ast.Ident@TESTPTR{
+				NamePos: token.Pos("file.cue:3:1", section)
+				Name: "a"
+			}
+			TokenPos: token.Pos("file.cue:3:2", nospace)
+			Value: *ast.Ident@TESTPTR{
+				NamePos: token.Pos("file.cue:3:4", blank)
+				Name: "b"
+				Node: @TESTPTR (ast.BasicLit)
+			}
+		}
+		*ast.Field@TESTPTR{
+			Label: *ast.Ident@TESTPTR{
+				NamePos: token.Pos("file.cue:4:1", newline)
+				Name: "b"
+			}
+			TokenPos: token.Pos("file.cue:4:2", nospace)
+			Value: *ast.BasicLit@TESTPTR{
+				ValuePos: token.Pos("file.cue:4:4", blank)
+				Kind: token.Token("INT")
+				Value: "3"
+			}
+		}
+	}
+	LanguageVersion: "v0.13.0"
+}
+-- out/debugprint/file.cue/omitempty-strings --
+*ast.File{
+	Filename: "file.cue"
+	Decls: []ast.Decl{
+		*ast.Package{
+			Name: *ast.Ident{
+				Name: "p"
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				Name: "a"
+			}
+			Value: *ast.Ident{
+				Name: "b"
+			}
+		}
+		*ast.Field{
+			Label: *ast.Ident{
+				Name: "b"
+			}
+			Value: *ast.BasicLit{
+				Value: "3"
+			}
+		}
+	}
+	LanguageVersion: "v0.13.0"
+}

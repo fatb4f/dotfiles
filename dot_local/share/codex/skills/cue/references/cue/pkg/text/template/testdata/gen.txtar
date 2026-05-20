@@ -1,0 +1,8 @@
+# generated from the original tests.
+# Henceforth it may be nicer to group tests into separate files.
+-- in.cue --
+import "text/template"
+
+t1: template.Execute("{{.}}-{{.}}", "foo")
+-- out/template --
+t1: "foo-foo"

@@ -1,0 +1,23 @@
+-- in.cue --
+t1: {$id: "foo"} & {
+	ref: t1.stdout
+	cmd: ["sh", "-c", "echo hello"]
+	stdout: string
+}
+a: b: {$id: "foo"} & {
+	text: t1.stdout
+}
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+7:    t1.stdout => t1.stdout
+-- out/dependencies/dynamic --
+line  reference    path of resulting vertex
+7:    t1.stdout => t1.stdout
+-- out/dependencies-v3/stats/field --
+// COUNT: 0
+-- out/dependencies-v3/stats/all --
+// COUNT: 1
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 2

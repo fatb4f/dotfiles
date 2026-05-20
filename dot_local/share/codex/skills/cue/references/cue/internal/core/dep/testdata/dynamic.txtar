@@ -1,0 +1,41 @@
+-- in.cue --
+first: {
+	out: [1, 2]
+}
+ignore: {
+	x: 1
+	y: a.c
+}
+middle: {
+	for x in first.out {
+		ignore.y
+
+		"la\(x)": ignore & {
+			seq: x + 1
+			val: "foo\(x)"
+			out: ignore.x
+		}
+	}
+}
+
+a: {
+	b: [for x in middle {x}]
+	c: {}
+}
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+21:   middle    => middle
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+21:   middle    => middle
+-- out/dependencies/dynamic --
+line  reference    path of resulting vertex
+21:   middle    => middle
+21:   x         => middle.la1
+21:   x         => middle.la2
+-- out/dependencies-v3/stats/field --
+// COUNT: 2
+-- out/dependencies-v3/stats/all --
+// COUNT: 4
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 8

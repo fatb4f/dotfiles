@@ -1,0 +1,77 @@
+[
+	{
+		"description": "$dynamicRef skips over intermediate resources - pointer reference across resource boundary",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"$id": "https://test.json-schema.org/dynamic-ref-skips-intermediate-resource/optional/main",
+			"type": "object",
+			"properties": {
+				"bar-item": {
+					"$ref": "bar#/$defs/item"
+				}
+			},
+			"$defs": {
+				"bar": {
+					"$id": "bar",
+					"type": "array",
+					"items": {
+						"$ref": "item"
+					},
+					"$defs": {
+						"item": {
+							"$id": "item",
+							"type": "object",
+							"properties": {
+								"content": {
+									"$dynamicRef": "#content"
+								}
+							},
+							"$defs": {
+								"defaultContent": {
+									"$dynamicAnchor": "content",
+									"type": "integer"
+								}
+							}
+						},
+						"content": {
+							"$dynamicAnchor": "content",
+							"type": "string"
+						}
+					}
+				}
+			}
+		},
+		"skip": {
+			"v3": "extract error: keyword \"$dynamicRef\" not yet implemented (and 5 more errors)",
+			"v3-roundtrip": "inital extract failed"
+		},
+		"tests": [
+			{
+				"description": "integer property passes",
+				"data": {
+					"bar-item": {
+						"content": 42
+					}
+				},
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			},
+			{
+				"description": "string property fails",
+				"data": {
+					"bar-item": {
+						"content": "value"
+					}
+				},
+				"valid": false,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	}
+]

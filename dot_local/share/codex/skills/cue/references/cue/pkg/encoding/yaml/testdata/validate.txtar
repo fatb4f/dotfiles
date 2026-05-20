@@ -1,0 +1,118 @@
+-- in.cue --
+import "encoding/yaml"
+
+#test: {
+	fn: _
+
+	data1: "a: 2"
+	t1: [string]: data1
+	t1: ok1: fn({a!: int} | {b!: int}) // TODO: filter unsatisfied required fields.
+	t1: ok2: fn(close({a: int}) | close({b: int}))
+
+	#A: {a: int}
+	#B: {b: int}
+	t1: ok3: fn(#A | #B)
+
+	data2: "'foo'"
+	t2: [string]: data2
+	t2: ok1: fn(*int | string)
+	t2: ok2: fn(string)
+}
+
+validate: #test & {
+	fn: yaml.Validate
+
+	// TODO: fix this test: the second disjunct should be eliminated, so there
+	// should not be a concreteness error.
+	t1: _
+}
+
+validatePartial: #test & {
+	fn: yaml.ValidatePartial
+}
+
+invalidDisjuntion: yaml.Validate("a: 3", {a: 1 | 2})
+-- out/yaml --
+Errors:
+validate.t1.ok1: invalid value "a: 2" (does not satisfy encoding/yaml.Validate): incomplete value {a:2} | {a:2,b!:int}:
+    ./in.cue:8:11
+    ./in.cue:6:9
+    ./in.cue:7:16
+invalidDisjuntion: error in call to encoding/yaml.Validate: 2 errors in empty disjunction::
+    ./in.cue:33:20
+
+Result:
+import "encoding/yaml"
+
+#test: {
+	fn:    _
+	data1: "a: 2"
+	t1: {
+		ok1: data1 & fn({
+			a!: int
+		} | {
+			b!: int
+		})
+		ok2: data1 & fn(close({
+			a: int
+		}) | close({
+			b: int
+		}))
+		ok3: data1 & fn(#A | #B)
+	}
+	#A: {
+		a: int
+	}
+	#B: {
+		b: int
+	}
+	data2: "'foo'"
+	t2: {
+		ok1: data2 & fn(*int | string)
+		ok2: data2 & fn(string)
+	}
+}
+validate: {
+	fn:    yaml.Validate
+	data1: "a: 2"
+
+	// TODO: fix this test: the second disjunct should be eliminated, so there
+	// should not be a concreteness error.
+	t1: {
+		ok1: _|_ // validate.t1.ok1: invalid value "a: 2" (does not satisfy encoding/yaml.Validate): validate.t1.ok1: incomplete value {a:2} | {a:2,b!:int}
+		ok2: "a: 2"
+		ok3: "a: 2"
+	}
+	#A: {
+		a: int
+	}
+	#B: {
+		b: int
+	}
+	data2: "'foo'"
+	t2: {
+		ok1: "'foo'"
+		ok2: "'foo'"
+	}
+}
+validatePartial: {
+	fn:    yaml.ValidatePartial
+	data1: "a: 2"
+	t1: {
+		ok1: "a: 2"
+		ok2: "a: 2"
+		ok3: "a: 2"
+	}
+	#A: {
+		a: int
+	}
+	#B: {
+		b: int
+	}
+	data2: "'foo'"
+	t2: {
+		ok1: "'foo'"
+		ok2: "'foo'"
+	}
+}
+invalidDisjuntion: _|_ // invalidDisjuntion: error in call to encoding/yaml.Validate: invalidDisjuntion.a: 2 errors in empty disjunction: (and 2 more errors)

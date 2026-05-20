@@ -1,0 +1,21 @@
+// Issue #2060
+-- in.cue --
+v: w: 0
+
+let X = {c: d: v}
+
+a: b: X.c
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+3:    v         => v
+-- out/dependencies/dynamic --
+line  reference    path of resulting vertex
+3:    v         => v
+-- out/dependencies-v3/stats/field --
+// COUNT: 1
+-- out/dependencies-v3/stats/all --
+// COUNT: 3
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 5

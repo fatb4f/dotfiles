@@ -1,0 +1,34 @@
+// NOTE: do not add more tests to this file, as it may obfuscate the test case.
+-- in.cue --
+a: #A
+a: c: 1 @test(err, code=eval,
+		contains="field not allowed",
+		pos=[in.cue:2:4],
+		hint="more positions may be allowed, see out/todo.txt for details")
+#A: {} @test(eq, {})
+-- out/errors.txt --
+[eval] a.c: field not allowed:
+    ./in.cue:2:4
+-- out/eval/stats --
+Leaks:  0
+Freed:  4
+Reused: 1
+Allocs: 3
+Retain: 1
+
+Unifications: 4
+Conjuncts:    6
+Disjuncts:    5
+-- out/compile --
+--- in.cue
+{
+  a: 〈0;#A〉
+  a: {
+    c: 1
+  }
+  #A: {}
+}
+-- out/todo.txt --
+v2 reports additional error positions (in.cue:1:4 and in.cue:3:5) for the "field
+not allowed" error on a.c. v3 only reports the direct field definition position
+(in.cue:2:4).

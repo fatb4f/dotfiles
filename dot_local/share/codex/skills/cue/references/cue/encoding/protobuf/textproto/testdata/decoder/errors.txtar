@@ -1,0 +1,11 @@
+# The textpbfmt library spots the error (wrong comment style),
+# but note how its error message is somewhat confusing.
+-- errors.cue --
+a: int
+-- input.textproto --
+
+// Silent nights
+a: 1
+
+-- out/decode --
+textproto: parser encountered unexpected character ':' (should be whitespace, ',', or ';')

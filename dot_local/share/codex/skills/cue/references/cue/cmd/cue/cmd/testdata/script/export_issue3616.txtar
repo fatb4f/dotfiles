@@ -1,0 +1,30 @@
+# https://cuelang.org/issue/3616
+#
+# This test involves "copying" values and the use of -l for a
+# non-CUE file. We get an error as expected.
+
+! exec cue export --with-context -l '_input:' -l 'filename' x.cue data.json
+stderr 'notAllowed: field not allowed'
+
+-- x.cue --
+#schema: aField!: bool
+
+_parameters & #schema
+_parameters: #template
+
+#template: {
+    #in: _input
+    for _name, _content in #in {
+        _content.parameters
+    }
+}
+
+_input: {}
+
+-- data.json --
+{
+    "parameters": {
+        "aField": true,
+        "notAllowed": true
+    }
+}

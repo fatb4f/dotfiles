@@ -1,0 +1,72 @@
+# Tests @test(err, suberr=(...)) sub-error matching.
+# A disjunction unified with a conflicting closed struct produces two sub-errors;
+# suberr=() specs are matched order-independently against the actual sub-errors.
+-- in/test.cue --
+#empty: {}
+
+// Both sub-errors matched in declaration order
+x: null | {n: 3}
+x: #empty & {n: 3} @test(err, code=eval,
+	suberr=(contains="conflicting values"),
+	suberr=(contains="not allowed")
+)
+
+// Both sub-errors matched in reversed order (order-independent matching)
+y: null | {n: 3}
+y: #empty & {n: 3} @test(err, code=eval,
+	suberr=(contains="not allowed"),
+	suberr=(contains="conflicting values")
+)
+
+// TODO(inline): terminal `)` on newline. Perhaps more intelligent breaking.
+seed: null | {n: 3}
+seed: #empty @test(err)
+-- out/status.txt --
+update: output passes run
+force:  identical to update
+-- out/update/test.cue --
+#empty: {}
+
+// Both sub-errors matched in declaration order
+x: null | {n: 3}
+x: #empty & {n: 3} @test(err, code=eval,
+	suberr=(contains="conflicting values"),
+	suberr=(contains="not allowed")
+)
+
+// Both sub-errors matched in reversed order (order-independent matching)
+y: null | {n: 3}
+y: #empty & {n: 3} @test(err, code=eval,
+	suberr=(contains="not allowed"),
+	suberr=(contains="conflicting values")
+)
+
+// TODO(inline): terminal `)` on newline. Perhaps more intelligent breaking.
+seed: null | {n: 3}
+seed: #empty @test(err, code=eval,
+	suberr=(code=eval, contains="conflicting values %s and %s (mismatched types %s and %s)", args=[{}, null, struct, null], pos=[-18:9, -1:7, 0:7]),
+	suberr=(code=eval, path=n, contains="field not allowed", pos=[-1:15]))
+-- out/update/out/errors.txt --
+[eval] x: 2 errors in empty disjunction:
+x: conflicting values {n:3} and null (mismatched types struct and null):
+    ./test.cue:4:4
+    ./test.cue:5:4
+    ./test.cue:5:13
+x.n: field not allowed:
+    ./test.cue:4:12
+    ./test.cue:5:14
+[eval] y: 2 errors in empty disjunction:
+y: conflicting values {n:3} and null (mismatched types struct and null):
+    ./test.cue:11:4
+    ./test.cue:12:4
+    ./test.cue:12:13
+y.n: field not allowed:
+    ./test.cue:11:12
+    ./test.cue:12:14
+[eval] seed: 2 errors in empty disjunction:
+seed: conflicting values {} and null (mismatched types struct and null):
+    ./test.cue:1:9
+    ./test.cue:18:7
+    ./test.cue:19:7
+seed.n: field not allowed:
+    ./test.cue:18:15

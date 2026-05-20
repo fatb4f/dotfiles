@@ -1,0 +1,37 @@
+-- in.cue --
+a: b: {
+	{[pattern]: c}
+	{"\(name)": c}
+	regular:   c
+	optional?: c
+	...
+}
+
+pattern: =~"^Foo"
+value:   c
+name:    "name"
+c:       "descendants"
+-- out/dependencies/field --
+line  reference    path of resulting vertex
+2:    pattern   => pattern
+3:    name      => name
+-- out/dependencies/all --
+line  reference    path of resulting vertex
+2:    pattern   => pattern
+2:    c         => c
+3:    name      => name
+3:    c         => c
+4:    c         => c
+5:    c         => c
+-- out/dependencies/dynamic --
+line  reference    path of resulting vertex
+2:    pattern   => pattern
+3:    name      => name
+4:    c         => c
+3:    c         => c
+-- out/dependencies-v3/stats/field --
+// COUNT: 2
+-- out/dependencies-v3/stats/all --
+// COUNT: 8
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 12

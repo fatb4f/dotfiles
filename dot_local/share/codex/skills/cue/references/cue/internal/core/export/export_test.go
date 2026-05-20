@@ -1,0 +1,400 @@
+// Copyright 2020 CUE Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package export_test
+
+import (
+	"testing"
+
+	"golang.org/x/tools/txtar"
+
+	"cuelang.org/go/cue"
+	"cuelang.org/go/cue/ast"
+	"cuelang.org/go/cue/cuecontext"
+	"cuelang.org/go/cue/errors"
+	"cuelang.org/go/cue/format"
+	"cuelang.org/go/cue/parser"
+	"cuelang.org/go/encoding/gocode/gocodec"
+	"cuelang.org/go/internal/astinternal"
+	"cuelang.org/go/internal/core/adt"
+	"cuelang.org/go/internal/core/compile"
+	"cuelang.org/go/internal/core/convert"
+	"cuelang.org/go/internal/core/eval"
+	"cuelang.org/go/internal/core/export"
+	"cuelang.org/go/internal/core/runtime"
+	"cuelang.org/go/internal/cuetdtest"
+	"cuelang.org/go/internal/cuetxtar"
+	"cuelang.org/go/internal/value"
+)
+
+func TestDefinition(t *testing.T) {
+	t.Parallel()
+	test := cuetxtar.TxTarTest{
+		Root:   "./testdata/main",
+		Name:   "definition",
+		Matrix: cuetdtest.FullMatrix,
+	}
+
+	test.Run(t, func(t *cuetxtar.Test) {
+		r := t.Runtime()
+		a := t.Instance()
+
+		v, errs := compile.Instance(nil, r, a)
+		if errs != nil {
+			t.Fatal(errs)
+		}
+		v.Finalize(eval.NewContext(r, v))
+
+		file, errs := export.Def(r, "", v)
+		errors.Print(t, errs, nil)
+		_, _ = t.Write(formatNode(t.T, file))
+	})
+}
+
+func formatNode(t *testing.T, n ast.Node) []byte {
+	t.Helper()
+
+	b, err := format.Node(n)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
+// TestGenerated tests conversions of generated Go structs, which may be
+// different from parsed or evaluated CUE, such as having Vertex values.
+func TestGenerated(t *testing.T) {
+	cuetdtest.FullMatrix.Do(t, func(t *testing.T, m *cuetdtest.M) {
+		ctx := m.CueContext()
+
+		testCases := []struct {
+			in  func(ctx *adt.OpContext) (adt.Expr, error)
+			out string
+			p   *export.Profile
+		}{{
+			in: func(ctx *adt.OpContext) (adt.Expr, error) {
+				in := &C{
+					Terminals: []*A{{Name: "Name", Description: "Desc"}},
+				}
+				return convert.FromGoValue(ctx, in, false), nil
+			},
+			out: `Terminals: [{Name: "Name", Description: "Desc"}]`,
+		}, {
+			in: func(ctx *adt.OpContext) (adt.Expr, error) {
+				in := &C{
+					Terminals: []*A{{Name: "Name", Description: "Desc"}},
+				}
+				return convert.FromGoType(ctx, in)
+			},
+			out: `*null|_C_0, _C_0: {Terminals?: *null|[...*null|_A_0]}, _A_0: {Name: string, Description: string}`,
+		}, {
+			in: func(ctx *adt.OpContext) (adt.Expr, error) {
+				in := []*A{{Name: "Name", Description: "Desc"}}
+				return convert.FromGoValue(ctx, in, false), nil
+			},
+			out: `[{Name: "Name", Description: "Desc"}]`,
+		}, {
+			in: func(ctx *adt.OpContext) (adt.Expr, error) {
+				in := []*A{{Name: "Name", Description: "Desc"}}
+				return convert.FromGoType(ctx, in)
+			},
+			out: `*null|[...*null|_A_0], _A_0: {Name: string, Description: string}`,
+		}, {
+			in: func(ctx *adt.OpContext) (adt.Expr, error) {
+				in := &KeepGoFieldOrdering{}
+				return convert.FromGoValue(ctx, in, false), nil
+			},
+			out: `One: 0, Two: 0, Three: 0, Four: 0, Five: 0, Six: 0, Seven: 0, Eight: 0, Nine: 0, Ten: 0`,
+		}, {
+			in: func(ctx *adt.OpContext) (adt.Expr, error) {
+				expr, err := parser.ParseExpr("test", `{
+				x: Guide.#Terminal
+				Guide: {}
+			}`)
+				if err != nil {
+					return nil, err
+				}
+				c, err := compile.Expr(nil, ctx, "_", expr)
+				if err != nil {
+					return nil, err
+				}
+				root := &adt.Vertex{}
+				root.AddConjunct(c)
+				root.Finalize(ctx)
+
+				// Simulate Value.Unify of Lookup("x") and Lookup("Guide").
+				n := &adt.Vertex{}
+				n.AddConjunct(adt.MakeRootConjunct(nil, root.Arcs[0]))
+				n.AddConjunct(adt.MakeRootConjunct(nil, root.Arcs[1]))
+				n.Finalize(ctx)
+
+				return n, nil
+			},
+			out: `<[l2// x: undefined field: #Terminal] _|_>`,
+			p:   export.Final,
+		}, {
+			in: func(r *adt.OpContext) (adt.Expr, error) {
+				v := ctx.CompileString(`
+				#Provider: {
+					ID: string
+					notConcrete: bool
+					a: int
+					b: a + 1
+				}`)
+
+				spec := v.LookupPath(cue.ParsePath("#Provider"))
+				spec2 := spec.FillPath(cue.ParsePath("ID"), "12345")
+				root := v.FillPath(cue.ParsePath("providers.foo"), spec2)
+				_, n := value.ToInternal(root)
+
+				return n, nil
+			},
+			out: `#Provider: {ID: string, notConcrete: bool, a: int, b: a+1}, providers: {foo: {ID: "12345", notConcrete: bool, a: int, b: a+1}}`,
+			p:   export.All,
+		}, {
+			// Issue #882
+			in: func(r *adt.OpContext) (adt.Expr, error) {
+				valA := ctx.CompileString(`
+				#One: { version: string }
+			`)
+
+				valB := ctx.CompileString(`
+				#One: _
+				ones: {[string]: #One}
+			`)
+				v := valB.Unify(valA)
+				_, n := value.ToInternal(v)
+				return n, nil
+			},
+			out: `#One: {version: string}, ones: {[string]: #One}`,
+			p:   export.All,
+		}, {
+			// Indicate closedness in an element that is closed and misses parent
+			// context.
+			// Issue #882
+			in: func(r *adt.OpContext) (adt.Expr, error) {
+				v := ctx.CompileString(`
+					#A: b: c: string
+				`)
+				v = v.LookupPath(cue.ParsePath("#A.b"))
+
+				_, n := value.ToInternal(v)
+				return n, nil
+			},
+			out: `_#def, _#def: {c: string}`,
+			p:   export.All,
+		}, {
+			// Don't wrap in def if the if the value is an embedded scalar.
+			// Issue #977
+			in: func(r *adt.OpContext) (adt.Expr, error) {
+				v := ctx.CompileString(`
+					#A: { "foo", #enum: 2 }
+				`)
+				v = v.LookupPath(cue.ParsePath("#A"))
+
+				_, n := value.ToInternal(v)
+				return n, nil
+			},
+			out: `"foo", #enum: 2`,
+			p:   export.All,
+		}, {
+			// Issue #1131
+			in: func(r *adt.OpContext) (adt.Expr, error) {
+				m := make(map[string]interface{})
+				v := ctx.Encode(m)
+				_, x := value.ToInternal(v)
+				return x, nil
+			},
+			out: ``, // empty file
+		}, {
+			in: func(r *adt.OpContext) (adt.Expr, error) {
+				v := &adt.Vertex{}
+				v.SetValue(r, &adt.StructMarker{})
+				return v, nil
+			},
+			out: ``, // empty file
+		}}
+		for _, tc := range testCases {
+			t.Run("", func(t *testing.T) {
+				ctx := adt.NewContext((*runtime.Runtime)(ctx), &adt.Vertex{})
+				v, err := tc.in(ctx)
+				if err != nil {
+					t.Fatal("failed test case: ", err)
+				}
+
+				p := tc.p
+				if p == nil {
+					p = export.Simplified
+				}
+
+				var n ast.Node
+				switch x := v.(type) {
+				case *adt.Vertex:
+					n, err = p.Def(ctx, "", x)
+				default:
+					n, err = p.Expr(ctx, "", v)
+				}
+				if err != nil {
+					t.Fatal("failed export: ", err)
+				}
+				got := astinternal.DebugStr(n)
+				if got != tc.out {
+					t.Errorf("got:  %s\nwant: %s", got, tc.out)
+				}
+			})
+		}
+	})
+}
+
+type A struct {
+	Name        string
+	Description string
+}
+
+type B struct {
+	Image string
+}
+
+type C struct {
+	Terminals []*A
+}
+
+type KeepGoFieldOrdering struct {
+	One, Two, Three, Four, Five  int64
+	Six, Seven, Eight, Nine, Ten int32
+}
+
+// For debugging purposes. Do not delete.
+func TestX(t *testing.T) {
+	t.Skip()
+
+	in := `
+-- in.cue --
+	`
+
+	archive := txtar.Parse([]byte(in))
+	a := cuetxtar.Load(archive, t.TempDir())
+	if err := a[0].Err; err != nil {
+		t.Fatal(err)
+	}
+
+	// x := a[0].Files[0]
+	// astutil.Sanitize(x)
+
+	ctx := cuecontext.New()
+	r := (*runtime.Runtime)(ctx)
+	v, errs := compile.Instance(nil, r, a[0])
+	if errs != nil {
+		t.Fatal(errs)
+	}
+	v.Finalize(eval.NewContext(r, v))
+
+	file, errs := export.Def(r, "main", v)
+	if errs != nil {
+		t.Fatal(errs)
+	}
+
+	t.Error(string(formatNode(t, file)))
+}
+
+func TestFromGo(t *testing.T) {
+	type Struct struct {
+		A string
+		B string
+	}
+
+	m := make(map[string]Struct)
+	m["hello"] = Struct{
+		A: "a",
+		B: "b",
+	}
+	ctx := cuecontext.New()
+	codec := gocodec.New(ctx, nil)
+	v, err := codec.Decode(m)
+	if err != nil {
+		panic(err)
+	}
+
+	syn, _ := format.Node(v.Syntax())
+	if got := string(syn); got != `{
+	hello: {
+		A: "a"
+		B: "b"
+	}
+}` {
+		t.Errorf("incorrect ordering: %s\n", got)
+	}
+}
+
+func TestFromAPI(t *testing.T) {
+	testCases := []struct {
+		expr ast.Expr
+		out  string
+	}{{
+		expr: ast.NewCall(ast.NewIdent("close"), ast.NewStruct()),
+		out:  `close({})`,
+	}, {
+		expr: ast.NewCall(ast.NewIdent("close"), ast.NewStruct(
+			"a", ast.NewString("foo"),
+		)),
+		out: `close({a: "foo"})`,
+	}, {
+		expr: ast.NewCall(ast.NewIdent("close"), ast.NewStruct(
+			ast.Embed(ast.NewStruct("a", ast.NewString("foo"))),
+		)),
+		out: `close({a: "foo"})`,
+	}}
+	// Issue #1204
+	for _, tc := range testCases {
+		cuetdtest.FullMatrix.Run(t, "", func(t *testing.T, m *cuetdtest.M) {
+			ctx := m.CueContext()
+
+			v := ctx.BuildExpr(tc.expr)
+
+			r, x := value.ToInternal(v)
+			file, err := export.Def(r, "foo", x)
+
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got := astinternal.DebugStr(file)
+			if got != tc.out {
+				t.Errorf("got:  %s\nwant: %s", got, tc.out)
+			}
+
+		})
+	}
+}
+
+// TestNoPanicCyclicBuiltinValidator is a regression test for a stack overflow
+// in vertex() when a BuiltinValidator argument contains a vertex that is
+// already on the export stack. For example, exporting
+//
+//	#c: { a?: matchN(1, [#c]) }
+//
+// caused infinite recursion: vertex(#c) → structComposite → vertex(a) →
+// builtinValidator → value([#c]) → vertex(#c) → …
+func TestNoPanicCyclicBuiltinValidator(t *testing.T) {
+	cuetdtest.FullMatrix.Run(t, "", func(t *testing.T, m *cuetdtest.M) {
+		ctx := m.CueContext()
+		v := ctx.CompileString(`#c: { a?: matchN(1, [#c]) }`)
+		if err := v.Err(); err != nil {
+			t.Fatal(err)
+		}
+		r, x := value.ToInternal(v)
+		// Must complete without stack overflow.
+		_, _ = export.Def(r, "", x)
+	})
+}

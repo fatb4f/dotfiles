@@ -1,0 +1,58 @@
+-- test.cue --
+package test
+foo!: #D1
+#D1: {
+	x!: int
+	y?: #D2
+	z?: #D3
+}
+#D2: string
+#D3: "a" | "b" | "c"
+
+-- datatest/testdata.cue --
+package datatest
+simple: {
+	data: {foo: {x: 2, y: "foo"}}
+}
+missingX: {
+	data: {foo: y: "foo"}
+	error: true
+}
+-- out/generate-v3/schema --
+{
+	$schema: "https://json-schema.org/draft/2020-12/schema"
+	$defs: {
+		D1: {
+			type:                 "object"
+			additionalProperties: false
+			properties: {
+				x: {
+					type: "integer"
+				}
+				y: {
+					$ref: "#/$defs/D2"
+				}
+				z: {
+					$ref: "#/$defs/D3"
+				}
+			}
+			required: ["x"]
+		}
+		D2: {
+			type: "string"
+		}
+		D3: {
+			enum: ["a", "b", "c"]
+		}
+	}
+	type: "object"
+	properties: {
+		foo: {
+			$ref: "#/$defs/D1"
+		}
+	}
+	required: ["foo"]
+}
+-- out/generate-v3/simple --
+-- out/generate-v3/missingX --
+missingX.data.foo.x: field is required but not present

@@ -1,0 +1,30 @@
+[
+	{
+		"description": "refs to historic drafts are processed as historic drafts",
+		"schema": {
+			"$schema": "https://json-schema.org/draft/2020-12/schema",
+			"type": "array",
+			"$ref": "http://localhost:1234/draft2019-09/ignore-prefixItems.json"
+		},
+		"skip": {
+			"v3": "extract error: cannot compile resulting schema: invalid import path: \"localhost:1234/draft2019-09/ignore-prefixItems.json:schema\":\n    generated.cue:1:8\n",
+			"v3-roundtrip": "inital extract failed"
+		},
+		"tests": [
+			{
+				"description": "first item not a string is valid",
+				"comment": "if the implementation is not processing the $ref as a 2019-09 schema, this test will fail",
+				"data": [
+					1,
+					2,
+					3
+				],
+				"valid": true,
+				"skip": {
+					"v3": "could not extract schema",
+					"v3-roundtrip": "could not extract schema"
+				}
+			}
+		]
+	}
+]

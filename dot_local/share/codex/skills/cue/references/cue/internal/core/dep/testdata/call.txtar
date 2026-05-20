@@ -1,0 +1,25 @@
+-- in.cue --
+import "encoding/json"
+
+// The reference to string needs to be included even for Visit.
+a: b: json.Marshal({#a: str})
+
+str: "x:y:z"
+-- out/dependencies/field --
+line  reference       path of resulting vertex
+4:    json.Marshal => "encoding/json".Marshal
+4:    str          => str
+-- out/dependencies/all --
+line  reference       path of resulting vertex
+4:    json.Marshal => "encoding/json".Marshal
+4:    str          => str
+-- out/dependencies/dynamic --
+line  reference       path of resulting vertex
+4:    json.Marshal => "encoding/json".Marshal
+4:    str          => str
+-- out/dependencies-v3/stats/field --
+// COUNT: 2
+-- out/dependencies-v3/stats/all --
+// COUNT: 4
+-- out/dependencies-v3/stats/dynamic --
+// COUNT: 6

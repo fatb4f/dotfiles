@@ -1,0 +1,7 @@
+path=example.com/m@v1
+version=v1.0.0
+wantErr=case-insensitive file name collision: "M.GO" and "m.go"
+-- m.go --
+package m
+-- M.GO --
+package m

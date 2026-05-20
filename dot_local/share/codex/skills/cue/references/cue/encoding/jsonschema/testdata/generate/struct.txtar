@@ -1,0 +1,204 @@
+-- test.cue --
+package test
+import (
+	"strings"
+	"struct"
+)
+t01?: #S1
+t02?: #S2
+t03?: close(_foo)
+t04?: {a?: int, ...}
+t05?: {[_]: int}
+t06?: {a?: int}
+t07?: close({a!: string, b!: int})
+t08?: {
+	[=~"^a"]: =~"b"
+	[=~"b$"]: =~"x"
+	a?: string
+	b?: string
+	ab?: string
+	x?: string
+}
+t09?: close({
+	{a?: int}
+	b?: int
+})
+t10?: {
+	[_]: int
+}
+t11?: {
+	{[_]: int}
+	a?: int
+}
+t12?: {
+	x?: string
+	[_]: =~"foo"
+} & {
+	x?: =~"bar"
+	y?: string
+	[_]: =~"bar"
+	[=~"x"]: strings.MinRunes(1)
+} & struct.MaxFields(100)
+
+#S1: {
+	a?: int
+}
+#S2: {
+	a?: int
+	...
+}
+_foo: a?: int
+
+-- out/generate-v3/schema --
+{
+	$schema: "https://json-schema.org/draft/2020-12/schema"
+	$defs: {
+		S1: {
+			type:                 "object"
+			additionalProperties: false
+			properties: {
+				a: {
+					type: "integer"
+				}
+			}
+		}
+		S2: {
+			type:                 "object"
+			additionalProperties: true
+			properties: {
+				a: {
+					type: "integer"
+				}
+			}
+		}
+		"_foo": {
+			type: "object"
+			properties: {
+				a: {
+					type: "integer"
+				}
+			}
+		}
+	}
+	type: "object"
+	properties: {
+		t01: {
+			$ref: "#/$defs/S1"
+		}
+		t02: {
+			$ref: "#/$defs/S2"
+		}
+		t03: {
+			$ref: "#/$defs/_foo"
+		}
+		t04: {
+			type:                 "object"
+			additionalProperties: true
+			properties: {
+				a: {
+					type: "integer"
+				}
+			}
+		}
+		t05: {
+			type: "object"
+			additionalProperties: {
+				type: "integer"
+			}
+		}
+		t06: {
+			type: "object"
+			properties: {
+				a: {
+					type: "integer"
+				}
+			}
+		}
+		t07: {
+			type:                 "object"
+			additionalProperties: false
+			properties: {
+				a: {
+					type: "string"
+				}
+				b: {
+					type: "integer"
+				}
+			}
+			required: ["a", "b"]
+		}
+		t08: {
+			type: "object"
+			patternProperties: {
+				"^a": {
+					type:    "string"
+					pattern: "b"
+				}
+				b$: {
+					type:    "string"
+					pattern: "x"
+				}
+			}
+			properties: {
+				a:  true
+				ab: true
+				b:  true
+				x: {
+					type: "string"
+				}
+			}
+		}
+		t09: {
+			type:                 "object"
+			additionalProperties: false
+			properties: {
+				a: {
+					type: "integer"
+				}
+				b: {
+					type: "integer"
+				}
+			}
+		}
+		t10: {
+			type: "object"
+			additionalProperties: {
+				type: "integer"
+			}
+		}
+		t11: {
+			type: "object"
+			patternProperties: {
+				"": {
+					type: "integer"
+				}
+			}
+			properties: {
+				a: {
+					type: "integer"
+				}
+			}
+		}
+		t12: {
+			type: "object"
+			patternProperties: {
+				"": {
+					allOf: [{
+						pattern: "bar"
+					}, {
+						type:    "string"
+						pattern: "foo"
+					}]
+				}
+				x: {
+					type:      "string"
+					minLength: 1
+				}
+			}
+			properties: {
+				x: true
+				y: true
+			}
+		}
+	}
+}

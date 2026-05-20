@@ -1,0 +1,58 @@
+exec cue cmd after
+cmp stdout expect-stdout
+
+-- expect-stdout --
+run also
+run
+timestamps are in order
+SUCCESS
+-- after_tool.cue --
+package home
+
+import (
+	"tool/exec"
+	"tool/cli"
+	"strconv"
+	"strings"
+)
+
+top0: cli.Print & { text: "run also" }
+top1: cli.Print & { text: "run", $after: top0 }
+top2: cli.Print & { text: "don't run also" }
+top3: cli.Print & { text: "don't", $after: top2 }
+
+command: after: {
+	group: {
+		t1: exec.Run & {
+			cmd: ["testcmd", "sleep_and_print", "50ms", "UNIX_MILLI"]
+			stdout: string
+			$after: top1
+		}
+		t2: exec.Run & {
+			cmd: ["testcmd", "sleep_and_print", "0ms", "UNIX_MILLI"]
+			stdout: string
+			$after: t1
+		}
+	}
+	t3: cli.Print & {
+		_t1: strconv.Atoi(strings.TrimSpace(group.t1.stdout))
+		_t2: strconv.Atoi(strings.TrimSpace(group.t2.stdout))
+		if _t1 <= _t2 {
+			text: "timestamps are in order"
+		}
+		if _t1 > _t2 {
+			text: "out of order timestamps; t1: \(_t1); t2: \(_t2)"
+		}
+	}
+	t4: cli.Print & {
+		text: "SUCCESS"
+		$after: [group, t3]
+	}
+}
+
+-- task.cue --
+package home
+
+-- cue.mod/module.cue --
+module: "test.example"
+language: version: "v0.9.0"

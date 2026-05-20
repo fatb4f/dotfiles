@@ -1,0 +1,116 @@
+-- in.cue --
+package lpcorpus
+
+#Value:   {type: "int"} | {type: "float"} | {type: "string"}
+@test(eq, {type: "int"} | {type: "float"} | {type: "string"}, at=#Value)
+
+foo: [{type: "float"}] & [...#Value] @test(err, code=eval, path=foo.0.type, pos=[0:14, 5:14])
+foo: [{type: "float"}] & [...#Value]
+foo: [{type: "float"}] & [...#Value]
+foo: [{type: "float"}] & [...#Value]
+foo: [{type: "float"}] & [...#Value]
+foo: [{type: "string"}] & [...#Value]
+foo: [{type: "string"}] & [...#Value]
+foo: [{type: "string"}] & [...#Value]
+foo: [{type: "float"}] & [...#Value]
+foo: [{type: "float"}] & [...#Value]
+-- out/errors.txt --
+[eval] foo.0.type: conflicting values "string" and "float":
+    ./in.cue:6:14
+    ./in.cue:11:14
+-- out/todo.txt --
+v2 reported an additional "2 errors in empty disjunction" wrapper error at foo.0;
+v3 only reports the direct conflicting values error at foo.0.type.
+-- out/eval/stats --
+Leaks:  0
+Freed:  11
+Reused: 2
+Allocs: 9
+Retain: 0
+
+Unifications: 8
+Conjuncts:    59
+Disjuncts:    3
+
+NumCloseIDs: 1
+-- out/compile --
+--- in.cue
+{
+  #Value: ({
+    type: "int"
+  }|{
+    type: "float"
+  }|{
+    type: "string"
+  })
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "string"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "string"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "string"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+  foo: ([
+    {
+      type: "float"
+    },
+  ] & [
+    ...〈1;#Value〉,
+  ])
+}

@@ -1,0 +1,14 @@
+! exec cue cmd errcode
+! stdout .
+stderr '^task failed: command \["testcmd" "exitcode" "5"\] failed: exit status 5$'
+
+-- task_tool.cue --
+package home
+
+import "tool/exec"
+
+command: errcode: {
+	task: bad: exec.Run & {
+		cmd: ["testcmd", "exitcode", "5"]
+	}
+}

@@ -1,0 +1,23 @@
+# Check that an imported package with bad syntax produces
+# a sane error (it did panic).
+
+! exec cue export
+cmp stderr want-stderr
+-- want-stderr --
+import failed: missing ',' in struct literal:
+    ./foo.cue:2:8
+    ./blah/invalid.cue:3:11
+-- cue.mod/module.cue --
+module: "test.example"
+language: version: "v0.9.0"
+
+-- foo.cue --
+package foo
+import "test.example/blah"
+
+blah
+-- blah/invalid.cue --
+package blah
+
+self: bad )
+syntax

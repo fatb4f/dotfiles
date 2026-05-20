@@ -1,0 +1,194 @@
+# Check that cue mod tidy can add dependencies by
+# querying the registry, that it doesn't upgrade existing
+# dependencies, and that it removes dependencies that
+# aren't needed any more.
+
+exec cue mod tidy
+cmp cue.mod/module.cue want-module
+
+# Check that the resulting module evaluates as expected.
+exec cue export .
+cmp stdout want-stdout
+
+# Check that the tidy check succeeds
+exec cue mod tidy --check
+
+# Check what the structure of CUE_CACHE_DIR looks like after fetching modules.
+find-files ${CUE_CACHE_DIR}
+cmp stdout cue-cache-dir.files
+# Unused dependencies should not have their entire source downloaded or extracted.
+! stdout 'unused\.com.*\.zip$'
+-- want-module --
+module: "main.org"
+language: {
+	version: "v0.8.0"
+}
+deps: {
+	"bar.com@v0": {
+		v: "v0.5.0"
+	}
+	"baz.org@v0": {
+		v: "v0.10.1"
+	}
+	"example.com@v0": {
+		v: "v0.0.1"
+	}
+	"foo.com/bar/hello@v0": {
+		v:       "v0.2.3"
+		default: true
+	}
+}
+-- want-stdout --
+{
+    "bar.com@v0": "v0.5.0",
+    "baz.org@v0": "v0.10.1",
+    "foo.com/bar/hello@v0": "v0.2.3",
+    "main": "main",
+    "example.com@v0": "v0.0.1"
+}
+-- cue.mod/module.cue --
+module: "main.org"
+language: version: "v0.8.0"
+
+deps: "example.com": v: "v0.0.1"
+deps: "unused.com@v0": v: "v0.2.4"
+
+-- main.cue --
+package main
+import "example.com@v0:main"
+
+main
+
+-- cue-cache-dir.files --
+.tmp/cache/mod/download/bar.com/@v/v0.5.0.lock
+.tmp/cache/mod/download/bar.com/@v/v0.5.0.mod
+.tmp/cache/mod/download/bar.com/@v/v0.5.0.zip
+.tmp/cache/mod/download/baz.org/@v/v0.10.1.lock
+.tmp/cache/mod/download/baz.org/@v/v0.10.1.mod
+.tmp/cache/mod/download/baz.org/@v/v0.10.1.zip
+.tmp/cache/mod/download/example.com/@v/v0.0.1.lock
+.tmp/cache/mod/download/example.com/@v/v0.0.1.mod
+.tmp/cache/mod/download/example.com/@v/v0.0.1.zip
+.tmp/cache/mod/download/foo.com/bar/hello/@v/v0.2.3.lock
+.tmp/cache/mod/download/foo.com/bar/hello/@v/v0.2.3.mod
+.tmp/cache/mod/download/foo.com/bar/hello/@v/v0.2.3.zip
+.tmp/cache/mod/download/unused.com/@v/v0.2.4.lock
+.tmp/cache/mod/download/unused.com/@v/v0.2.4.mod
+.tmp/cache/mod/extract/bar.com@v0.5.0/bar/x.cue
+.tmp/cache/mod/extract/bar.com@v0.5.0/cue.mod/module.cue
+.tmp/cache/mod/extract/baz.org@v0.10.1/baz.cue
+.tmp/cache/mod/extract/baz.org@v0.10.1/cue.mod/module.cue
+.tmp/cache/mod/extract/example.com@v0.0.1/cue.mod/module.cue
+.tmp/cache/mod/extract/example.com@v0.0.1/top.cue
+.tmp/cache/mod/extract/foo.com/bar/hello@v0.2.3/cue.mod/module.cue
+.tmp/cache/mod/extract/foo.com/bar/hello@v0.2.3/x.cue
+-- _registry/example.com_v0.0.1/cue.mod/module.cue --
+module: "example.com@v0"
+language: version: "v0.8.0"
+deps: {
+	"foo.com/bar/hello@v0": v: "v0.2.3"
+	"bar.com@v0": v: "v0.5.0"
+}
+
+-- _registry/example.com_v0.0.1/top.cue --
+package main
+
+import a "foo.com/bar/hello"
+a
+main: "main"
+"example.com@v0": "v0.0.1"
+
+-- _registry/unused.com_v0.2.4/cue.mod/module.cue --
+module: "unused.com@v0"
+language: version: "v0.8.0"
+
+-- _registry/example.com_v0.1.2/cue.mod/module.cue --
+module: "example.com@v0"
+language: version: "v0.8.0"
+
+-- _registry/example.com_v0.1.2/top.cue --
+package main
+"example.com@v0": "v0.1.2"
+
+// TODO: import without a major version should
+// the major version from the module.cue file.
+main: "main"
+"example.com@v0": "v0.0.1"
+
+-- _registry/foo.com_bar_hello_v0.2.3/cue.mod/module.cue --
+module: "foo.com/bar/hello@v0"
+language: version: "v0.8.0"
+deps: {
+	"bar.com@v0": v: "v0.0.2"
+	"baz.org@v0": v: "v0.10.1"
+}
+
+-- _registry/foo.com_bar_hello_v0.2.3/x.cue --
+package hello
+import (
+	a "bar.com/bar@v0"
+	b "baz.org@v0:baz"
+)
+"foo.com/bar/hello@v0": "v0.2.3"
+a
+b
+
+
+-- _registry/bar.com_v0.0.2/cue.mod/module.cue --
+module: "bar.com@v0"
+language: version: "v0.8.0"
+deps: "baz.org@v0": v: "v0.0.2"
+
+-- _registry/bar.com_v0.0.2/bar/x.cue --
+package bar
+import a "baz.org@v0:baz"
+"bar.com@v0": "v0.0.2"
+a
+
+
+-- _registry/bar.com_v0.5.0/cue.mod/module.cue --
+module: "bar.com@v0"
+language: version: "v0.8.0"
+deps: "baz.org@v0": v: "v0.5.0"
+
+-- _registry/bar.com_v0.5.0/bar/x.cue --
+package bar
+import a "baz.org@v0:baz"
+"bar.com@v0": "v0.5.0"
+a
+
+
+-- _registry/baz.org_v0.0.2/cue.mod/module.cue --
+module: "baz.org@v0"
+language: version: "v0.8.0"
+
+-- _registry/baz.org_v0.0.2/baz.cue --
+package baz
+"baz.org@v0": "v0.0.2"
+
+
+-- _registry/baz.org_v0.1.2/cue.mod/module.cue --
+module: "baz.org@v0"
+language: version: "v0.8.0"
+
+-- _registry/baz.org_v0.1.2/baz.cue --
+package baz
+"baz.org@v0": "v0.1.2"
+
+
+-- _registry/baz.org_v0.5.0/cue.mod/module.cue --
+module: "baz.org@v0"
+language: version: "v0.8.0"
+
+-- _registry/baz.org_v0.5.0/baz.cue --
+package baz
+"baz.org@v0": "v0.5.0"
+
+
+-- _registry/baz.org_v0.10.1/cue.mod/module.cue --
+module: "baz.org@v0"
+language: version: "v0.8.0"
+
+-- _registry/baz.org_v0.10.1/baz.cue --
+package baz
+"baz.org@v0": "v0.10.1"

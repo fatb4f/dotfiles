@@ -1,0 +1,289 @@
+{
+  "generated_from": "skills.zip",
+  "timestamp": "2026-05-19",
+  "scope": "root skills.cue plus per-skill skill.cue files",
+  "excluded": [
+    "skills/.system/*"
+  ],
+  "validation": {
+    "network_from_container": "unavailable: github.com DNS resolution failed inside container",
+    "web_validation": "repository/doc anchors were checked using web search/open results where available; path-level git validation remains for agentctl/scripts",
+    "policy": "references.upstream.include defines candidate source/docs paths to fetch/validate/distill; references.projected.include defines curated local reference payloads for runtime projection"
+  },
+  "skills": [
+    {
+      "id": "agent-sdk",
+      "upstream": {
+        "kind": "local",
+        "source": "$AGENT_SDK_SOURCE"
+      },
+      "upstream_include": [],
+      "projected_include": [
+        "SKILL.md",
+        "skill.cue",
+        "references/INDEX.md",
+        "references/provenance.json"
+      ]
+    },
+    {
+      "id": "argc",
+      "upstream": {
+        "kind": "github",
+        "repo": "sigoden/argc",
+        "ref": "main",
+        "url": "https://github.com/sigoden/argc"
+      },
+      "upstream_include": [
+        "README.md",
+        "docs",
+        "examples"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns"
+      ]
+    },
+    {
+      "id": "bash-ast",
+      "upstream": {
+        "kind": "github",
+        "repo": "cv/bash-ast",
+        "ref": "main",
+        "url": "https://github.com/cv/bash-ast"
+      },
+      "upstream_include": [
+        "README.md",
+        "HOMEBREW.md",
+        "tests"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns",
+        "references/fixtures"
+      ]
+    },
+    {
+      "id": "bashly",
+      "upstream": {
+        "kind": "github",
+        "repo": "bashly-framework/bashly",
+        "ref": "master",
+        "url": "https://github.com/bashly-framework/bashly",
+        "docs_url": "https://bashly.dev/"
+      },
+      "upstream_include": [
+        "README.md",
+        "docs",
+        "examples"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns"
+      ]
+    },
+    {
+      "id": "bats-core",
+      "upstream": {
+        "kind": "github",
+        "repo": "bats-core/bats-core",
+        "ref": "master",
+        "url": "https://github.com/bats-core/bats-core",
+        "docs_url": "https://bats-core.readthedocs.io/"
+      },
+      "upstream_include": [
+        "README.md",
+        "docs",
+        "man"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns",
+        "references/fixtures"
+      ]
+    },
+    {
+      "id": "cue",
+      "upstream": {
+        "kind": "github",
+        "repo": "cue-lang/cue",
+        "ref": "master",
+        "url": "https://github.com/cue-lang/cue",
+        "docs_repos": [
+          {
+            "repo": "cue-lang/cuelang.org",
+            "ref": "master",
+            "url": "https://github.com/cue-lang/cuelang.org"
+          }
+        ]
+      },
+      "upstream_include": [
+        "doc/ref/spec.md",
+        "doc/ref/impl.md",
+        "doc/cmd/cue.md",
+        "doc/context/language-features.md",
+        "doc/tutorial/basics/README.md"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns",
+        "references/fixtures"
+      ]
+    },
+    {
+      "id": "repo-search",
+      "upstream": {
+        "kind": "github",
+        "repo": "burntsushi/ripgrep",
+        "ref": "master",
+        "url": "https://github.com/BurntSushi/ripgrep"
+      },
+      "upstream_include": [
+        "README.md",
+        "GUIDE.md",
+        "FAQ.md",
+        "doc/rg.1.md"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "repo-rg",
+        "references/INDEX.md",
+        "references/provenance.json"
+      ]
+    },
+    {
+      "id": "sem",
+      "upstream": {
+        "kind": "github",
+        "repo": "Ataraxy-Labs/sem",
+        "ref": "main",
+        "url": "https://github.com/Ataraxy-Labs/sem",
+        "docs_url": "https://ataraxy-labs.github.io/sem/"
+      },
+      "upstream_include": [
+        "README.md",
+        "docs/llms.txt",
+        "docs/agents.html",
+        "docs/details.html"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns",
+        "references/fixtures"
+      ]
+    },
+    {
+      "id": "shell-validation",
+      "upstream": {
+        "kind": "composite",
+        "repos": [
+          {
+            "id": "shellcheck",
+            "repo": "koalaman/shellcheck",
+            "ref": "master",
+            "url": "https://github.com/koalaman/shellcheck",
+            "include": [
+              "README.md",
+              "wiki"
+            ]
+          },
+          {
+            "id": "shfmt",
+            "repo": "mvdan/sh",
+            "ref": "master",
+            "url": "https://github.com/mvdan/sh",
+            "include": [
+              "README.md",
+              "cmd/shfmt",
+              "cmd/shfmt/shfmt.1.scd"
+            ]
+          }
+        ]
+      },
+      "upstream_include": [
+        "shellcheck/README.md",
+        "shellcheck/wiki",
+        "shfmt/README.md",
+        "shfmt/cmd/shfmt",
+        "shfmt/cmd/shfmt/shfmt.1.scd"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns"
+      ]
+    },
+    {
+      "id": "shellspec",
+      "upstream": {
+        "kind": "github",
+        "repo": "shellspec/shellspec",
+        "ref": "master",
+        "url": "https://github.com/shellspec/shellspec",
+        "docs_url": "https://shellspec.info/"
+      },
+      "upstream_include": [
+        "README.md",
+        "docs",
+        "examples"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns",
+        "references/fixtures"
+      ]
+    },
+    {
+      "id": "tree-sitter",
+      "upstream": {
+        "kind": "github",
+        "repo": "tree-sitter/tree-sitter",
+        "ref": "master",
+        "url": "https://github.com/tree-sitter/tree-sitter",
+        "docs_url": "https://tree-sitter.github.io/tree-sitter/"
+      },
+      "upstream_include": [
+        "README.md",
+        "docs",
+        "cli"
+      ],
+      "projected_include": [
+        "SKILL.md",
+        "AGENTS.md",
+        "references/INDEX.md",
+        "references/provenance.json",
+        "references/docs",
+        "references/patterns",
+        "references/fixtures"
+      ]
+    }
+  ]
+}

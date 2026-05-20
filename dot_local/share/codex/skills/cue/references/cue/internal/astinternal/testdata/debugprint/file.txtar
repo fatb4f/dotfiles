@@ -1,0 +1,176 @@
+-- empty.cue --
+-- package_only.cue --
+package p
+-- comments_only.cue --
+// some
+// comment lines
+-- imports.cue --
+package p
+
+import "foo"
+
+import (
+	"bar"
+	name "baz"
+)
+-- out/debugprint/empty.cue --
+*ast.File{
+	Filename: "empty.cue"
+	LanguageVersion: "v0.13.0"
+}
+-- out/debugprint/package_only.cue --
+*ast.File{
+	Filename: "package_only.cue"
+	Decls: []ast.Decl{
+		*ast.Package{
+			PackagePos: token.Pos("package_only.cue:1:1", nospace)
+			Name: *ast.Ident{
+				NamePos: token.Pos("package_only.cue:1:9", blank)
+				Name: "p"
+			}
+		}
+	}
+	LanguageVersion: "v0.13.0"
+}
+-- out/debugprint/comments_only.cue --
+*ast.File{
+	Filename: "comments_only.cue"
+	LanguageVersion: "v0.13.0"
+	Comments: []*ast.CommentGroup{
+		{
+			List: []*ast.Comment{
+				{
+					Slash: token.Pos("comments_only.cue:1:1", newline)
+					Text: "// some"
+				}
+				{
+					Slash: token.Pos("comments_only.cue:2:1", newline)
+					Text: "// comment lines"
+				}
+			}
+		}
+	}
+}
+-- out/debugprint/imports.cue --
+*ast.File{
+	Filename: "imports.cue"
+	Decls: []ast.Decl{
+		*ast.Package{
+			PackagePos: token.Pos("imports.cue:1:1", nospace)
+			Name: *ast.Ident{
+				NamePos: token.Pos("imports.cue:1:9", blank)
+				Name: "p"
+			}
+		}
+		*ast.ImportDecl{
+			Import: token.Pos("imports.cue:3:1", section)
+			Specs: []*ast.ImportSpec{
+				{
+					Path: *ast.BasicLit{
+						ValuePos: token.Pos("imports.cue:3:8", blank)
+						Kind: token.Token("STRING")
+						Value: "\"foo\""
+					}
+				}
+			}
+		}
+		*ast.ImportDecl{
+			Import: token.Pos("imports.cue:5:1", section)
+			Lparen: token.Pos("imports.cue:5:8", blank)
+			Specs: []*ast.ImportSpec{
+				{
+					Path: *ast.BasicLit{
+						ValuePos: token.Pos("imports.cue:6:2", newline)
+						Kind: token.Token("STRING")
+						Value: "\"bar\""
+					}
+				}
+				{
+					Name: *ast.Ident{
+						NamePos: token.Pos("imports.cue:7:2", newline)
+						Name: "name"
+					}
+					Path: *ast.BasicLit{
+						ValuePos: token.Pos("imports.cue:7:7", blank)
+						Kind: token.Token("STRING")
+						Value: "\"baz\""
+					}
+				}
+			}
+			Rparen: token.Pos("imports.cue:8:1", newline)
+		}
+	}
+	LanguageVersion: "v0.13.0"
+}
+-- out/debugprint/empty.cue/omitempty-strings --
+*ast.File{
+	Filename: "empty.cue"
+	LanguageVersion: "v0.13.0"
+}
+-- out/debugprint/package_only.cue/omitempty-strings --
+*ast.File{
+	Filename: "package_only.cue"
+	Decls: []ast.Decl{
+		*ast.Package{
+			Name: *ast.Ident{
+				Name: "p"
+			}
+		}
+	}
+	LanguageVersion: "v0.13.0"
+}
+-- out/debugprint/comments_only.cue/omitempty-strings --
+*ast.File{
+	Filename: "comments_only.cue"
+	LanguageVersion: "v0.13.0"
+	Comments: []*ast.CommentGroup{
+		{
+			List: []*ast.Comment{
+				{
+					Text: "// some"
+				}
+				{
+					Text: "// comment lines"
+				}
+			}
+		}
+	}
+}
+-- out/debugprint/imports.cue/omitempty-strings --
+*ast.File{
+	Filename: "imports.cue"
+	Decls: []ast.Decl{
+		*ast.Package{
+			Name: *ast.Ident{
+				Name: "p"
+			}
+		}
+		*ast.ImportDecl{
+			Specs: []*ast.ImportSpec{
+				{
+					Path: *ast.BasicLit{
+						Value: "\"foo\""
+					}
+				}
+			}
+		}
+		*ast.ImportDecl{
+			Specs: []*ast.ImportSpec{
+				{
+					Path: *ast.BasicLit{
+						Value: "\"bar\""
+					}
+				}
+				{
+					Name: *ast.Ident{
+						Name: "name"
+					}
+					Path: *ast.BasicLit{
+						Value: "\"baz\""
+					}
+				}
+			}
+		}
+	}
+	LanguageVersion: "v0.13.0"
+}

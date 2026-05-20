@@ -1,0 +1,4 @@
+! exec cue mod init bad.com@v2.2
+cmp stderr want-stderr
+-- want-stderr --
+malformed module path "bad.com@v2.2": path can contain major version only
