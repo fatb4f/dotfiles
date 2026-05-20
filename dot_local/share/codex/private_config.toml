@@ -1,0 +1,98 @@
+# managed by chezmoi
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+network_access = true
+web_search = "disabled"
+model_reasoning_summary = "auto"
+project_doc_max_bytes = 24576
+
+log_dir = "/home/_404/.local/state/codex/log"
+sqlite_home = "/home/_404/.local/state/codex/sqlite"
+allow_login_shell = false
+
+[features]
+codex_hooks = false
+shell_tool = true
+shell_snapshot = false
+
+[history]
+persistence = "none"
+
+[shell_environment_policy]
+inherit = "core"
+include_only = [
+  "HOME",
+  "PATH",
+  "SHELL",
+  "TERM",
+  "USER",
+  "LOGNAME",
+  "PWD",
+  "LANG",
+  "LC_.*",
+
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "XDG_STATE_HOME",
+  "XDG_CACHE_HOME",
+
+  "CODEX_HOME",
+  "CODEX_STATE",
+  "CODEX_CACHE",
+  "CODEX_SQLITE_HOME",
+]
+exclude = [".*TOKEN.*", ".*SECRET.*", ".*KEY.*", ".*PASSWORD.*"]
+experimental_use_profile = false
+ignore_default_excludes = false
+
+[tui]
+status_line = [
+  "model-with-reasoning",
+  "current-dir",
+  "model",
+  "context-used",
+  "five-hour-limit",
+  "weekly-limit",
+  "context-window-size",
+  "used-tokens",
+  "total-input-tokens",
+  "total-output-tokens",
+]
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+
+# Trust registry: global project/worktree trust
+[projects]
+"/home/_404/.local/share/chezmoi" = { trust_level = "trusted" }
+"/home/_404/.local/src/fatb4f/bashly.sh" = { trust_level = "trusted" }
+"/home/_404/.local/src/fatb4f/agent-sdk" = { trust_level = "trusted" }
+
+[profiles.bashly]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+default_permissions = ":workspace"
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+
+[profiles.bashly.sandbox_workspace_write]
+network_access = true
+writable_roots = [
+  "/home/_404/.local/src/github.com/fatb4f/bashly.sh",
+]
+
+[profiles.agent-sdk]
+approval_policy = "never"
+sandbox_mode = "workspace-write"
+default_permissions = ":workspace"
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+
+[profiles.agent-sdk.sandbox_workspace_write]
+network_access = true
+writable_roots = [
+  "/home/_404/.local/src/fatb4f/agent-sdk",
+  "/home/_404/.local/share/chezmoi",
+]

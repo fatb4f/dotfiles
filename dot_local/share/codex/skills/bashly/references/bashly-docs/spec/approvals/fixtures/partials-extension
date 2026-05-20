@@ -1,0 +1,118 @@
++ export BASHLY_PARTIALS_EXTENSION=bash
++ BASHLY_PARTIALS_EXTENSION=bash
++ bundle exec bashly init
+created src/bashly.yml
+run bashly generate to create the bash script
++ bundle exec bashly generate
+creating user files in src
+created src/download_command.bash
+created src/upload_command.bash
+created ./cli
+run ./cli --help to test your bash script
++ bundle exec bashly add colors
+created src/lib/colors.bash
+
+The colors library supports the NO_COLOR standard out of the box.
+
+In case you wish to also enable automatic output of colors based on the
+terminal being interactive (TTY), call enable_auto_colors in your 
+src/initialize.sh. You may run the following command to add this file:
+
+  $ bashly add hooks
+
++ bundle exec bashly add completions
+created src/lib/send_completions.bash
+
+In order to enable completions in your script, create a command or a flag (for example: cli completions or cli --completions) that calls the send_completions function.
+
+Your users can then run something like this to enable completions:
+
+  $ eval "$(cli completions)"
+
++ bundle exec bashly add config
+created src/lib/config.bash
+created src/lib/ini.bash
++ bundle exec bashly add help
+created src/help_command.bash
+
+Add this as a command to your bashly.yml:
+
+  commands:
+    - name: help
+      help: Show help about a command
+      args:
+      - name: command
+        help: Help subject
+
+
++ bundle exec bashly add lib
+created src/lib/sample_function.bash
++ bundle exec bashly add validations
+created src/lib/validations/validate_dir_exists.bash
+created src/lib/validations/validate_file_exists.bash
+created src/lib/validations/validate_integer.bash
+created src/lib/validations/validate_not_empty.bash
++ bundle exec bashly add yaml
+created src/lib/yaml.bash
++ bundle exec bashly generate --upgrade
+creating user files in src
+skipped src/download_command.bash (exists)
+skipped src/upload_command.bash (exists)
+updated src/help_command.bash
+updated src/lib/colors.bash
+updated src/lib/config.bash
+updated src/lib/ini.bash
+updated src/lib/send_completions.bash
+updated src/lib/validations/validate_dir_exists.bash
+updated src/lib/validations/validate_file_exists.bash
+updated src/lib/validations/validate_integer.bash
+updated src/lib/validations/validate_not_empty.bash
+updated src/lib/yaml.bash
+created ./cli
+run ./cli --help to test your bash script
++ ./cli
+cli - Sample application
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+
++ ./cli --help
+cli - Sample application
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+
+Options:
+  --help, -h
+    Show this help
+
+  --version, -v
+    Show version number
+
+Environment Variables:
+  API_KEY
+    Set your API key
+
++ ./cli download something
+# This file is located at 'src/download_command.bash'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[source]} = something
+
+environment variables:
+- $API_KEY = 
+- $DEFAULT_TARGET_LOCATION = 

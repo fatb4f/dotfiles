@@ -1,0 +1,42 @@
+name: cli
+help: Sample application
+version: 0.1.0
+
+commands:
+- name: download
+  alias: d
+  help: Download a file
+
+  # Configure catch_all for the `download` sub-command using the extended
+  # syntax which adds a proper help message.
+  catch_all:
+    label: AWS Params
+    help: Additional arguments or flags for AWS CLI
+
+  args:
+  - name: source
+    required: true
+    help: URL to download from
+  - name: target
+    help: "Target filename (default: same as source)"
+
+  flags:
+  - long: --force
+    short: -f
+    help: Overwrite existing files
+
+  examples:
+  - cli download example.com
+  - cli download example.com ./output -f
+
+- name: upload
+  alias: u
+  help: Upload a file
+
+  # Configure catch_all for the `upload` sub-command using the extended
+  # syntax, and specifying that `catch_all` is required (which means that at 
+  # least one extra argument must be provided)
+  catch_all:
+    label: Files
+    help: Files to upload
+    required: true

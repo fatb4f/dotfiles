@@ -1,0 +1,34 @@
+if environment_variables.any?
+  = view_marker
+  = render(:environment_variables_default)
+
+  if Settings.enabled? :env_var_names_array
+    environment_variables.each do |env_var|
+      > env_var_names+=("{{ env_var.name.upcase }}")
+    end
+  end
+end
+
+if required_environment_variables.any?
+  required_environment_variables.each do |env_var|
+    > if [[ -z "${<%= env_var.name.upcase %>:-}" ]]; then
+    >   printf "{{ strings[:missing_required_environment_variable] % { var: env_var.name.upcase } }}\n" >&2
+    >   exit 1
+    > fi
+  end
+end
+
+if whitelisted_environment_variables.any?
+  whitelisted_environment_variables.each do |env_var|
+    > if [[ -n "${<%= env_var.name.upcase %>:-}" ]] && [[ ! ${<%= env_var.name.upcase %>:-} =~ ^({{ env_var.allowed.join '|' }})$ ]]; then
+    >   printf "%s\n" "{{ strings[:disallowed_environment_variable] % { name: env_var.name.upcase, allowed: env_var.allowed.join(', ') } }}" >&2
+    >   exit 1
+    > fi
+  end
+end
+
+if validated_environment_variables.any?
+  validated_environment_variables.each do |env_var|
+    = env_var.render(:validations)
+  end
+end

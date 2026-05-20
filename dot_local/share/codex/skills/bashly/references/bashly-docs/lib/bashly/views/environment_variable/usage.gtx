@@ -1,0 +1,15 @@
+= view_marker
+
+> printf "  %s\n" "{{ usage_string(extended: true).color(:environment_variable) }}"
+> printf "{{ user_string help, indent: 4 }}\n"
+
+if allowed
+  > printf "    %s\n" "{{ strings[:allowed] % { values: allowed.join(', ') } }}"
+end
+
+if default
+  > printf "    %s\n" "{{ strings[:default] % { value: default } }}"
+end
+
+> echo
+> 

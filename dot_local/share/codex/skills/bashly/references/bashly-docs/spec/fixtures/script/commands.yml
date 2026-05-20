@@ -1,0 +1,521 @@
+:aliases:
+  name: apt
+  commands:
+  - name: download
+    alias: [d, pull]
+  - name: upload
+    alias: [u, push]
+  - name: update
+    alias: upgrade
+
+:basic_command:
+  name: get
+  alias: g
+  help: |-
+    get something from somewhere
+    this is the second line
+
+  args:
+  - name: source
+    required: true
+  - name: target
+
+  flags:
+  - long: --force
+    required: true
+  - long: --verbose
+
+  environment_variables:
+  - name: secret_key
+    required: true
+  - name: target_folder
+
+:catch_all:
+  name: get
+  help: get something from somewhere
+  catch_all: true
+
+:catch_all_string:
+  name: get
+  help: get something from somewhere
+  catch_all: extra_params
+
+:catch_all_hash:
+  name: get
+  help: get something from somewhere
+  catch_all:
+    label: additional_params
+    help: Any additional argument or flag
+    required: true
+
+:completions_simple:
+  name: get
+  completions:
+  - <file>
+
+  flags:
+  - long: --force
+  - long: --verbose
+
+:completions_advanced:
+  name: say
+  commands:
+  - name: hello
+    commands:
+    - name: world
+      completions:
+      - <directory>
+      - <user>
+      flags:
+      - long: --force
+      - long: --verbose
+  - name: goodbye
+    commands:
+    - name: universe
+      completions:
+      - $(git branch)
+      flags:
+      - long: --color
+        short: -c
+        allowed: [green, red]
+      - long: --path
+        completions: [<file>]
+      - long: --verbose
+        short: -v
+
+:completions_whitelist:
+  name: download
+  args:
+  - name: protocol
+    allowed: [https, ssh]
+  - name: port
+    allowed: ["80", "22", "3000"]
+  flags:
+  - long: --role
+    arg: name
+    allowed: [user, admin]
+  - long: --method
+    arg: name
+    allowed: [get, post]
+
+:completions_global_flags:
+  name: cli
+  flags:
+  - long: --debug
+  commands:
+  - name: images
+    flags:
+    - long: --verbose
+    commands:
+    - name: ls
+      flags:
+      - long: --env
+        arg: env
+        allowed: [prod, dev]
+
+:completions_global_flags_nested:
+  name: cli
+  commands:
+  - name: images
+    flags:
+    - long: --verbose
+    commands:
+    - name: ls
+
+:completions_global_flags_root:
+  name: cli
+  flags:
+  - long: --debug
+  commands:
+  - name: images
+    commands:
+    - name: ls
+      flags:
+      - long: --env
+        arg: env
+        allowed: [prod, dev]
+
+:custom_filename:
+  name: run
+  filename: ops/run_command.sh
+
+:custom_function:
+  name: run
+  function: my_custom_function
+
+:custom_header:
+  name: check
+
+:default_command:
+  name: cli
+  commands:
+  - name: get
+    help: get this
+    default: true
+  - name: post
+  - name: put
+
+:default_values:
+  name: cli
+  args:
+  - name: files
+    default: "*.jpg"
+  flags:
+  - short: -f
+    long: --format
+    arg: format
+    default: png
+
+:dependencies:
+  name: cli
+  dependencies:
+  - curl
+  - jq
+
+:dependencies_simple_hash:
+  name: cli
+  dependencies:
+    curl: Please install curl
+
+:dependencies_full_hash:
+  name: cli
+  dependencies:
+    http_client:
+      command: [curl, wget]
+      help: Please install curl or wget
+
+:docker:
+  name: docker
+  help: run docker commands
+  commands:
+  - name: container
+    commands:
+    - name: run
+    - name: stop
+  - name: image
+
+:docker_container_run:
+  name: run
+  help: perform docker container run
+  parents: [docker, container]
+
+:environment_variable_enthusiast:
+  name: get
+  environment_variables:
+  - name: username
+    required: true
+  - name: file
+    default: README.md
+  - name: config_dir
+    validate: dir_exists
+  - name: protocol
+    allowed: [ssh, https]
+  - name: secret
+    private: true
+
+:examples_array:
+  name: get
+  help: get something from somewhere
+
+  examples:
+  - get url --out path
+  - get url --force
+
+:examples_string:
+  name: get
+  help: get something from somewhere
+
+  examples: |-
+    Download a file
+    $ get url --out path
+
+    Force download
+    $ get url --force
+
+:exposed:
+  name: cli
+  commands:
+  - name: init
+    help: Start a new project
+  - name: config
+    help: Config management commands
+    expose: always
+    commands:
+    - name: edit
+      help: Edit config file
+    - name: show
+      help: Show config file
+  - name: server
+    help: Server management commands
+    expose: true
+    group: Cluster
+    commands:
+    - name: start
+      help: Start the server
+    - name: stop
+      help: Stop the server
+
+  - name: container
+    alias: c
+    help: Container management commands
+    expose: true
+    group: Cluster
+    commands:
+    - name: exec
+      help: Run a command in the container
+    - name: down
+      help: Terminate a container
+
+:exposed_private:
+  name: cli
+  help: sample application
+  environment_variables:
+  - name: secret
+    help: Set secret key
+    private: true
+  flags:
+  - long: --debug
+    help: Enable debug mode
+    private: true
+  commands:
+  - name: admin
+    help: Admin operations
+    expose: true
+    commands:
+    - name: list
+      help: List connected devices    
+    - name: reboot
+      help: Reboot
+      private: true
+
+:filters_array:
+  name: run
+  filters:
+  - docker_running
+  - redis_running
+
+:filters_string:
+  name: run
+  filters: docker_running
+
+:flag_hog:
+  name: cli
+  help: test when -h and -v are defined
+  flags:
+  - short: -h
+    long: --hello
+  - short: -v
+    long: --vorld
+
+:flags_only_command:
+  name: status
+  help: perform git status
+  flags:
+  - long: --force
+  - long: --verbose
+  parents: [git]
+
+:git_status:
+  name: status
+  help: perform git status
+  parents: [git]
+
+:grouped:
+  name: push
+  group: Repository
+
+:helpless:
+  name: helpless
+
+:long_only_command:
+  name: get
+  help: get something from somewhere
+
+:mode_global_flags:
+  name: get
+  help: get something from somewhere
+
+  flags:
+  - long: --force
+  - long: --verbose
+
+  commands:
+  - name: download
+    flags:
+    - long: --http
+  - name: upload
+
+:mode_commands:
+  name: get
+  help: get something from somewhere
+
+  commands:
+  - name: download
+    flags:
+    - long: --http
+  - name: upload
+
+:mode_args_and_flags:
+  name: get
+  help: get something from somewhere
+  catch_all: params
+
+  args:
+  - name: source
+    required: true
+  - name: target
+
+  flags:
+  - long: --force
+    required: true
+  - long: --verbose
+
+:mode_args:
+  name: get
+  help: get something from somewhere
+  catch_all: params
+
+  args:
+  - name: source
+    required: true
+  - name: target
+
+:mode_flags:
+  name: get
+  help: get something from somewhere
+  catch_all: params
+
+  flags:
+  - long: --force
+    required: true
+  - long: --verbose
+
+:mode_empty:
+  name: get
+  help: get something from somewhere
+  catch_all: params
+
+:needy_flags:
+  name: add
+  help: add a command alias
+
+  flags:
+  - long: --add
+    arg: alias
+    needs: [--command]
+  - long: --command
+    arg: command
+    needs: [--add]
+
+
+:nested_aliases:
+  name: cli
+  commands:
+  - name: alpha
+    alias: a
+    commands:
+    - name: bravo
+      alias: [b, beta]
+      commands:
+      - name: charlie
+        alias: c
+        commands:
+        - name: delta
+          alias: d
+          flags:
+          - long: --color
+            short: -c
+            allowed: [green, red]
+
+:private_commands:
+  name: private
+  help: Test private commands
+  commands:
+  - name: connect
+    alias: c
+  - name: connect-ftp
+    alias: cf
+    private: true
+  - name: connect-ssh
+    alias: cs
+    private: true
+
+:private_flags:
+  name: status
+  help: perform git status
+  flags:
+  - long: --legacy
+    private: true
+  - long: --new
+
+:repeatable_arg:
+  name: get
+  args:
+  - name: source
+  - name: target
+    repeatable: true
+
+:unique_args:
+  name: get
+  args:
+  - name: file
+    repeatable: true
+    unique: true
+
+:unique_flags:
+  name: get
+  flags:
+  - short: --file
+    arg: path
+    repeatable: true
+    unique: true
+
+:unique_args_deep:
+  name: ftp
+  commands:
+  - name: upload
+    args:
+    - name: file
+      repeatable: true
+      unique: true
+
+:unique_flags_deep:
+  name: ftp
+  commands:
+  - name: upload
+    flags:
+    - long: --file
+      arg: path
+      repeatable: true
+      unique: true
+
+:variables:
+  name: get
+  variables:
+  - name: debug
+    value: true
+  - name: url
+    value: http://hello.com
+  - name: number
+    value: 123
+  - name: array
+    value: [one, two]
+  - name: hash
+    value: { one: 1, two: 2 }
+  - name: empty
+
+:whitelist:
+  name: cli
+  args:
+  - name: region
+    allowed: [eu, us]
+  - name: environment
+
+  flags:
+  - long: --user
+    arg: name
+    allowed: [user, admin]
+
+  - long: --protocol
+    arg: type
+

@@ -1,0 +1,9 @@
+= view_marker
+
+args.each_with_index do |arg, index|
+  = arg.render :case_repeatable, index: index
+end
+
+> fi
+> shift
+> 

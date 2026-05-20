@@ -1,0 +1,19 @@
+---
+download:
+- "--help"
+- "--method"
+- "--role"
+- "--version"
+- "-h"
+- "-v"
+- '22'
+- '3000'
+- '80'
+- https
+- ssh
+download*--role:
+- user
+- admin
+download*--method:
+- get
+- post

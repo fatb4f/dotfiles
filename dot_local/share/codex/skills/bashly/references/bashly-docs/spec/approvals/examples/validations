@@ -1,0 +1,56 @@
++ bashly add validations --force
+created src/lib/validations/validate_dir_exists.sh
+created src/lib/validations/validate_file_exists.sh
+created src/lib/validations/validate_integer.sh
+created src/lib/validations/validate_not_empty.sh
++ bashly generate
+creating user files in src
+created src/calc_command.sh
+created src/build_command.sh
+created src/deploy_command.sh
+created ./validate
+run ./validate --help to test your bash script
++ ./validate calc 1 2 --save README.md
+# This file is located at 'src/calc_command.sh'.
+# It contains the implementation for the 'validate calc' command.
+# The code you write here will be wrapped by a function named 'validate_calc_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[first]} = 1
+- ${args[--save]} = README.md
+- ${args[second]} = 2
++ ./validate calc A
+validation error in FIRST:
+must be an integer
++ ./validate calc 1 ''
+validation error in SECOND:
+must not be empty
++ ./validate calc 1 B
+validation error in SECOND:
+must be an integer
++ ./validate calc 1 2 --save no-such-file.txt
+validation error in --save PATH:
+must be an existing file
++ ./validate build
+validation error in environment variable BUILD_DIR:
+must be an existing directory
++ BUILD_DIR=src
++ ./validate build
+# This file is located at 'src/build_command.sh'.
+# It contains the implementation for the 'validate build' command.
+# The code you write here will be wrapped by a function named 'validate_build_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args: none
+
+environment variables:
+- $BUILD_DIR = src
++ ./validate deploy --user ''
+validation error in --user USERNAME:
+must not be empty
++ ./validate deploy --user admin
+# This file is located at 'src/deploy_command.sh'.
+# It contains the implementation for the 'validate deploy' command.
+# The code you write here will be wrapped by a function named 'validate_deploy_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--user]} = admin

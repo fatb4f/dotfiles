@@ -1,0 +1,91 @@
++ bashly generate
+creating user files in src
+skipped src/verify_command.sh (exists)
+created ./cli
+run ./cli --help to test your bash script
++ ./cli
+cli - Sample application that requires environment variables
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  verify   Verify your user
+
++ ./cli -h
+cli - Sample application that requires environment variables
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  verify   Verify your user
+
+Options:
+  --help, -h
+    Show this help
+
+  --version, -v
+    Show version number
+
+Environment Variables:
+  API_KEY
+    Set your API key
+
++ ./cli verify -h
+cli verify - Verify your user
+
+Alias: v
+
+Usage:
+  cli verify
+  cli verify --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Environment Variables:
+  MY_SECRET (required)
+    Your secret
+
+  REGION
+    Cloud region
+    Default: us-east-2
+
+  ENVIRONMENT
+    One of development, production or test
+    Allowed: development, production, testing
+    Default: development
+
++ ./cli verify
+missing required environment variable: MY_SECRET
++ MY_SECRET='there is no spoon'
++ ./cli verify
+# this file is located in 'src/verify_command.sh'
+# code for 'cli verify' goes here
+# you can edit it freely and regenerate (it will not be overwritten)
+args: none
+
+environment variables:
+- $API_KEY = 
+- $ENVIRONMENT = development
+- $MY_SECRET = there is no spoon
+- $REGION = us-east-2
++ ENVIRONMENT=production
++ MY_SECRET=safe-with-me
++ ./cli verify
+# this file is located in 'src/verify_command.sh'
+# code for 'cli verify' goes here
+# you can edit it freely and regenerate (it will not be overwritten)
+args: none
+
+environment variables:
+- $API_KEY = 
+- $ENVIRONMENT = production
+- $MY_SECRET = safe-with-me
+- $REGION = us-east-2

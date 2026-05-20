@@ -1,0 +1,47 @@
+name: cli
+help: Sample application with nested commands
+version: 0.1.0
+
+commands:
+- name: dir
+  alias: d
+  help: Directory commands
+
+  # The `commands` array can be nested inside any other command
+  # This particular array will generate a script that answers to
+  # `cli dir list` and `cli dir remove`
+  commands:
+  - name: list
+    help: Show files in the directory
+
+    args: &dir_args
+    - name: path
+      help: Directory path
+      required: true
+
+  - name: remove
+    help: Remove directory
+    args: *dir_args   # reuse args from the list command
+
+    flags:
+    - long: --force
+      short: -f
+      help: Remove even if when not empty
+
+- name: file
+  alias: f
+  help: File commands
+
+  # The nested commands for `cli file` - will generate `cli file show` and
+  # `cli file edit`.
+  commands:
+  - name: show
+    help: Show file contents
+    args: &file_args
+    - name: path
+      help: Path to file
+      required: true
+
+  - name: edit
+    help: Edit the file
+    args: *file_args   # reuse args from the show command

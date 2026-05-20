@@ -1,0 +1,29 @@
+= view_marker
+
+> {{ Settings.function_name :run }}() {
+= render(:globals).indent(2)
+>
+>   normalize_input "$@"
+>   parse_requirements "${input[@]}"
+
+if user_file_exist?('before')
+  >   before_hook
+end
+
+> 
+>   case "$action" in
+deep_commands.each do |command|
+  >     "{{ command.action_name }}") {{ command.function_name }}_command ;;
+end
+
+if commands.empty?
+  >     "root") root_command ;;
+end
+>   esac
+
+if user_file_exist?('after')
+  >
+  >   after_hook
+end
+
+> }

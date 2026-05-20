@@ -1,0 +1,456 @@
+:arg:
+  name: invalid
+  help: the arg.name should not start with --
+  args:
+  - name: --user
+
+:arg_default_array_without_repeatable:
+  name: invalid
+  help: default cannot be an array without repeatable
+  args:
+  - name: path
+    default:
+    - spaced file
+    - other-file
+
+:arg_nested_name:
+  name: invalid
+  help: last nested arg does not have a name
+  commands:
+  - name: level1
+    commands:
+    - name: level2a
+      args:
+      - name: ok
+      - name: alright
+    - name: level2b
+      args:          
+      - name: ok
+      - help: there is no name
+
+:arg_repeatable_more_than_one:
+  name: invalid
+  help: can only have one repeatable arg
+  args:
+  - name: source
+    required: true
+    repeatable: true
+    help: URL to download from
+  - name: target
+    repeatable: true
+    help: Target filename
+
+:arg_repeatable_not_last:
+  name: invalid
+  help: can the last arg can be repeatable
+  args:
+  - name: source
+    required: true
+    repeatable: true
+    help: URL to download from
+  - name: target
+    help: Target filename
+
+:arg_unique_without_repeatable:
+  name: invalid
+  help: arg must be repeatable when using unique
+  args:
+  - name: target
+    help: Target filename
+    unique: true
+
+:catch_all_and_repeatable_arg:
+  name: invalid
+  help: catch_all and repeatable arg make no sense together
+  catch_all: true
+  args:
+  - name: path
+    help: Path to one or more files
+    repeatable: true
+    required: true
+
+:command_args_required_after_optional:
+  name: invalid
+  args:
+  - name: user
+  - name: password
+    required: true
+
+:command_catch_all_commands:
+  name: invalid
+  catch_all:
+    label: params
+    help: catch_all makes no sense with commands
+  commands:
+  - name: config
+
+:command_catch_all_hash:
+  name: invalid
+  catch_all:
+    help: catch_all hash must have a label
+
+:command_catch_all_type:
+  name: invalid
+  help: catch_all must be boolean, string, or hash
+  catch_all: [1,2]
+
+:command_catch_all_catch_help:
+  name: invalid
+  help: catch_all.catch_help must be boolean
+  catch_all:
+    label: params
+    catch_help: "this is not a help string"
+
+:command_catch_all_valid:
+  name: invalid
+  catch_all:
+    label: acceptable
+    help: catch_all.required should be boolean
+    required: 1
+
+:command_dependencies_invalid:
+  name: invalid
+  dependencies: 1
+
+:command_dependencies_invalid_array:
+  name: invalid
+  dependencies: [1, 2]
+
+:command_dependencies_invalid_hash:
+  name: invalid
+  dependencies:
+    docker: 1
+    git: 2
+
+:command_dependencies_invalid_hash_command:
+  name: invalid
+  dependencies:
+    docker:
+      command: 1
+
+:command_dependencies_invalid_hash_help:
+  name: invalid
+  dependencies:
+    http_client:
+      command: [curl, wget]
+      help: 1
+
+:command_dependencies_invalid_hash_keys:
+  name: invalid
+  dependencies:
+    docker:
+      invalid_key: goes here
+
+:command_expose_invalid_string:
+  name: invalid
+  help: expose should be boolean or 'always'
+  commands:
+  - name: config
+    expose: never
+    commands:
+    - name: edit
+    - name: show
+
+:command_expose_invalid_type:
+  name: invalid
+  help: expose should be boolean or 'always'
+  commands:
+  - name: config
+    expose: 1
+    commands:
+    - name: edit
+    - name: show
+
+:command_expose_no_commands:
+  name: invalid
+  help: expose without commands makes no sense
+  commands:
+  - name: config
+    expose: true
+
+:command_extensible:
+  name: invalid
+  help: extensible should be a boolean or string
+  extensible: 1
+
+:command_filters_type:
+  name: invalid
+  help: command.filters should be an array
+  filters: docker_running
+
+:command_filters_array:
+  name: invalid
+  help: command.filters should be an array of strings
+  filters: [1, 2]
+
+:command_function:
+  name: invalid
+  help: command.function must match /[a-z0-9_]+/
+  function: myCamelCaseFunction
+
+:command_name_uppercase:
+  name: INVALID
+  help: command.name must match /[a-z0-9_\-]+/
+
+:command_name_hyphen:
+  name: -invalid
+  help: command.name must not start with a hyphen
+
+:command_name_missing:
+  help: there is no name
+
+:command_version:
+  name: invalid
+  help: version should be a string or a number
+  version: [1, 0, 0]
+
+:commands_and_args:
+  name: invalid
+  help: there are both commands and args
+  commands:
+  - name: sub
+  args:
+  - name: source
+
+:commands_default:
+  name: invalid
+  help: command.default should be a boolean or 'force'
+  commands:
+  - name: sub
+    default: yes_please
+
+:env_var_required:
+  name: invalid
+  help: env_var.required should be a boolean
+  environment_variables:
+  - name: api_key
+    required: 1
+
+:env_var_required_and_default:
+  name: invalid
+  help: env_var cannot have both required and default
+  environment_variables:
+  - name: app_env
+    required: true
+    default: dev
+
+:env_var_private:
+  name: invalid
+  help: env_var.private should be a boolean
+  environment_variables:
+  - name: server_env
+    default: development
+    private: 1
+
+:flag_arg:
+  name: invalid
+  help: the flag.arg should not start with --
+  flags:
+  - long: --user
+    arg: --name
+
+:flag_allowed_and_completions:
+  name: invalid
+  help: flag with both allowed and completions
+  flags:
+  - long: --file
+    allowed: [one, two]
+    completions: [<file>]
+
+:flag_allowed_without_arg:
+  name: invalid
+  help: flag must have an arg when using allowed
+  flags:
+  - long: --role
+    allowed: [admin, noob]
+
+:flag_completions_without_arg:
+  name: invalid
+  help: flag must have an arg when using completions
+  flags:
+  - long: --target
+    completions: [<dir>]    
+
+:flag_conflicts_array:
+  name: invalid
+  help: flag.conflicts should be an array of strings
+  flags:
+  - long: --cache
+    conflicts: [1, 2]
+
+:flag_conflicts_type:
+  name: invalid
+  help: flag.conflicts should be an array
+  flags:
+  - long: --cache
+    conflicts: --no-cache
+
+:flag_default_array_without_repeatable:
+  name: invalid
+  help: default cannot be an array without repeatable
+  flags:
+  - long: --path
+    arg: location
+    default:
+    - spaced file
+    - other-file
+
+:flag_default_without_arg:
+  name: invalid
+  help: flag must have an arg when using default
+  flags:
+  - long: --role
+    default: admin
+
+:flag_default_without_arg:
+  name: invalid
+  help: flag must have an arg when using default
+  flags:
+  - long: --role
+    default: admin
+
+:flag_long:
+  name: invalid
+  help: the long flag is not in the form of --force
+  flags:
+  - long: force
+
+:flag_required_and_default:
+  name: invalid
+  help: flag cannot have both required and default
+  flags:
+  - long: --role
+    arg: name
+    required: true
+    default: admin
+
+:flag_short:
+  name: invalid
+  help: the short flag is not in the form of -f
+  flags:
+  - short: f
+
+:flag_unique_without_repeatable_and_arg:
+  name: invalid
+  help: flag must have an arg and be repeatable when using unique
+  flags:
+  - long: --ssh
+    repeatable: true
+    unique: true
+
+:invalid_arg_keys:
+  name: invalid
+  help: disallowed arg keys
+  args:
+  - name: user
+    private: true
+    disallowed: false
+
+:invalid_catch_all_keys:
+  name: invalid
+  help: disallowed catch_all keys
+  catch_all:
+    label: files
+    private: true
+
+:invalid_command_keys:
+  name: invalid
+  help: disallowed command keys
+  disallowed: false
+  
+:invalid_env_var_keys:
+  name: invalid
+  help: disallowed environment variable keys
+  environment_variables:
+  - name: api_key
+    disallowed: true
+  
+:invalid_flag_keys:
+  name: invalid
+  help: disallowed flag keys
+  flags:
+  - long: --user
+    disallowed: true
+
+:non_uniq_command_names:
+  name: invalid
+  help: commands with the same name
+  commands:
+  - name: upload
+  - name: download
+  - name: download
+
+:non_uniq_command_aliases:
+  name: invalid
+  help: commands with the same alias
+  commands:
+  - name: connect
+    alias: c
+  - name: config
+    alias: [c, conf]
+
+:non_uniq_command_mix:
+  name: invalid
+  help: alias of one command conflicts with name of another
+  commands:
+  - name: download
+    alias: pull
+  - name: pull
+    alias: [p, get]
+
+:non_uniq_flags_longs:
+  name: invalid
+  help: flags with the same long name
+  flags:
+  - long: --force
+  - long: --force
+
+:non_uniq_flags_shorts:
+  name: invalid
+  help: flags with the same short name
+  flags:
+  - short: -f
+  - short: -f
+  
+:non_uniq_arg_names:
+  name: invalid
+  help: args with the same name
+  args:
+  - name: file
+  - name: file
+
+:root_alias:
+  name: invalid
+  help: root cannot have alias
+  alias: i
+
+:root_group:
+  name: invalid
+  help: root cannot have group
+  group: My Commands
+
+:root_default:
+  name: invalid
+  help: root cannot have default
+  default: true
+  args:
+  - name: ok
+
+:root_expose:
+  name: invalid
+  help: root cannot have expose
+  expose: true
+  commands:
+  - name: config
+
+:root_private:
+  name: invalid
+  help: root cannot have private
+  private: true
+
+:var:
+  name: invalid
+  help: var.name should be a string
+  variables:
+  - name: 1
+    value: 2

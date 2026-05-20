@@ -1,0 +1,17 @@
+= view_marker
+
+if args.any?
+  args.each_with_index do |arg, index|
+    = arg.render :case, index: index
+  end
+
+  > else
+  >   other_args+=("$1")
+  >   shift
+  > fi
+
+else
+  > other_args+=("$1")
+  > shift
+
+end

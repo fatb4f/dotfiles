@@ -1,0 +1,31 @@
+if validate?
+  = view_marker
+
+  if repeatable
+    > if [[ -v args['{{ name }}'] ]]; then
+    >   values=''
+    >   eval "values=(${args['{{ name }}']})"
+    >   for value in "${values[@]}"; do
+    validate.each do |funcname|
+    >     validation_output="$(validate_{{ funcname }} "$value")"
+    >     if [[ -n "$validation_output" ]]; then
+    >       printf "{{ strings[:validation_error] }}\n" "{{ name.upcase }}" "$validation_output" >&2
+    >       exit 1
+    >     fi
+    end
+    >   done
+    > fi
+  else
+    > if [[ -v args['{{ name }}'] ]]; then
+    validate.each do |funcname|
+    >   validation_output="$(validate_{{ funcname }} "${args['{{ name }}']:-}")"
+    >   if [[ -n "$validation_output" ]]; then
+    >     printf "{{ strings[:validation_error] }}\n" "{{ name.upcase }}" "$validation_output" >&2
+    >     exit 1
+    >   fi
+    end
+    > fi
+    >
+  end
+
+end

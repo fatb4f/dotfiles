@@ -1,0 +1,38 @@
+Generate the bash script and required files
+
+This command is also aliased as 'build'
+
+Usage:
+  bashly generate [options]
+  bashly generate (-h|--help)
+
+Options:
+  -f --force
+    Overwrite existing files
+
+  -q --quiet
+    Disable on-screen progress report
+
+  -u --upgrade
+    Upgrade all added library functions
+
+  -w --watch
+    Watch the source directory for changes and regenerate on change
+
+  -r --wrap FUNCTION
+    Wrap the entire script in a function so it can also be sourced
+
+  -e --env ENV
+    Force the generation environment:
+    
+    - development   default script output
+    - production    remove file marker comments and development functions
+
+  -h --help
+    Show this help
+
+Examples:
+  bashly generate --force
+  bashly generate --wrap my_function
+  bashly build --watch --env production
+  bashly g -uw

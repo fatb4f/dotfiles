@@ -1,0 +1,8 @@
+if Settings.show_examples_on_error && examples
+  = view_marker
+
+  > printf "{{ strings[:examples_caption_on_error] }}\n" >&2
+  examples.each do |example|
+    > printf "{{ user_string example, indent: 2 }}\n" >&2
+  end
+end

@@ -1,0 +1,56 @@
++ bundle exec bashly add validations --force
+created src/lib/validations/validate_dir_exists.sh
+created src/lib/validations/validate_file_exists.sh
+created src/lib/validations/validate_integer.sh
+created src/lib/validations/validate_not_empty.sh
++ bundle exec bashly generate
+creating user files in src
+created src/root_command.sh
+created ./validate
+run ./validate --help to test your bash script
++ ./validate 1
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'validate' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[integer_arg]} = 1
++ ./validate A
+validation error in INTEGER_ARG:
+must be an integer
++ ./validate 1 README.md
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'validate' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[file_exists_arg]} = README.md
+- ${args[integer_arg]} = 1
++ ./validate 1 no-such-file
+validation error in FILE_EXISTS_ARG:
+must be an existing file
++ ./validate 1 README.md src
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'validate' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[dir_exists_arg]} = src
+- ${args[file_exists_arg]} = README.md
+- ${args[integer_arg]} = 1
++ ./validate 1 README.md no-such-dir
+validation error in DIR_EXISTS_ARG:
+must be an existing directory
++ ./validate 1 README.md src non-empty
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'validate' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[dir_exists_arg]} = src
+- ${args[file_exists_arg]} = README.md
+- ${args[integer_arg]} = 1
+- ${args[not_empty_arg]} = non-empty
++ ./validate 1 README.md src ''
+validation error in NOT_EMPTY_ARG:
+must not be empty

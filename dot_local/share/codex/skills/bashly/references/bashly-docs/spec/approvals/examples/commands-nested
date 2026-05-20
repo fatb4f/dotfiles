@@ -1,0 +1,146 @@
++ bashly generate
+creating user files in src
+created src/dir_list_command.sh
+created src/dir_remove_command.sh
+created src/file_show_command.sh
+created src/file_edit_command.sh
+created ./cli
+run ./cli --help to test your bash script
++ ./cli
+cli - Sample application with nested commands
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  dir    Directory commands
+  file   File commands
+
++ ./cli -h
+cli - Sample application with nested commands
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  dir    Directory commands
+  file   File commands
+
+Options:
+  --help, -h
+    Show this help
+
+  --version, -v
+    Show version number
+
++ ./cli dir
+cli dir - Directory commands
+
+Alias: d
+
+Usage:
+  cli dir COMMAND
+  cli dir [COMMAND] --help | -h
+
+Commands:
+  list     Show files in the directory
+  remove   Remove directory
+
++ ./cli file
+cli file - File commands
+
+Alias: f
+
+Usage:
+  cli file COMMAND
+  cli file [COMMAND] --help | -h
+
+Commands:
+  show   Show file contents
+  edit   Edit the file
+
++ ./cli dig
+invalid command: dig
++ ./cli dir -h
+cli dir - Directory commands
+
+Alias: d
+
+Usage:
+  cli dir COMMAND
+  cli dir [COMMAND] --help | -h
+
+Commands:
+  list     Show files in the directory
+  remove   Remove directory
+
+Options:
+  --help, -h
+    Show this help
+
++ ./cli file -h
+cli file - File commands
+
+Alias: f
+
+Usage:
+  cli file COMMAND
+  cli file [COMMAND] --help | -h
+
+Commands:
+  show   Show file contents
+  edit   Edit the file
+
+Options:
+  --help, -h
+    Show this help
+
++ ./cli dir list
+missing required argument: PATH
+usage: cli dir list PATH
++ ./cli dir list -h
+cli dir list - Show files in the directory
+
+Usage:
+  cli dir list PATH
+  cli dir list --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Arguments:
+  PATH
+    Directory path
+
++ ./cli dir lost -h
+invalid command: lost
++ ./cli file edit
+missing required argument: PATH
+usage: cli file edit PATH
++ ./cli file edit -h
+cli file edit - Edit the file
+
+Usage:
+  cli file edit PATH
+  cli file edit --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Arguments:
+  PATH
+    Path to file
+
++ ./cli file edit filename
+# This file is located at 'src/file_edit_command.sh'.
+# It contains the implementation for the 'cli file edit' command.
+# The code you write here will be wrapped by a function named 'cli_file_edit_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[path]} = filename

@@ -1,0 +1,27 @@
+Add extra features and customization to your script
+
+Usage:
+  bashly add [--source NAME] LIBRARY [ARGS...] [--force --quiet]
+  bashly add [--source NAME] --list
+  bashly add (-h|--help)
+
+Options:
+  -s --source NAME
+    Specify a different libraries source. NAME can be:
+    
+    * Path to a local libraries directory
+    * GitHub (HTTPS) repository:  github:user/repo[//path@ref]
+    * GitHub (SSH) repository:    github-ssh:user/repo[//path@ref]
+    * Remote git repository:      git:repo-url.git[//path@ref]
+
+  -f --force
+    Overwrite existing files
+
+  -l --list
+    Show available libraries
+
+  -q --quiet
+    Do not show post-install messages
+
+  -h --help
+    Show this help

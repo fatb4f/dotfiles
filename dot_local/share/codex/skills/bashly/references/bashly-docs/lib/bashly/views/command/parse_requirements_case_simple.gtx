@@ -1,0 +1,19 @@
+= view_marker
+
+if args.any?
+  args.each_with_index do |arg, index|
+    = arg.render :case, index: index
+  end
+
+  > else
+  >   printf "{{ strings[:invalid_argument] }}\n" "$key" >&2
+  >   exit 1
+  > fi
+
+else
+  > printf "{{ strings[:invalid_argument] }}\n" "$key" >&2
+  > exit 1
+
+end
+
+>

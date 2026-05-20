@@ -1,0 +1,50 @@
+name: configly
+help: Sample application that uses the config functions
+version: 0.1.0
+
+commands:
+- name: set
+  alias: s
+  help: Save a value in the config file
+
+  args:
+  - name: key
+    required: true
+    help: Config key
+  - name: value
+    required: true
+    help: Config value
+
+  examples:
+  - configly set hello world
+  - configly set login.name Megatron
+
+- name: get
+  alias: g
+  help: Read a value from the config file
+
+  args:
+  - name: key
+    required: true
+    help: Config key
+
+  examples:
+  - configly get hello
+  - configly get login.name
+
+- name: del
+  alias: d
+  help: Delete a value from the config file
+
+  args:
+  - name: key
+    required: true
+    help: Config key
+
+  examples:
+  - configly del hello
+  - configly del login.name
+
+- name: list
+  alias: l
+  help: Show all values

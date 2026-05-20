@@ -1,0 +1,36 @@
+= view_marker
+
+> while [[ $# -gt 0 ]]; do
+>   key="$1"
+>   case "$key" in
+
+if root_command?
+  = (short_flag_exist?("-v") ? "--version)" : "--version | -v)").indent(4)
+  >       version_command
+  >       exit
+  >       ;;
+  > 
+end
+
+unless catch_all.catch_help?
+  = (short_flag_exist?("-h") ? "--help)" : "--help | -h)").indent(4)
+  >       long_usage=yes
+  >       <%= function_name %>_usage
+  >       exit
+  >       ;;
+  > 
+end
+
+if global_flags?
+  flags.each do |flag|
+    = flag.render(:case).indent(4)
+  end
+end
+
+>     *)
+>       break
+>       ;;
+>
+>   esac
+> done
+>

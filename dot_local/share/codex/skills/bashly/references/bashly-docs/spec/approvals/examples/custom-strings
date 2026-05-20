@@ -1,0 +1,34 @@
++ bashly generate
+creating user files in src
+created src/root_command.sh
+created ./download
+run ./download --help to test your bash script
++ ./download
+Boom! a required argument is missing: SOURCE
+usage: download SOURCE [OPTIONS]
++ ./download -h
+download - Sample minimal application with custom strings
+
+== Usage ==
+  download SOURCE [OPTIONS]
+  download --help | -h
+  download --version | -v
+
+== Options ==
+  --out, -o DIR (required)
+    Target directory
+
+  --help, -h
+    Show this helpful help
+
+  --version, -v
+    Show version number
+
+== Arguments ==
+  SOURCE
+    URL to download from
+
++ ./download somesource
+Yo! you forgot a flag: --out, -o DIR
++ ./download somesource -o
+Hey! the flag --out requires an argument: --out, -o DIR

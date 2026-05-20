@@ -1,0 +1,18 @@
++ bashly generate
+creating user files in src
+created src/download_command.sh
+created src/upload_command.sh
+created out/cli
+run out/cli --help to test your bash script
++ ./out/cli
+cli - Sample application
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+

@@ -1,0 +1,135 @@
++ bashly generate
+creating user files in src
+created src/download_command.sh
+created src/upload_command.sh
+created ./cli
+run ./cli --help to test your bash script
++ ./cli
+cli - Sample application
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+
++ ./cli download -h
+cli download - Download a file
+
+Alias: d
+
+Usage:
+  cli download SOURCE [TARGET] [OPTIONS] [--] [AWS PARAMS...]
+  cli download --help | -h
+
+Options:
+  --force, -f
+    Overwrite existing files
+
+  --help, -h
+    Show this help
+
+Arguments:
+  SOURCE
+    URL to download from
+
+  TARGET
+    Target filename (default: same as source)
+
+  AWS PARAMS...
+    Additional arguments or flags for AWS CLI
+
+Examples:
+  cli download example.com
+  cli download example.com ./output -f
+
++ ./cli download source
+# This file is located at 'src/download_command.sh'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[source]} = source
++ ./cli download source target
+# This file is located at 'src/download_command.sh'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[source]} = source
+- ${args[target]} = target
++ ./cli download source target --force
+# This file is located at 'src/download_command.sh'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--force]} = 1
+- ${args[source]} = source
+- ${args[target]} = target
++ ./cli download source target --force -abc --option=value
+# This file is located at 'src/download_command.sh'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--force]} = 1
+- ${args[source]} = source
+- ${args[target]} = target
+
+other_args:
+- ${other_args[*]} = -a -b -c --option value
+- ${other_args[0]} = -a
+- ${other_args[1]} = -b
+- ${other_args[2]} = -c
+- ${other_args[3]} = --option
+- ${other_args[4]} = value
++ ./cli download source target --force -- -abc --option=value
+# This file is located at 'src/download_command.sh'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--force]} = 1
+- ${args[source]} = source
+- ${args[target]} = target
+
+other_args:
+- ${other_args[*]} = -abc --option=value
+- ${other_args[0]} = -abc
+- ${other_args[1]} = --option=value
++ ./cli upload -h
+cli upload - Upload a file
+
+Alias: u
+
+Usage:
+  cli upload [--] FILES...
+  cli upload --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Arguments:
+  FILES...
+    Files to upload
+
++ ./cli upload
+missing required argument: FILES...
+usage: cli upload [--] FILES...
++ ./cli upload file1 'file 2' file3
+# This file is located at 'src/upload_command.sh'.
+# It contains the implementation for the 'cli upload' command.
+# The code you write here will be wrapped by a function named 'cli_upload_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args: none
+
+other_args:
+- ${other_args[*]} = file1 file 2 file3
+- ${other_args[0]} = file1
+- ${other_args[1]} = file 2
+- ${other_args[2]} = file3

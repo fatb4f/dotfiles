@@ -1,0 +1,34 @@
+---
+cli:
+- "--help"
+- "--version"
+- "-h"
+- "-v"
+- d
+- download
+- u
+- upload
+cli download:
+- "--force"
+- "--help"
+- "-f"
+- "-h"
+cli d:
+- "--force"
+- "--help"
+- "-f"
+- "-h"
+cli upload:
+- "--help"
+- "--password"
+- "--user"
+- "-h"
+- "-p"
+- "-u"
+cli u:
+- "--help"
+- "--password"
+- "--user"
+- "-h"
+- "-p"
+- "-u"

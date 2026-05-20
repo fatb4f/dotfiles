@@ -1,0 +1,15 @@
+name: cli
+help: Sample application
+version: 0.1.0
+
+commands:
+- name: download
+  alias: d
+  help: Download a file
+
+- name: upload
+  alias: u
+  help: Upload a file
+  commands:
+  - name: ftp
+  - name: ssh

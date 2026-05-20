@@ -1,0 +1,129 @@
++ bashly generate
+creating user files in src
+created src/download_command.sh
+created src/upload_command.sh
+created ./cli
+run ./cli --help to test your bash script
++ ./cli
+cli - Sample application
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+
++ ./cli -h
+cli - Sample application
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+
+Options:
+  --help, -h
+    Show this help
+
+  --version, -v
+    Show version number
+
+Environment Variables:
+  API_KEY
+    Set your API key
+
++ ./cli download -h
+cli download - Download a file
+
+Alias: d
+
+Usage:
+  cli download SOURCE [TARGET]
+  cli download --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Arguments:
+  SOURCE
+    URL to download from
+
+  TARGET
+    Target filename (default: same as source)
+
+Examples:
+  cli download example.com
+  cli d example.com ./output
+
++ ./cli d somefile
+# This file is located at 'src/download_command.sh'.
+# It contains the implementation for the 'cli download' command.
+# The code you write here will be wrapped by a function named 'cli_download_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[source]} = somefile
+
+environment variables:
+- $API_KEY = 
++ ./cli upload --help
+cli upload - Upload a file
+
+Alias: u, push
+
+Usage:
+  cli upload SOURCE
+  cli upload --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Arguments:
+  SOURCE
+    File to upload
+
+Examples:
+  cli upload README.md
+  cli push README.md
+  cli u README.md
+
++ ./cli u --help
+cli upload - Upload a file
+
+Alias: u, push
+
+Usage:
+  cli upload SOURCE
+  cli upload --help | -h
+
+Options:
+  --help, -h
+    Show this help
+
+Arguments:
+  SOURCE
+    File to upload
+
+Examples:
+  cli upload README.md
+  cli push README.md
+  cli u README.md
+
++ ./cli push somefile
+# This file is located at 'src/upload_command.sh'.
+# It contains the implementation for the 'cli upload' command.
+# The code you write here will be wrapped by a function named 'cli_upload_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[source]} = somefile
+
+environment variables:
+- $API_KEY = 

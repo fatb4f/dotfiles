@@ -1,0 +1,47 @@
+name: docker
+help: Docker example
+version: 0.1.0
+
+# Since we have a `commands` section below, these flags will be considered
+# "global flags" and available to all sub-commands.
+flags:
+- long: --debug
+  short: -d
+  help: Enable debug mode
+
+commands:
+- name: container
+  alias: c*
+  help: Container commands
+
+  commands:
+  - name: run
+    help: Run a container
+    args:
+    - name: image
+      help: Image name
+      required: true
+
+  - name: stop
+    help: Stop a container
+    args:
+    - name: container
+      help: Container name
+      required: true
+
+- name: image
+  alias: i*
+  help: Image commands
+
+  commands:
+  - name: ls
+    alias: l
+    help: Show all images
+
+- name: ps
+  help: List containers
+
+  flags:
+  - long: --all
+    short: -a
+    help: Show all containers

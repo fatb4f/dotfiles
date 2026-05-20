@@ -1,0 +1,42 @@
++ bundle exec bashly generate
+creating user files in src
+created src/root_command.sh
+created ./argflag
+run ./argflag --help to test your bash script
++ ./argflag -f -o
+--options requires an argument: --options, -o LIST
++ ./argflag -o -f
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'argflag' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--options]} = -f
++ ./argflag -o '--verbose --anything' -f
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'argflag' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--force]} = 1
+- ${args[--options]} = --verbose --anything
++ BASHLY_COMPACT_SHORT_FLAGS=no
++ bundle exec bashly generate
+creating user files in src
+skipped src/root_command.sh (exists)
+created ./argflag
+run ./argflag --help to test your bash script
++ ./argflag -o -force
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'argflag' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--options]} = -force
++ ./argflag -o '-f -o'
+# This file is located at 'src/root_command.sh'.
+# It contains the implementation for the 'argflag' command.
+# The code you write here will be wrapped by a function named 'root_command()'.
+# Feel free to edit this file; your changes will persist when regenerating.
+args:
+- ${args[--options]} = -f -o

@@ -1,0 +1,61 @@
++ bashly generate
+creating user files in src
+created src/download_command.sh
+skipped src/upload_command.sh (exists)
+created ./cli
+run ./cli --help to test your bash script
++ ./cli
+cli - Configuration splitting example
+
+Usage:
+  cli COMMAND
+  cli [COMMAND] --help | -h
+  cli --version | -v
+
+Commands:
+  download   Download a file
+  upload     Upload a file
+
++ ./cli download -h
+cli download - Download a file
+
+Alias: d
+
+Usage:
+  cli download SOURCE [TARGET] [OPTIONS]
+  cli download --help | -h
+
+Options:
+  --force, -f
+    Overwrite existing files
+
+  --help, -h
+    Show this help
+
+Arguments:
+  SOURCE
+    URL to download from
+
+  TARGET
+    Target filename (default: same as source)
+
++ ./cli upload -h
+cli upload - Upload a file
+
+Alias: u
+
+Usage:
+  cli upload SOURCE [OPTIONS]
+  cli upload --help | -h
+
+Options:
+  --force, -f
+    Overwrite existing files
+
+  --help, -h
+    Show this help
+
+Arguments:
+  SOURCE
+    File to upload
+

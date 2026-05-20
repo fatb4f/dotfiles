@@ -1,0 +1,19 @@
+= view_marker
+
+> printf "  %s\n" "{{ label.color(:arg) }}"
+> printf "{{ user_string help, indent: 4 }}\n"
+
+if allowed
+  > printf "    %s\n" "{{ strings[:allowed] % { values: allowed.join(', ') } }}"
+end
+
+if default
+  if default.is_a? Array
+    > printf "    %s\n" "{{ strings[:default] % { value: default.join(', ') } }}"
+  else
+    > printf "    %s\n" "{{ strings[:default] % { value: default } }}"
+  end
+end
+
+> echo
+> 
