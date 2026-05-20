@@ -1,9 +1,0 @@
-path=example.com/empty@v1
-wantErr=no cue.mod/module.cue file found
-version=v1.0.0
--- want --
-valid:
-
-omitted:
-
-invalid:

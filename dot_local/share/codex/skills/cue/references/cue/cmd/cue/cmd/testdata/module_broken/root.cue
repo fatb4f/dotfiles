@@ -1,3 +1,0 @@
-package root
-
-foo: "bar"

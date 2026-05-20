@@ -1,6 +1,0 @@
-! exec cue eval nonexisting .
-! stdout .
-cmp stderr expect-stderr
-
--- expect-stderr --
-standard library import path "nonexisting" cannot be imported as a CUE package

@@ -1,7 +1,0 @@
-#Issue: 2247
--- x.cue --
-a: _
-b: [a][0]
--- out/self/default --
-a: _
-b: [a][0]

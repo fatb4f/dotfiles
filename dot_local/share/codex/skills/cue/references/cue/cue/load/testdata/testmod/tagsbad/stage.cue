@@ -1,3 +1,0 @@
-package tagsbad
-
-@if(prod)

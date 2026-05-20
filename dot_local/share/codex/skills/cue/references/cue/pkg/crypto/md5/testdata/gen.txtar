@@ -1,8 +1,0 @@
-# generated from the original tests.
-# Henceforth it may be nicer to group tests into separate files.
--- in.cue --
-import "crypto/md5"
-
-t1: len(md5.Sum("hash me"))
--- out/md5 --
-t1: 16

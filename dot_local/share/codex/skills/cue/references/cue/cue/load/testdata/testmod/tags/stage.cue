@@ -1,3 +1,0 @@
-@if(stage)
-
-package tags
