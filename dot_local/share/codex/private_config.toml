@@ -90,6 +90,9 @@ writable_roots = [
   "/home/_404/.local/share/codex",
   "/home/_404/.local/share/go/pkg/mod",
   "/home/_404/.cache/go-build",
+  "/home/_404/.local/share/agent-sdk",
+  "/home/_404/.config/agent-sdk",
+  "/home/_404/.cache/agent-sdk",
   ]
 
 [mcp_servers.gopls]
@@ -115,4 +118,21 @@ approval_mode = "approve"
 approval_mode = "approve"
 
 [mcp_servers.gopls.tools.go_search]
+approval_mode = "approve"
+
+[mcp_servers.agent-sdk]
+command = "/home/_404/.local/share/go/bin/agent-sdk-mcp"
+args = ["serve", "--skill-tree", "/home/_404/.local/share/agent-sdk/skills"]
+enabled = true
+required = true
+startup_timeout_sec = 10
+tool_timeout_sec = 30
+enabled_tools = [
+  "agent_sdk_projection_status",
+  "agent_sdk_skill_list",
+  "agent_sdk_skill_read",
+  "agent_sdk_reference_read",
+]
+
+[mcp_servers.agent-sdk.tools.agent_sdk_skill_list]
 approval_mode = "approve"
