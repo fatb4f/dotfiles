@@ -1,16 +1,18 @@
 # managed by chezmoi
+
 model = "gpt-5.5"
 model_reasoning_effort = "medium"
+model_reasoning_summary = "auto"
+
 approval_policy = "never"
 sandbox_mode = "workspace-write"
-network_access = true
+
 web_search = "disabled"
-model_reasoning_summary = "auto"
 project_doc_max_bytes = 24576
+allow_login_shell = false
 
 log_dir = "/home/_404/.local/state/codex/log"
 sqlite_home = "/home/_404/.local/state/codex/sqlite"
-allow_login_shell = false
 
 [features]
 shell_tool = true
@@ -18,6 +20,15 @@ shell_snapshot = false
 
 [history]
 persistence = "none"
+
+[sandbox_workspace_write]
+network_access = true
+writable_roots = [
+  "/home/_404/.local/src/fatb4f/frame",
+  "/home/_404/.local/state/codex",
+  "/home/_404/.local/cache/codex",
+  "/home/_404/.local/share/codex",
+]
 
 [shell_environment_policy]
 inherit = "core"
@@ -63,3 +74,8 @@ status_line = [
 [tui.model_availability_nux]
 "gpt-5.5" = 4
 
+[projects."/home/_404/.local/src/fatb4f/repo-frame-slim"]
+trust_level = "trusted"
+
+[projects."/home/_404/.local/src/fatb4f/frame"]
+trust_level = "trusted"

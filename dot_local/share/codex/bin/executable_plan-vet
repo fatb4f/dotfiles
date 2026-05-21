@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -eu
+
+FRAME_SRC="${FRAME_SRC:-$HOME/.local/src/fatb4f/frame}"
+exec "$FRAME_SRC/bin/plan-vet" "$@"
+
