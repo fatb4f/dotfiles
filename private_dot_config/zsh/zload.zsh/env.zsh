@@ -29,6 +29,7 @@ _env_path() {
     "${CARGO_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/cargo}/bin"
     "${GOBIN:-${XDG_DATA_HOME:-$HOME/.local/share}/go/bin}"
     "${npm_config_prefix:-${XDG_DATA_HOME:-$HOME/.local/share}/npm}/bin"
+    "${CODEX_BIN:-$HOME/_404/.local/share/codex/bin}"
   )
 
   prefix=()
