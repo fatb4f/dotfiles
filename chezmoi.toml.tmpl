@@ -71,12 +71,3 @@ nu = { command = "nu" }
 [warnings]
 configFileTemplateHasChanged = true
 
-# Optional later, only after the scripts exist and are idempotent.
-# Hooks run even under --dry-run, so do not point these at mutating commands.
-# [hooks.read-source-state.pre]
-# command = "/home/_404/.local/bin/dotctl"
-# args = ["chezmoi", "preflight"]
-#
-# [hooks.apply.post]
-# command = "/home/_404/.local/bin/dotctl"
-# args = ["chezmoi", "snapshot"]

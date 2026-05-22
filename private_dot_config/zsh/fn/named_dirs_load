@@ -5,8 +5,8 @@ emulate -L zsh
 local -A dirs
 
 dirs=(
-  dl    "$HOME/.local/user/Downloads"
-  work  "$HOME/.local/src"
+  dl    "/tmp"
+  work  "$HOME/src"
 )
 
 if [[ -n "${DOTS_SOURCE_DIR:-}" ]]; then

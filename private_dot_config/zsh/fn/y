@@ -1,5 +1,82 @@
 emulate -L zsh
 
+local tmp cwd status first resolved
+
+_y_resolve_tilde_dir_for_y() {
+	emulate -L zsh
+
+	local arg="$1"
+	local head name tail base
+
+	REPLY="$arg"
+
+	[[ "$arg" == \~* ]] || return 0
+
+	case "$arg" in
+		"~"|"~/"*)
+			base="$HOME"
+			tail="${arg#\~}"
+			;;
+
+		"~+"|"~+/"*)
+			base="$PWD"
+			tail="${arg#\~+}"
+			;;
+
+		"~-"|"~-/"*)
+			base="$OLDPWD"
+			tail="${arg#\~-}"
+			;;
+
+		*)
+			head="${arg%%/*}"
+			name="${head#\~}"
+			tail="${arg#$head}"
+
+			if (( ${+nameddirs[$name]} )); then
+				base="${nameddirs[$name]}"
+			else
+				return 1
+			fi
+			;;
+	esac
+
+	REPLY="${base}${tail}"
+	return 0
+}
+
+if (( $# > 0 )); then
+	first="$1"
+
+	if [[ "$first" == \~* ]]; then
+		if _y_resolve_tilde_dir_for_y "$first" && [[ -d "$REPLY" ]]; then
+			resolved="$REPLY"
+			shift
+			set -- "$resolved" "$@"
+		else
+			print -u2 -- "y: directory not found: $first"
+			return 1
+		fi
+	fi
+fi
+
+tmp="$(mktemp -t 'yazi-cwd.XXXXXX')" || return 1
+
+{
+	command yazi "$@" --cwd-file="$tmp"
+	status=$?
+
+	if IFS= read -r cwd < "$tmp"; then
+		if [[ -n "$cwd" && "$cwd" != "$PWD" && -d "$cwd" ]]; then
+			builtin cd -- "$cwd"
+		fi
+	fi
+} always {
+	command rm -f -- "$tmp"
+}
+
+return "$status"
+
 local tmp cwd
 tmp="$(mktemp -t 'yazi-cwd.XXXXXX')" || return 1
 
