@@ -1,9 +1,15 @@
 return {
   "tinted-theming/tinted-nvim",
-  priority = 1000, -- load colorscheme early
-  lazy = false, -- apply on startup
+  priority = 1000,
+  lazy = false,
   opts = {
-    default_scheme = "base16-darkviolet", -- pick any bundled Base16/Base24
-    -- compile = true, -- optional: precompile for faster startup
+    default_scheme = "base16-papercolor-light",
+    compile = true,
+    selector = {
+      enabled = true,
+      mode = "file",
+      path = "~/.local/share/tinted-theming/tinty/current_scheme",
+      watch = true,
+    },
   },
 }

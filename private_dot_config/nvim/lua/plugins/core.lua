@@ -2,7 +2,9 @@ return {
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "tinted",
+      colorscheme = function()
+        require("tinted-nvim").load()
+      end,
     },
   },
   {
