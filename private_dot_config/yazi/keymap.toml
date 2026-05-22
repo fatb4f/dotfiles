@@ -4,25 +4,19 @@ prepend_keymap = [
   { on = "<Enter>", run = "open", desc = "Open selected files" },
   { on = [ "g", "." ], run = "hidden toggle", desc = "Toggle hidden files" },
   { on = [ "g", "i" ], run = "plugin lazygit", desc = "Launch lazygit" },
-[mgr]
-prepend_keymap = [
-  { on = "<A-y>", run = "plugin copy-file-contents", desc = "Copy contents of file" },
-  { on = "<Enter>", run = "open", desc = "Open selected files" },
-  { on = [ "g", "." ], run = "hidden toggle", desc = "Toggle hidden files" },
-  { on = [ "g", "i" ], run = "plugin lazygit", desc = "Launch lazygit" },
   { on = ["C"], run = "plugin ouch", desc = "Compress with ouch" },
 
   # named-dir jumps
-  { on = [ "g", "t" ], run = "cd /tmp", desc = "Cd to ~dl" },
-  { on = [ "g", "w" ], run = "cd ~/src", desc = "Cd to ~work" },
+  { on = [ "g", "t" ], run = "cd /tmp", desc = "jump to ~dl" },
+  { on = [ "g", "w" ], run = "cd ~/src", desc = "jump to ~work" },
 
   # DOTS_SOURCE_DIR-backed jumps
-  { on = [ "g", "d" ], run = "cd ~/.local/share/chezmoi", desc = "Cd to ~dots" },
-  { on = [ "g", "h" ], run = "cd ~/.local/share/chezmoi/private_dot_config/hypr", desc = "Cd to ~hypr" },
-  { on = [ "g", "z" ], run = "cd ~/.local/share/chezmoi/private_dot_config/zsh", desc = "Cd to ~zsh" },
-  { on = [ "g", "u" ], run = "cd ~/.local/share/chezmoi/private_dot_config/systemd/user", desc = "Cd to ~units" },
-  { on = [ "g", "k" ], run = "cd ~/.local/share/chezmoi/private_dot_config/kitty", desc = "Cd to ~kitty" },
-  { on = [ "g", "y" ], run = "cd ~/.local/share/chezmoi/private_dot_config/yazi", desc = "Cd to ~yazi" },
-  { on = [ "g", "n" ], run = "cd ~/.local/share/chezmoi/private_dot_config/nvim", desc = "Cd to ~nvim" },
-  { on = [ "g", "l" ], run = "cd ~/.local/share/chezmoi/private_dot_config/nvim/lua", desc = "Cd to ~lvim" },
+  { on = [ "g", "d" ], run = "cd ~/.local/share/chezmoi", desc = "jump to ~dots" },
+  { on = [ "g", "h" ], run = "cd ~/.local/share/chezmoi/private_dot_config/hypr", desc = "jump to ~hypr" },
+  { on = [ "g", "z" ], run = "cd ~/.local/share/chezmoi/private_dot_config/zsh", desc = "jump to ~zsh" },
+  { on = [ "g", "u" ], run = "cd ~/.local/share/chezmoi/private_dot_config/systemd/user", desc = "jump to ~units" },
+  { on = [ "g", "k" ], run = "cd ~/.local/share/chezmoi/private_dot_config/kitty", desc = "jump to ~kitty" },
+  { on = [ "g", "y" ], run = "cd ~/.local/share/chezmoi/private_dot_config/yazi", desc = "jump to ~yazi" },
+  { on = [ "g", "n" ], run = "cd ~/.local/share/chezmoi/private_dot_config/nvim", desc = "jump to ~nvim" },
+  { on = [ "g", "l" ], run = "cd ~/.local/share/chezmoi/private_dot_config/nvim/lua", desc = "jump to ~lvim" },
 ]
