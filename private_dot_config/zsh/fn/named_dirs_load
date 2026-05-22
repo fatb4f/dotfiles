@@ -12,7 +12,7 @@ dirs=(
 if [[ -n "${DOTS_SOURCE_DIR:-}" ]]; then
   dirs+=(
     dots    "$DOTS_SOURCE_DIR"
-    niri    "$DOTS_SOURCE_DIR/private_dot_config/niri"
+    hypr    "$DOTS_SOURCE_DIR/private_dot_config/hypr"
     zsh     "$DOTS_SOURCE_DIR/private_dot_config/zsh"
     units   "$DOTS_SOURCE_DIR/private_dot_config/systemd/user"
     kitty   "$DOTS_SOURCE_DIR/private_dot_config/kitty"
