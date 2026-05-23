@@ -24,7 +24,6 @@ The unit namespace itself stays mostly flat because systemd discovers user units
 
 ### Runtime lock/power units
 
-- `session-lock.service`
 - `locked-session-halt.timer`
 - `locked-session-halt.service`
 
@@ -52,13 +51,11 @@ systemctl --user list-unit-files \
   noctalia-shell.service \
   stasis.service \
   logind-lock-listener.service \
-  session-lock.service \
   locked-session-halt.service \
   locked-session-halt.timer \
   'app-nvim@.service'
 
 systemctl --user is-enabled \
-  session-lock.service \
   locked-session-halt.service \
   locked-session-halt.timer \
   'app-nvim@.service'

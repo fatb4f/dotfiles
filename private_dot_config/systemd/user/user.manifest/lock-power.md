@@ -4,7 +4,6 @@ These units are runtime-triggered only. They should not be enabled directly.
 
 ## Units
 
-- `session-lock.service`: foreground graphical locker.
 - `locked-session-halt.timer`: abandoned locked-session deadline.
 - `locked-session-halt.service`: powers off when the timer elapses.
 
@@ -13,8 +12,8 @@ These units are runtime-triggered only. They should not be enabled directly.
 ```text
 loginctl lock-session
 → logind Lock signal
-→ logind-lock-listener.service
-→ session-lock.service
+→ hypridle lock_cmd
+→ cli.session locker
 → locked-session-halt.timer
 → locked-session-halt.service
 ```
