@@ -7,7 +7,7 @@ sessions = 4
 # Required for break-lock:
 # Work automatically transitions into break, so the break_start hook fires.
 # Returning to work remains intentional/manual.
-auto_advance = "to-break"
+auto_advance = "all"
 
 [sound]
 enabled = false
@@ -27,12 +27,12 @@ text_format_idle = ""
 
 [hooks.on_break_start]
 cmd = "/home/_404/.local/bin/cli.session"
-args = ["lock", "--request"]
+args = ["lock"]
 timeout = 3
 capture_output = true
 
 [hooks.on_long_break_start]
 cmd = "/home/_404/.local/bin/cli.session"
-args = ["lock", "--request"]
+args = ["lock"]
 timeout = 3
 capture_output = true
