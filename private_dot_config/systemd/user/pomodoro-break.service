@@ -1,7 +1,0 @@
-[Unit]
-Description=Pomodoro break interval complete
-Documentation=man:systemd.service(5)
-
-[Service]
-Type=oneshot
-ExecStart=%h/.local/bin/pomodoroctl finish-break

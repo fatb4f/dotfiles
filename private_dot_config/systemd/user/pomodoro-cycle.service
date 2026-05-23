@@ -1,9 +1,0 @@
-[Unit]
-Description=Pomodoro cycle bootstrap
-Documentation=man:systemd.service(5) man:systemd.timer(5)
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=%h/.local/bin/pomodoroctl enter-work
-
