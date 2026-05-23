@@ -13,6 +13,7 @@ momentum_scroll 0.90
 wheel_scroll_multiplier 5.0
 wheel_scroll_min_lines 1
 map_timeout 8.0
+notify_on_cmd_finish invisible 5.0 command /home/_404/.local/bin/kitty-command-finished-notify "%s"
 
 # Shared action aliases
 action_alias launch_tab_zsh launch --type=tab --cwd=current zsh -l

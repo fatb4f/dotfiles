@@ -17,7 +17,7 @@ volume = 0.5
 
 [notification]
 enabled = true
-icon = "auto"
+icon = "/usr/share/icons/Adwaita/symbolic/status/alarm-symbolic.svg"
 timeout = 5000
 urgency = "normal"
 
