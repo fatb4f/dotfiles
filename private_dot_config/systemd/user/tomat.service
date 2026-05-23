@@ -18,8 +18,7 @@ PartOf=graphical-session.target
 [Service]
 Type=simple
 ExecStart=/usr/bin/tomat daemon run
-ExecStartPost=/home/_404/.local/bin/cli.session tomat-start-work
-Restart=always
+Restart=on-failure
 RestartSec=5
 Environment="PATH=/home/_404/.local/bin:/usr/local/bin:/usr/bin:/bin"
 
