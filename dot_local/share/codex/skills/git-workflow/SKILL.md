@@ -11,6 +11,8 @@ metadata:
 allowed-tools:
   - Bash(git:*)
   - Bash(gh:*)
+  - MCP(git:*)
+  - MCP(git-mcp-server:*)
   - Read
   - Write
 ---
@@ -27,6 +29,7 @@ Expert patterns for Git version control: branching, commits, collaboration, and 
 4. **No "tested/verified/working" without pasted command output** — if you cannot run the check, say so.
 5. **No edits to installed skill/plugin cache paths** (`~/.claude/skills/`, `~/.claude/plugins/cache/`, `**/.bare/**`) — always the repo worktree. Verify `pwd` first.
 6. **Force-push only with `--force-with-lease`** — never plain `--force`.
+7. **Use Git MCP for local Git writes when available** — stage, unstage, commit, checkout, branch, and init through the configured Git MCP server instead of shell Git writes.
 
 See `references/pull-request-workflow.md` for the merge-gate command, atomic-commit guidance, and review-thread SHA-citation pattern.
 
@@ -55,6 +58,31 @@ Load references on demand based on the task at hand:
 **Types**: `feat` (MINOR), `fix` (PATCH), `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
 
 **Breaking change**: Add `!` after type or `BREAKING CHANGE:` in footer.
+
+## Local Git Write Workflow
+
+When Git MCP tools are available, use them for repository write operations:
+
+1. Discover the current Git MCP surface with `tool_search` if needed. Prefer `git-mcp-server` tools when both `git` and `git-mcp-server` namespaces are present.
+2. Use read-only commands or MCP status/diff tools to inspect the repository:
+   `git_status`, `git_diff_unstaged`, `git_diff_staged`, `git_log`, `git_show`.
+3. Stage only intentional paths with MCP `git_add`; never stage generated or unrelated files by accident.
+4. Verify the staged diff with MCP `git_diff_staged` before committing.
+5. Commit with MCP `git_commit` and a Conventional Commit message.
+6. Check final state with MCP `git_status`.
+
+Use shell `git` writes only when no Git MCP write tool is available or the user explicitly asks for shell Git. If `.git` is write-protected from the shell but Git MCP is configured, do not report blocked until the MCP write path has been attempted.
+
+Common MCP write tools:
+
+```text
+git_add
+git_commit
+git_reset
+git_checkout
+git_create_branch
+git_init
+```
 
 ## Branch Naming
 
