@@ -4,7 +4,8 @@ local session = home .. "/.local/bin/cli.session"
 local session_osd = session .. " osd "
 
 -- launch
-hl.bind("SUPER + Return", hl.dsp.exec_cmd("uwsm-app -- kitty"))
+hl.bind("SUPER + Return", hl.dsp.exec_cmd("uwsm-app -- term-open"))
+hl.bind("SUPER + SHIFT + Return", hl.dsp.exec_cmd("uwsm-app -- kitty"))
 hl.bind("SUPER + B", hl.dsp.exec_cmd("uwsm-app -- chromium"))
 hl.bind("SUPER + Space", hl.dsp.exec_cmd(menu))
 

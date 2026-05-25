@@ -3,36 +3,36 @@
 -- Contract:
 --   Hyprland owns windows, focus, and role placement.
 --   Terminals/file managers are replaceable role clients.
---   Neovim is addressed through IDE_NVIM by nvim-open-here.
+--   Neovim is addressed through the editor role adapter.
 
-local function role(name)
-	hl.dsp.exec_cmd("ide-role " .. name)()
+local function exec_role(command)
+	hl.dsp.exec_cmd(command)()
 end
 
 -- Role binds.  These call the userland role adapter rather than launching
 -- terminal/file-manager/editor commands directly from Hyprland config.
 hl.bind("SUPER + E", function()
-	role("editor")
+	exec_role("editor-open")
 end)
 
 hl.bind("SUPER + F", function()
-	role("files")
+	exec_role("ide-role files")
 end)
 
 hl.bind("SUPER + T", function()
-	role("tests")
+	exec_role("ide-role tests")
 end)
 
 hl.bind("SUPER + D", function()
-	role("debug")
+	exec_role("ide-role debug")
 end)
 
 hl.bind("SUPER + R", function()
-	role("repl")
+	exec_role("ide-role repl")
 end)
 
 hl.bind("SUPER + G", function()
-	role("logs")
+	exec_role("ide-role logs")
 end)
 
 -- Current-window utility binds for early iteration.
