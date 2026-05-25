@@ -1,10 +1,9 @@
 return {
   {
     "mrjones2014/smart-splits.nvim",
-    build = "./kitty/install-kittens.bash",
     lazy = false,
     init = function()
-      vim.g.smart_splits_multiplexer_integration = "kitty"
+      vim.g.smart_splits_multiplexer_integration = "wezterm"
     end,
     opts = {
       at_edge = "stop",
@@ -24,17 +23,17 @@ return {
         "snacks_picker_list",
         "snacks_picker_preview",
       },
-      multiplexer_integration = "kitty",
+      multiplexer_integration = "wezterm",
     },
     keys = {
-      { "<M-h>", function() require("smart-splits").move_cursor_left() end, desc = "Move Left" },
-      { "<M-j>", function() require("smart-splits").move_cursor_down() end, desc = "Move Down" },
-      { "<M-k>", function() require("smart-splits").move_cursor_up() end, desc = "Move Up" },
-      { "<M-l>", function() require("smart-splits").move_cursor_right() end, desc = "Move Right" },
-      { "<M-H>", function() require("smart-splits").resize_left() end, desc = "Resize Left" },
-      { "<M-J>", function() require("smart-splits").resize_down() end, desc = "Resize Down" },
-      { "<M-K>", function() require("smart-splits").resize_up() end, desc = "Resize Up" },
-      { "<M-L>", function() require("smart-splits").resize_right() end, desc = "Resize Right" },
+      { "<C-h>", function() require("smart-splits").move_cursor_left() end, desc = "Move Left" },
+      { "<C-j>", function() require("smart-splits").move_cursor_down() end, desc = "Move Down" },
+      { "<C-k>", function() require("smart-splits").move_cursor_up() end, desc = "Move Up" },
+      { "<C-l>", function() require("smart-splits").move_cursor_right() end, desc = "Move Right" },
+      { "<M-h>", function() require("smart-splits").resize_left() end, desc = "Resize Left" },
+      { "<M-j>", function() require("smart-splits").resize_down() end, desc = "Resize Down" },
+      { "<M-k>", function() require("smart-splits").resize_up() end, desc = "Resize Up" },
+      { "<M-l>", function() require("smart-splits").resize_right() end, desc = "Resize Right" },
       { "<C-\\>", function() require("smart-splits").move_cursor_previous() end, desc = "Move to Previous Split" },
       { "<leader><leader>h", function() require("smart-splits").swap_buf_left() end, desc = "Swap Buffer Left" },
       { "<leader><leader>j", function() require("smart-splits").swap_buf_down() end, desc = "Swap Buffer Down" },
