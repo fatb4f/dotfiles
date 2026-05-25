@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+set -eu
+
+editor="${DOTFILES_EDITOR:-${EDITOR:-nvim}}"
+
+if ! command -v "$editor" >/dev/null 2>&1; then
+  printf '%s\n' "editor-open: configured editor '$editor' was not found in PATH" >&2
+  printf '%s\n' "editor-open: set DOTFILES_EDITOR to an installed editor role" >&2
+  exit 127
+fi
+
+exec "$editor" "$@"
