@@ -1,6 +1,6 @@
 ---
 name: file-search
-description: Use for local repository search and context discovery in Codex: ripgrep text search, git grep tracked/index/tree search, fd path discovery, ast-grep structural search, semgrep rule search, ripgrep-all document/archive search, and code metrics. Trigger before broad file reads, manual grep/find loops, or context-gathering for debugging, review, refactors, and implementation planning.
+description: "Use for local repository search and context discovery in Codex: ripgrep text search, git grep tracked/index/tree search, fd path discovery, ast-grep structural search, semgrep rule search, ripgrep-all document/archive search, and code metrics. Trigger before broad file reads, manual grep/find loops, or context-gathering for debugging, review, refactors, and implementation planning."
 license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
 compatibility: "Requires rg. Optional lanes: git, fd, ast-grep/sg, rga, tokei, scc, semgrep. Optional lanes must degrade cleanly when unavailable."
 metadata:
