@@ -1,13 +1,18 @@
 ---
 name: git-workflow
 description: "Use when establishing branching strategies, implementing Conventional Commits, creating or reviewing PRs, resolving PR review comments, merging PRs (including CI verification, auto-merge queues, and post-merge cleanup), managing PR review threads, merging PRs with signed commits, handling merge conflicts, creating releases, integrating Git with CI/CD, setting up git hooks (lefthook, captainhook, husky, pre-commit), or debugging hook-install failures in git worktrees."
+when_to_use: Use for Git status/diff/commit/branch/PR/release tasks, write-protected .git/index/refs failures, linked worktree metadata problems, hook install failures, conventional commit planning, and merge gates. Do not use for non-Git filesystem edits unless they are part of a Git workflow.
 license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
 compatibility: "Requires git, gh CLI."
 metadata:
   author: Netresearch DTT GmbH
   version: "1.14.0"
   repository: https://github.com/netresearch/git-workflow-skill
-allowed-tools: Bash(git:*) Bash(gh:*) Read Write
+allowed-tools:
+  - Bash(git:*)
+  - Bash(gh:*)
+  - Read
+  - Write
 ---
 
 # Git Workflow Skill
