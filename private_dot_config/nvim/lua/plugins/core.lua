@@ -4,6 +4,7 @@ return {
     opts = {
       colorscheme = function()
         require("tinted-nvim").load()
+        require("config.theme").sync_lualine_base16_globals()
       end,
     },
   },

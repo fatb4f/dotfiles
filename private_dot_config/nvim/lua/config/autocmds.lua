@@ -8,8 +8,10 @@
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
 local borealis_clipboard = vim.api.nvim_create_augroup("borealis_clipboard", { clear = true })
+local borealis_colorscheme = vim.api.nvim_create_augroup("borealis_colorscheme", { clear = true })
 local borealis_shell = vim.api.nvim_create_augroup("borealis_shell", { clear = true })
 local borealis_startup = vim.api.nvim_create_augroup("borealis_startup", { clear = true })
+local theme = require("config.theme")
 
 vim.api.nvim_create_autocmd("User", {
   group = borealis_clipboard,
@@ -18,6 +20,15 @@ vim.api.nvim_create_autocmd("User", {
     require("config.clipboard").setup()
   end,
 })
+
+vim.api.nvim_create_autocmd("ColorScheme", {
+  group = borealis_colorscheme,
+  callback = function()
+    theme.sync_lualine_base16_globals()
+  end,
+})
+
+theme.sync_lualine_base16_globals()
 
 vim.api.nvim_create_autocmd("FileType", {
   group = borealis_shell,

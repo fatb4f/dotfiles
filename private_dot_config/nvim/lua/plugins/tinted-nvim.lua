@@ -4,6 +4,7 @@ return {
   lazy = false,
   opts = {
     default_scheme = "base16-papercolor-light",
+    apply_scheme_on_startup = false,
     compile = true,
     selector = {
       enabled = true,
