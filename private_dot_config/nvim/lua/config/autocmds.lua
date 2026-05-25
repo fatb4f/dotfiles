@@ -10,7 +10,6 @@
 local borealis_clipboard = vim.api.nvim_create_augroup("borealis_clipboard", { clear = true })
 local borealis_colorscheme = vim.api.nvim_create_augroup("borealis_colorscheme", { clear = true })
 local borealis_shell = vim.api.nvim_create_augroup("borealis_shell", { clear = true })
-local borealis_startup = vim.api.nvim_create_augroup("borealis_startup", { clear = true })
 local theme = require("config.theme")
 
 vim.api.nvim_create_autocmd("User", {
@@ -45,21 +44,5 @@ vim.api.nvim_create_autocmd("FileType", {
     opts.softtabstop = 2
     opts.formatoptions:remove({ "t" })
     opts.commentstring = "# %s"
-  end,
-})
-
-vim.api.nvim_create_autocmd("FileType", {
-  group = borealis_startup,
-  pattern = "snacks_dashboard",
-  callback = function()
-    if vim.fn.argc() ~= 0 then
-      return
-    end
-
-    vim.schedule(function()
-      if vim.api.nvim_buf_is_valid(0) and vim.bo.filetype == "snacks_dashboard" then
-        require("snacks").explorer()
-      end
-    end)
   end,
 })

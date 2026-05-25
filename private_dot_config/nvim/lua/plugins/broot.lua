@@ -1,7 +1,7 @@
 return {
   {
     "aohoyd/broot.nvim",
-    lazy = false,
+    enabled = false,
     opts = {},
     keys = {
       {
