@@ -1,9 +1,10 @@
 local wezterm = require("wezterm")
+local shell = require("modules.shell")
 
 local config = wezterm.config_builder()
 
 config.enable_wayland = true
-config.default_prog = { os.getenv("SHELL") or "/bin/bash", "-l" }
+config.default_prog = shell.login_args()
 
 config.use_fancy_tab_bar = false
 config.hide_tab_bar_if_only_one_tab = false

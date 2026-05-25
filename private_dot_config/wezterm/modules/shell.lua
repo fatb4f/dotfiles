@@ -1,7 +1,14 @@
 local M = {}
 
 function M.login_shell()
-  return os.getenv("SHELL") or "/bin/bash"
+  return os.getenv("SHELL") or "zsh"
+end
+
+function M.login_args()
+  return {
+    M.login_shell(),
+    "-l",
+  }
 end
 
 function M.shell_cmd(cmd)
@@ -10,6 +17,10 @@ function M.shell_cmd(cmd)
     "-lc",
     cmd,
   }
+end
+
+function M.login_shell_cmd()
+  return string.format("%q", M.login_shell()) .. " -l"
 end
 
 function M.titled_cmd(title, cmd)

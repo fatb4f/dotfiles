@@ -25,12 +25,12 @@ local function spawn_project_workspace(name, project)
 
   window:spawn_tab({
     cwd = project.root,
-    args = shell.titled_cmd(name .. ":shell", "$SHELL -l"),
+    args = shell.titled_cmd(name .. ":shell", shell.login_shell_cmd()),
   })
 
   window:spawn_tab({
     cwd = project.root,
-    args = shell.titled_cmd(name .. ":task", "$SHELL -l"),
+    args = shell.titled_cmd(name .. ":task", shell.login_shell_cmd()),
   })
 
   mux.set_active_workspace(project.workspace)
@@ -58,14 +58,6 @@ function M.apply_to_config(config)
     mods = "ALT",
     action = wezterm.action_callback(function()
       switch_or_spawn("dots")
-    end),
-  })
-
-  table.insert(config.keys, {
-    key = "2",
-    mods = "ALT",
-    action = wezterm.action_callback(function()
-      switch_or_spawn("frame")
     end),
   })
 

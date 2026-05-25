@@ -10,9 +10,4 @@ return {
     root = home .. "/src/dotfiles",
     workspace = "dots",
   },
-
-  frame = {
-    root = home .. "/src/frame",
-    workspace = "frame",
-  },
 }
