@@ -36,3 +36,8 @@ else
   print -u2 "zim: missing $ZIM_HOME/init.zsh; run bootstrap"
 fi
 
+# Load after Zim so zsh-vi-mode keymap/prompt hooks are established before
+# WezTerm adds shell-integration prompt, cwd, and user-var hooks.
+if [[ "${TERM_PROGRAM:-}" == "WezTerm" ]] && (( $+commands[wezterm] )); then
+  eval "$(wezterm shell-integration --shell zsh)"
+fi

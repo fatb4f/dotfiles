@@ -9,6 +9,10 @@ local direction_keys = {
   l = "Right",
 }
 
+-- Contract:
+--   Neovim emits pane user var IS_NVIM=true while it owns the pane.
+--   Ctrl+h/j/k/l moves across Neovim splits or WezTerm panes.
+--   Alt+h/j/k/l resizes Neovim splits or WezTerm panes by 3 cells.
 local function is_nvim(pane)
   return pane:get_user_vars().IS_NVIM == "true"
 end

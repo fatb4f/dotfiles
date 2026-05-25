@@ -4,6 +4,35 @@ return {
     lazy = false,
     init = function()
       vim.g.smart_splits_multiplexer_integration = "wezterm"
+
+      local in_wezterm = vim.env.TERM_PROGRAM == "WezTerm" or vim.env.WEZTERM_PANE ~= nil
+      if not in_wezterm then
+        return
+      end
+
+      local values = {
+        ["true"] = "dHJ1ZQ==",
+        ["false"] = "ZmFsc2U=",
+      }
+
+      local function set_is_nvim(value)
+        io.stdout:write("\027]1337;SetUserVar=IS_NVIM=" .. values[value] .. "\007")
+        io.stdout:flush()
+      end
+
+      vim.api.nvim_create_autocmd({ "VimEnter", "FocusGained" }, {
+        group = vim.api.nvim_create_augroup("dotfiles_wezterm_is_nvim", { clear = true }),
+        callback = function()
+          set_is_nvim("true")
+        end,
+      })
+
+      vim.api.nvim_create_autocmd({ "VimLeavePre", "FocusLost" }, {
+        group = vim.api.nvim_create_augroup("dotfiles_wezterm_is_not_nvim", { clear = true }),
+        callback = function()
+          set_is_nvim("false")
+        end,
+      })
     end,
     opts = {
       at_edge = "stop",
@@ -26,6 +55,7 @@ return {
       multiplexer_integration = "wezterm",
     },
     keys = {
+      -- WezTerm mirrors this contract: Ctrl+h/j/k/l moves, Alt+h/j/k/l resizes.
       { "<C-h>", function() require("smart-splits").move_cursor_left() end, desc = "Move Left" },
       { "<C-j>", function() require("smart-splits").move_cursor_down() end, desc = "Move Down" },
       { "<C-k>", function() require("smart-splits").move_cursor_up() end, desc = "Move Up" },
