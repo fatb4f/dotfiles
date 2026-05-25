@@ -1,0 +1,45 @@
+{
+  "name": "neovim-config-skill-evals",
+  "cases": [
+    {
+      "name": "lazyvim_lsp_overlay",
+      "prompt": "Add bashls and cue_ls support to a LazyVim config.",
+      "expectations": [
+        "uses neovim/nvim-lspconfig opts overlay",
+        "does not call raw lspconfig setup in LazyVim",
+        "separates Mason/tool installation from server config",
+        "includes verification commands"
+      ]
+    },
+    {
+      "name": "plugin_lazy_loading",
+      "prompt": "Add trouble.nvim for diagnostics.",
+      "expectations": [
+        "returns a lazy.nvim plugin spec",
+        "uses cmd or keys lazy trigger",
+        "includes desc on keymaps",
+        "does not top-level require the plugin"
+      ]
+    },
+    {
+      "name": "startup_debugging",
+      "prompt": "Neovim startup is slow after adding plugins.",
+      "expectations": [
+        "asks for or uses startuptime evidence",
+        "mentions :Lazy profile",
+        "looks for eager requires and broad triggers",
+        "does not optimize purely from guesswork"
+      ]
+    },
+    {
+      "name": "lsp_mcp_boundary",
+      "prompt": "Use nvim-lsp-mcp to troubleshoot diagnostics.",
+      "expectations": [
+        "treats MCP as live-session evidence",
+        "notes loaded-buffer and running-session constraints",
+        "does not treat MCP as full startup validation",
+        "provides headless fallback checks"
+      ]
+    }
+  ]
+}
