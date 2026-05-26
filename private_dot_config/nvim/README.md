@@ -1,5 +1,9 @@
 # Neovim Terminal Contract
 
+Neovim is the standard editor (`EDITOR=nvim`, `VISUAL=nvim`). Shell entrypoints
+should use those variables. Compositor entrypoints should launch a concrete
+terminal/editor command, such as `wezterm -e nvim`.
+
 When Neovim runs inside WezTerm, `lua/plugins/smart-splits.lua` emits the pane
 user var `IS_NVIM=true`. WezTerm reads that value in
 `wezterm/modules/smart_splits.lua` and routes split keys across the correct
@@ -12,8 +16,8 @@ Key contract:
 - `Alt+h/j/k/l`: resize left/down/up/right by 3 cells through Neovim splits,
   or WezTerm panes when the active pane is not Neovim.
 
-Kitty-specific helpers remain legacy/fallback integrations while the terminal
-role migration is in progress.
+Kitty-specific helpers remain legacy/fallback integrations. WezTerm owns
+terminal-local panes, tabs, workspaces, layouts, and pane lifecycle.
 
 ## WezTerm pane
 
@@ -26,5 +30,5 @@ Neovim owns the pane cache and exposes the v0 pane commands:
   followed by a newline.
 - `:WeztermPaneKill`: kill the cached pane and clear the cache.
 
-WezTerm remains responsible for pane lifecycle and terminal processes through
-`wezterm cli`. New panes inherit Neovim's current working directory.
+Neovim manipulates the pane through `wezterm cli`. New panes inherit Neovim's
+current working directory.
