@@ -1,10 +1,5 @@
 # Neovim Terminal Contract
 
-Neovim is the configured editor role (`DOTFILES_EDITOR=nvim`) and IDE role
-fallback (`DOTFILES_IDE=${DOTFILES_EDITOR}`). Shell and compositor entrypoints
-should launch it through `editor-open` or `ide-role` instead of hardcoding a
-terminal/editor pair.
-
 When Neovim runs inside WezTerm, `lua/plugins/smart-splits.lua` emits the pane
 user var `IS_NVIM=true`. WezTerm reads that value in
 `wezterm/modules/smart_splits.lua` and routes split keys across the correct
@@ -19,3 +14,17 @@ Key contract:
 
 Kitty-specific helpers remain legacy/fallback integrations while the terminal
 role migration is in progress.
+
+## WezTerm pane
+
+Neovim owns the pane cache and exposes the v0 pane commands:
+
+- `:WeztermPaneToggle`: focus the cached pane, or split a new pane.
+- `:WeztermPaneFocus`: focus the cached pane, or create one if the
+  cache is empty or stale.
+- `:WeztermPaneRun <cmd>`: ensure the pane exists, then send `<cmd>`
+  followed by a newline.
+- `:WeztermPaneKill`: kill the cached pane and clear the cache.
+
+WezTerm remains responsible for pane lifecycle and terminal processes through
+`wezterm cli`. New panes inherit Neovim's current working directory.
