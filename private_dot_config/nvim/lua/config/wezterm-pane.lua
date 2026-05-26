@@ -4,6 +4,7 @@ local defaults = {
   direction = "right",
   percent = 35,
   title = "WezTerm Pane",
+  focus_backend = "smart-splits",
 }
 
 local config = vim.deepcopy(defaults)
@@ -56,6 +57,15 @@ local function direction_flag(direction)
     left = "--left",
     up = "--top",
     down = "--bottom",
+  })[direction]
+end
+
+local function smart_splits_move_fn(direction)
+  return ({
+    left = "move_cursor_left",
+    down = "move_cursor_down",
+    up = "move_cursor_up",
+    right = "move_cursor_right",
   })[direction]
 end
 
@@ -116,6 +126,41 @@ local function ensure_pane(opts)
   return split_pane(opts)
 end
 
+local function focus_via_smart_splits(opts)
+  opts = opts or {}
+
+  local direction = opts.direction or config.direction
+  local method = smart_splits_move_fn(direction)
+
+  if not method then
+    return nil, "invalid direction: " .. tostring(direction)
+  end
+
+  local ok, smart_splits = pcall(require, "smart-splits")
+  if not ok then
+    return nil, "smart-splits.nvim is required for WezTerm pane focus"
+  end
+
+  if type(smart_splits[method]) ~= "function" then
+    return nil, "smart-splits missing method: " .. method
+  end
+
+  local focused_pane_id = nil
+  local focus_err = nil
+
+  smart_splits[method]({
+    at_edge = function()
+      focused_pane_id, focus_err = ensure_pane(opts)
+    end,
+  })
+
+  if focus_err then
+    return nil, focus_err
+  end
+
+  return focused_pane_id or true, nil
+end
+
 function M.toggle()
   local cached = get_cached_pane()
 
@@ -137,14 +182,26 @@ function M.toggle()
   return pane_id
 end
 
-function M.focus()
-  local pane_id, err = ensure_pane()
+function M.focus(opts)
+  if config.focus_backend ~= "smart-splits" then
+    local pane_id, err = ensure_pane(opts)
+
+    if err then
+      notify(err, vim.log.levels.ERROR)
+      return nil
+    end
+
+    return pane_id
+  end
+
+  local result, err = focus_via_smart_splits(opts)
+
   if err then
     notify(err, vim.log.levels.ERROR)
     return nil
   end
 
-  return pane_id
+  return result
 end
 
 function M.run(command)
