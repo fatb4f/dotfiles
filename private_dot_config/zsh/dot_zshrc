@@ -38,6 +38,18 @@ fi
 
 # Load after Zim so zsh-vi-mode keymap/prompt hooks are established before
 # WezTerm adds shell-integration prompt, cwd, and user-var hooks.
-if [[ "${TERM_PROGRAM:-}" == "WezTerm" ]] && (( $+commands[wezterm] )); then
-  eval "$(wezterm shell-integration --shell zsh)"
+if [[ -o interactive && "${TERM_PROGRAM:-}" == "WezTerm" ]]; then
+  if (( ! $+functions[__wezterm_set_user_var] )); then
+    for _wezterm_integration in \
+      /etc/profile.d/wezterm.sh \
+      "${XDG_CONFIG_HOME:-$HOME/.config}/wezterm/shell-integration/wezterm.sh" \
+      "${XDG_DATA_HOME:-$HOME/.local/share}/wezterm/shell-integration/wezterm.sh"
+    do
+      if [[ -r "$_wezterm_integration" ]]; then
+        source "$_wezterm_integration"
+        break
+      fi
+    done
+    unset _wezterm_integration
+  fi
 fi
