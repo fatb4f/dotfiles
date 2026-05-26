@@ -4,13 +4,16 @@ local session = home .. "/.local/bin/cli.session"
 local session_osd = session .. " osd "
 
 -- launch
-hl.bind("SUPER + Return", hl.dsp.exec_cmd("uwsm-app -- term-open"))
+hl.bind("SUPER + Return", hl.dsp.exec_cmd("uwsm-app -- wezterm"))
 hl.bind("SUPER + SHIFT + Return", hl.dsp.exec_cmd("uwsm-app -- kitty"))
+hl.bind("SUPER + E", hl.dsp.exec_cmd("uwsm-app -- wezterm -e nvim"))
 hl.bind("SUPER + B", hl.dsp.exec_cmd("uwsm-app -- chromium"))
 hl.bind("SUPER + Space", hl.dsp.exec_cmd(menu))
 
 -- window state
 hl.bind("SUPER + Q", hl.dsp.window.close())
+hl.bind("SUPER + V", hl.dsp.window.float({ action = "toggle" }))
+hl.bind("SUPER + SHIFT + F", hl.dsp.window.fullscreen({ mode = "maximized", action = "toggle" }))
 
 -- master layout current workspace
 hl.bind("SUPER + Tab", hl.dsp.layout("rollnext"))
