@@ -27,6 +27,91 @@ local function is_dir(path)
 	return ok and entries ~= nil
 end
 
+local function basename(path)
+	local trimmed = path:gsub("/+$", "")
+	return trimmed:match("([^/]+)$") or trimmed
+end
+
+local function home_relative(path)
+	if type(path) ~= "string" then
+		return path
+	end
+
+	if path == wezterm.home_dir then
+		return "~"
+	end
+
+	if path:sub(1, #wezterm.home_dir + 1) == wezterm.home_dir .. "/" then
+		return "~" .. path:sub(#wezterm.home_dir + 1)
+	end
+
+	return path
+end
+
+local function is_abs_path(value)
+	return type(value) == "string" and value:sub(1, 1) == "/"
+end
+
+local function expand_home(path)
+	if type(path) == "string" and path:sub(1, 2) == "~/" then
+		return wezterm.home_dir .. path:sub(2)
+	end
+
+	return path
+end
+
+local function workspace_exists(name)
+	for _, workspace in ipairs(wezterm.mux.get_workspace_names()) do
+		if workspace == name then
+			return true
+		end
+	end
+
+	return false
+end
+
+local function normalize_dir_candidate(id, label)
+	local cwd = expand_home(id)
+	if not is_abs_path(cwd) or not is_dir(cwd) then
+		return nil
+	end
+
+	return {
+		workspace = basename(cwd),
+		cwd = cwd,
+		label = label or home_relative(cwd),
+	}
+end
+
+local function normalized_callback(window, pane, id, label)
+	if type(id) ~= "string" then
+		return sessionizer.DefaultCallback(window, pane, id, label)
+	end
+
+	if workspace_exists(id) then
+		window:perform_action(wezterm.action.SwitchToWorkspace({ name = id }), pane)
+		return
+	end
+
+	local candidate = normalize_dir_candidate(id, label)
+	if not candidate then
+		return sessionizer.DefaultCallback(window, pane, id, label)
+	end
+
+	window:perform_action(
+		wezterm.action.SwitchToWorkspace({
+			name = candidate.workspace,
+			spawn = {
+				cwd = candidate.cwd,
+				set_environment_variables = {
+					TERM_PROJECT_ROOT = candidate.cwd,
+				},
+			},
+		}),
+		pane
+	)
+end
+
 local function project_entries()
 	local names = {}
 	for name, project in pairs(projects) do
@@ -71,7 +156,7 @@ local function workspace_schema()
 		options = {
 			title = "Workspace",
 			prompt = "Workspace: ",
-			callback = history.Wrapper(sessionizer.DefaultCallback),
+			callback = history.Wrapper(normalized_callback),
 		},
 
 		history.MostRecentWorkspace({}),
@@ -82,7 +167,9 @@ local function workspace_schema()
 		project_entries(),
 
 		processing = sessionizer.for_each_entry(function(entry)
-			entry.label = entry.label:gsub(wezterm.home_dir, "~")
+			if type(entry.label) == "string" then
+				entry.label = home_relative(entry.label)
+			end
 		end),
 	}
 
