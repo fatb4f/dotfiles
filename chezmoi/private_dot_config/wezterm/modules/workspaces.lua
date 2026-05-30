@@ -10,8 +10,6 @@ local M = {}
 
 local fd_roots = {
 	wezterm.home_dir .. "/src",
-	wezterm.home_dir .. "/work",
-	wezterm.home_dir .. "/dev",
 }
 
 local fd_excludes = {
