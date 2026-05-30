@@ -1,13 +1,13 @@
 # ~/.config/chezmoi/chezmoi.toml
 # Conservative local baseline for a chezmoi-managed $HOME.
 
-sourceDir = "/home/_404/.local/share/chezmoi"
-workingTree = "/home/_404/.local/share/chezmoi"
-destDir = "/home/_404/.config/chezmoi"
-cacheDir = "/home/_404/.cache/chezmoi"
-persistentState = "/home/_404/.local/state/chezmoi/chezmoi.boltdb"
-tempDir = "/home/_404/.cache/chezmoi/tmp"
-scriptTempDir = "/home/_404/.cache/chezmoi/scripts"
+sourceDir = "{{ .chezmoi.homeDir }}/src/dotfiles"
+workingTree = "{{ .chezmoi.homeDir }}/src/dotfiles"
+destDir = "{{ .chezmoi.homeDir }}"
+cacheDir = "{{ .chezmoi.homeDir }}/.cache/chezmoi"
+persistentState = "{{ .chezmoi.homeDir }}/.local/state/chezmoi/chezmoi.boltdb"
+tempDir = "{{ .chezmoi.homeDir }}/.cache/chezmoi/tmp"
+scriptTempDir = "{{ .chezmoi.homeDir }}/.cache/chezmoi/scripts"
 
 mode = "file"
 umask = 0o022
