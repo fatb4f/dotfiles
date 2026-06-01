@@ -14,9 +14,9 @@ config.window_close_confirmation = "NeverPrompt"
 config.scrollback_lines = 10000
 config.keys = config.keys or {}
 table.insert(config.keys, {
-  key = "Enter",
-  mods = "SHIFT",
-  action = act.SendKey({ key = "J", mods = "CTRL" }),
+	key = "Enter",
+	mods = "SHIFT",
+	action = act.SendKey({ key = "j", mods = "CTRL" }),
 })
 
 require("modules.smart_splits").apply_to_config(config)
