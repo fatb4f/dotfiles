@@ -10,10 +10,10 @@ Required:
 
 ```sh
 chezmoi status
-chezmoi diff
+chezmoi diff <target-path>
 chezmoi apply --no-tty <target-path>
 chezmoi status
-chezmoi diff
+chezmoi diff <target-path>
 ```
 
 Optional:
@@ -26,13 +26,13 @@ chezmoi source-path <target-path>
 ## Procedure
 
 1. Run `chezmoi status`.
-2. Run `chezmoi diff` for the bounded target or task scope.
+2. Run `chezmoi diff <target-path>` for the bounded target or task scope.
 3. Confirm the diff is task-scoped.
 4. Confirm there is no unrelated target drift.
 5. Run `chezmoi apply --no-tty <target-path>`.
 6. If chezmoi refuses because the target changed since last write, stop.
 7. Run `chezmoi status`.
-8. Run `chezmoi diff`.
+8. Run `chezmoi diff <target-path>`.
 9. Report materialized files and remaining drift.
 
 ## Rules

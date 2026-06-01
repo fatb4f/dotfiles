@@ -7,6 +7,7 @@ Chezmoi domain router.
 Use:
 
 ```text
+chezmoi/dot_local/share/codex/skills/chezmoi-workflow/SKILL.md
 chezmoi-workflow
 ```
 

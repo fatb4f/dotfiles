@@ -27,7 +27,7 @@ Pick one row. Load one starting authority. Do not recurse.
 | Hookrail contracts / feeds / projections      | `cue.mods/AGENTS.md`   | domain-local                                                                                                                 |
 | Bashly / shell wrappers / executable adapters | `shell-wrap/AGENTS.md` | domain-local                                                                                                                 |
 | Git state discovery                           | root                   | `git-workflow: git.discovery`                                                                                                |
-| repo close-out                                | root                   | `git-workflow: git.discovery` → `chezmoi-workflow: chezmoi.closeout` → `git-workflow: git.closeout` only if commit requested |
+| repo close-out                                | root                   | `git-workflow: git.discovery` → selected-domain closeout → `git-workflow: git.closeout` |
 
 ## Limits
 
@@ -36,6 +36,7 @@ Pick one row. Load one starting authority. Do not recurse.
 * Do not inspect unrelated domains.
 * Do not expand `authority/` unless explicitly requested.
 * Do not compare against legacy frame systems.
+* Skip `git.closeout` only when the user explicitly requests observation-only close-out or no commit.
 
 ## Fallback starts
 
