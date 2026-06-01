@@ -66,6 +66,12 @@ HOOKRAIL_AGENT_FEED_CHARS         default: 2000
 bin/hookrail-doctor
 ```
 
+The doctor includes an end-to-end Stop closeout loop check:
+
+```text
+dirty repo -> Stop blocks -> git commit changes HEAD -> Stop continues from trace evidence
+```
+
 Manual hook run:
 
 ```sh

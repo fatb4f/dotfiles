@@ -210,4 +210,37 @@ with tempfile.TemporaryDirectory() as td:
     report(not proc.stderr, "Stop dirty evidence stderr empty")
     report(out == {"continue": True}, "dirty repo with closeout evidence continues")
 
+    loop_repo = Path(td) / "loop-repo"
+    loop_repo.mkdir()
+    init_git_fixture(loop_repo, dirty=True)
+
+    loop_event = stop_fixture("stop-dirty.json", loop_repo)
+    loop_event["session_id"] = "test-session-stop-dirty-loop"
+    loop_event["turn_id"] = "test-turn-stop-dirty-loop"
+    proc, out = run_hook(hook_cmd, loop_event, env)
+    report(proc.returncode == 0, "Stop dirty loop first pass exits 0")
+    report(not proc.stderr, "Stop dirty loop first pass stderr empty")
+    report(isinstance(out, dict), "Stop dirty loop first pass stdout JSON object")
+    report(out is not None and out.get("decision") == "block", "dirty loop first pass blocks")
+
+    git("add", "file.txt", cwd=loop_repo)
+    git("commit", "-m", "test: closeout loop fixture", cwd=loop_repo)
+
+    proc, out = run_hook(hook_cmd, loop_event, env)
+    report(proc.returncode == 0, "Stop dirty loop second pass exits 0")
+    report(not proc.stderr, "Stop dirty loop second pass stderr empty")
+    report(out == {"continue": True}, "dirty loop second pass continues after commit")
+
+    loop_trace = Path(td) / "trace" / f"{loop_event['session_id']}.jsonl"
+    report(loop_trace.exists(), "closeout loop trace file exists")
+    loop_rows = [
+        json.loads(line)
+        for line in loop_trace.read_text(encoding="utf-8").splitlines()
+        if line
+    ]
+    report(len(loop_rows) == 2, "closeout loop appends two trace rows")
+    if len(loop_rows) == 2:
+        report(loop_rows[0].get("gitHead") != loop_rows[1].get("gitHead"), "closeout loop trace records gitHead change")
+        report(loop_rows[0].get("manifestPath") != loop_rows[1].get("manifestPath"), "closeout loop trace records distinct manifests")
+
 sys.exit(failed)
