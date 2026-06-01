@@ -46,6 +46,7 @@ Pick one task. Load the skill procedure from `chezmoi-workflow/SKILL.md`.
 | edit authoritative chezmoi source files                        | `chezmoi.edit`            |
 | inspect source-to-target/rendered relationship                 | `chezmoi.materialization` |
 | preview what apply/materialization would change                | `chezmoi.apply-preview`   |
+| materialize bounded source changes to target files             | `chezmoi.apply`           |
 | produce chezmoi status/diff handoff for repo close-out         | `chezmoi.closeout`        |
 
 ## Workflow order
@@ -56,6 +57,7 @@ chezmoi.discovery
 → chezmoi.edit
 → chezmoi.materialization
 → chezmoi.apply-preview
+→ chezmoi.apply
 → chezmoi.closeout
 ```
 

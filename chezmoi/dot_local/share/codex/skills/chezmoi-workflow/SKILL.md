@@ -1,8 +1,8 @@
 ---
 
 name: chezmoi-workflow
-description: "Thin task index for chezmoi source/rendered discovery, drift review, source edits, materialization preview, apply preview, and close-out."
-when_to_use: Use when AGENTS.md or the user references chezmoi.discovery, chezmoi.drift, chezmoi.edit, chezmoi.materialization, chezmoi.apply-preview, or chezmoi.closeout.
+description: "Thin task index for chezmoi source/rendered discovery, drift review, source edits, materialization preview, bounded apply, apply preview, and close-out."
+when_to_use: Use when AGENTS.md or the user references chezmoi.discovery, chezmoi.drift, chezmoi.edit, chezmoi.materialization, chezmoi.apply-preview, chezmoi.apply, or chezmoi.closeout.
 license: "Repo-local"
 compatibility: "Requires chezmoi CLI. Git commits must be delegated to git-workflow."
 
@@ -21,7 +21,7 @@ Do not use this skill for Git staging or commits. Use `git-workflow` for Git sta
 1. Treat chezmoi source and target/rendered state as distinct surfaces.
 2. Prefer discovery and drift classification before edits.
 3. Edit source files, not rendered target files, unless the user explicitly requests target-side repair.
-4. Do not run `chezmoi apply` unless explicitly requested.
+4. Do not run `chezmoi apply` outside the `chezmoi.apply` task or an explicit user request.
 5. Do not assume rendered drift is safe to apply.
 6. Keep discovery bounded to the requested dotfile pattern.
 7. Delegate Git close-out to `git-workflow`.
@@ -34,19 +34,21 @@ chezmoi.discovery
 → chezmoi.edit
 → chezmoi.materialization
 → chezmoi.apply-preview
+→ chezmoi.apply
 → chezmoi.closeout
 ```
 
 ## Tasks
 
 | Order | Task                      | Use for                                                          | Procedure                             |
-| ----: | ------------------------- | ---------------------------------------------------------------- | ------------------------------------- |
-|     1 | `chezmoi.discovery`       | Identify chezmoi state, managed paths, and source/target mapping | `references/tasks/discovery.md`       |
-|     2 | `chezmoi.drift`           | Classify existing source/rendered drift before change            | `references/tasks/drift.md`           |
-|     3 | `chezmoi.edit`            | Edit authoritative chezmoi source files                          | `references/tasks/edit.md`            |
-|     4 | `chezmoi.materialization` | Inspect source-to-target/rendered relationship                   | `references/tasks/materialization.md` |
-|     5 | `chezmoi.apply-preview`   | Preview what apply/materialization would change                  | `references/tasks/apply-preview.md`   |
-|     6 | `chezmoi.closeout`        | Produce chezmoi status/diff handoff for repo close-out           | `references/tasks/closeout.md`        |
+| ---: | --- | --- | --- |
+| 1 | `chezmoi.discovery` | Identify chezmoi state, managed paths, and source/target mapping | `references/tasks/discovery.md` |
+| 2 | `chezmoi.drift` | Classify existing source/rendered drift before change | `references/tasks/drift.md` |
+| 3 | `chezmoi.edit` | Edit authoritative chezmoi source files | `references/tasks/edit.md` |
+| 4 | `chezmoi.materialization` | Inspect source-to-target/rendered relationship | `references/tasks/materialization.md` |
+| 5 | `chezmoi.apply-preview` | Preview what apply/materialization would change | `references/tasks/apply-preview.md` |
+| 6 | `chezmoi.apply` | Materialize bounded source changes to target files | `references/tasks/apply.md` |
+| 7 | `chezmoi.closeout` | Produce chezmoi status/diff handoff for repo close-out | `references/tasks/closeout.md` |
 
 ## Cross-skill boundary
 
