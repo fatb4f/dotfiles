@@ -48,14 +48,19 @@ with tempfile.TemporaryDirectory() as td:
     env = dict(os.environ)
     env["HOOKRAIL_STATE"] = td
     hook_cmd = [str(HOOK)] if os.access(HOOK, os.X_OK) else [sys.executable, str(HOOK)]
+    fixture_count = 0
     for fixture in fixtures:
+        fixture_count += 1
         proc = subprocess.run(hook_cmd, input=fixture.read_bytes(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
         ok = proc.returncode == 0
         report(ok, f"{fixture.name} exits 0")
+        report(not proc.stderr, f"{fixture.name} stderr empty")
         try:
-            out = json.loads(proc.stdout.decode())
+            stdout = proc.stdout.decode()
+            out = json.loads(stdout)
             report(isinstance(out, dict), f"{fixture.name} stdout JSON object")
             report("continue" in out or "hookSpecificOutput" in out or "systemMessage" in out, f"{fixture.name} output shape")
+            report(stdout.lstrip().startswith("{"), f"{fixture.name} stdout starts with JSON object")
             if fixture.name == "stop.json":
                 report(out == {"continue": True}, f"{fixture.name} default output is bare continue")
         except Exception as exc:
@@ -63,5 +68,52 @@ with tempfile.TemporaryDirectory() as td:
 
     persisted = list(Path(td).glob("runs/*/*/events/*.json"))
     report(bool(persisted), "at least one manifest persisted")
+    manifests = []
+    for path in persisted:
+        try:
+            manifests.append((path, json.loads(path.read_text())))
+        except Exception as exc:
+            report(False, f"{path.name} invalid manifest JSON: {exc}")
+
+    trace_files = sorted((Path(td) / "trace").glob("*.jsonl"))
+    report(bool(trace_files), "trace files present")
+    trace_rows = []
+    for path in trace_files:
+        for line_no, line in enumerate(path.read_text().splitlines(), start=1):
+            try:
+                row = json.loads(line)
+                report(isinstance(row, dict), f"{path.name}:{line_no} trace JSON object")
+                trace_rows.append(row)
+            except Exception as exc:
+                report(False, f"{path.name}:{line_no} invalid trace JSON: {exc}")
+    report(len(trace_rows) == fixture_count, "every fixture invocation appends one trace row")
+    report(
+        all({"timestamp", "hookEventName", "sessionID", "turnID", "cwd", "model", "transcriptPath", "persisted", "manifestPath"} <= set(row) for row in trace_rows),
+        "trace rows include required fields",
+    )
+    report(
+        any(row.get("hookEventName") == "PostToolUse" and row.get("persisted") is False for row in trace_rows),
+        "PostToolUse small fixture traces without persistence",
+    )
+    report(
+        any(row.get("hookEventName") == "Stop" and row.get("persisted") is True and row.get("manifestPath") for row in trace_rows),
+        "Stop trace records persisted manifest",
+    )
+
+    small_prompt_manifests = [
+        data
+        for _path, data in manifests
+        if data.get("hookEventName") == "UserPromptSubmit"
+        and data.get("payload", {}).get("class") == "small"
+    ]
+    report(bool(small_prompt_manifests), "UserPromptSubmit small prompt persists metadata-only manifest")
+    if small_prompt_manifests:
+        manifest = small_prompt_manifests[0]
+        report(manifest.get("prompt") == {"stored": False, "reason": "redacted-by-default"}, "UserPromptSubmit prompt is marked redacted")
+        report("small bounded request" not in json.dumps(manifest, ensure_ascii=False), "UserPromptSubmit manifest omits raw prompt text")
+    report(
+        any(data.get("hookEventName") == "Stop" for _path, data in manifests),
+        "Stop persists manifest",
+    )
 
 sys.exit(failed)

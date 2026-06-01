@@ -4,9 +4,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import subprocess
+import re
 import sys
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -88,10 +89,13 @@ def next_event_path(events_dir: Path, hook_event_name: str) -> Path:
             seq = len(existing) + 1
     else:
         seq = 1
-    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in hook_event_name).strip(
-        "-"
-    )
+    slug = slugify(hook_event_name)
     return events_dir / f"{seq:06d}-{slug}.json"
+
+
+def slugify(value: str) -> str:
+    with_word_boundaries = re.sub(r"(?<!^)(?=[A-Z])", "-", value)
+    return re.sub(r"[^a-z0-9]+", "-", with_word_boundaries.lower()).strip("-")
 
 
 def atomic_write_json(path: Path, data: Any) -> None:
@@ -122,36 +126,45 @@ def persist_manifest(event: dict[str, Any], manifest: dict[str, Any]) -> str | N
     return str(p)
 
 
-def repo_is_dirty(cwd: str) -> bool:
-    if not cwd:
-        return False
+def append_trace(
+    event: dict[str, Any],
+    persisted: bool,
+    manifest_path: str | None,
+) -> None:
+    root = state_root()
+    if root is None:
+        return
+    session_id = event.get("session_id") or "unknown-session"
+    trace_dir = root / "trace"
+    trace_dir.mkdir(parents=True, exist_ok=True)
+    row = {
+        "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "hookEventName": event.get("hook_event_name"),
+        "sessionID": event.get("session_id", "unknown-session"),
+        "turnID": event.get("turn_id", "session"),
+        "cwd": event.get("cwd", ""),
+        "model": event.get("model", ""),
+        "transcriptPath": event.get("transcript_path"),
+        "persisted": persisted,
+        "manifestPath": manifest_path,
+    }
+    with (trace_dir / f"{session_id}.jsonl").open("a", encoding="utf-8") as fh:
+        json.dump(row, fh, sort_keys=True, separators=(",", ":"))
+        fh.write("\n")
+
+
+def try_append_trace(
+    event: dict[str, Any],
+    persisted: bool,
+    manifest_path: str | None,
+) -> None:
     try:
-        proc = subprocess.run(
-            ["git", "-C", cwd, "status", "--porcelain"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            text=True,
-            check=False,
-        )
-    except OSError:
-        return False
-    return proc.returncode == 0 and bool(proc.stdout.strip())
+        append_trace(event, persisted, manifest_path)
+    except Exception:
+        pass
 
 
-def stop_closeout_exists(event: dict[str, Any]) -> bool:
-    d = turn_dir(event)
-    if d is None:
-        return False
-    return any((d / "events").glob("*-stop.json"))
-
-
-def stop_warning(event: dict[str, Any], chars: int) -> str | None:
-    cwd = event.get("cwd") or ""
-    if repo_is_dirty(cwd) and not stop_closeout_exists(event):
-        return (
-            "hookrail: repo dirty and no closeout exists; closeout frame can be "
-            "generated from persisted hook manifests."
-        )
+def stop_warning(_event: dict[str, Any], chars: int) -> str | None:
     if chars >= STOP_PRESSURE:
         return "hookrail: stop observed; session pressure threshold crossed."
     return None
@@ -203,7 +216,7 @@ def build_manifest(
     }
 
 
-def handle_session_start(event: dict[str, Any]) -> dict[str, Any]:
+def handle_session_start(event: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     source = event.get("source", "unknown")
     text = None
     root = state_root()
@@ -218,12 +231,11 @@ def handle_session_start(event: dict[str, Any]) -> dict[str, Any]:
     manifest = build_manifest(
         event, 0, "small", bool(text), "session-start-frame", text, out
     )
-    if text:
-        persist_manifest(event, manifest)
-    return out
+    manifest_path = persist_manifest(event, manifest) if text else None
+    return out, manifest_path
 
 
-def handle_user_prompt_submit(event: dict[str, Any]) -> dict[str, Any]:
+def handle_user_prompt_submit(event: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     prompt = event.get("prompt", "")
     chars = len(prompt)
     klass = payload_class(chars, PROMPT_LARGE, PROMPT_OVERSIZED)
@@ -233,15 +245,16 @@ def handle_user_prompt_submit(event: dict[str, Any]) -> dict[str, Any]:
     out = base_output_context("UserPromptSubmit", text)
     if klass == "oversized":
         out["systemMessage"] = text
-    manifest = build_manifest(
-        event, chars, klass, klass != "small", "prompt-pressure", text, out
-    )
-    if klass != "small":
-        persist_manifest(event, manifest)
-    return out
+    manifest = build_manifest(event, chars, klass, True, "prompt-metadata", text, out)
+    manifest["prompt"] = {
+        "stored": False,
+        "reason": "redacted-by-default",
+    }
+    manifest_path = persist_manifest(event, manifest)
+    return out, manifest_path
 
 
-def handle_post_tool_use(event: dict[str, Any]) -> dict[str, Any]:
+def handle_post_tool_use(event: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     response = event.get("tool_response")
     chars = json_chars(response)
     klass = payload_class(chars, TOOL_LARGE, None)
@@ -257,12 +270,11 @@ def handle_post_tool_use(event: dict[str, Any]) -> dict[str, Any]:
     manifest = build_manifest(
         event, chars, klass, klass != "small", "tool-output-budget", text, out
     )
-    if klass != "small":
-        persist_manifest(event, manifest)
-    return out
+    manifest_path = persist_manifest(event, manifest) if klass != "small" else None
+    return out, manifest_path
 
 
-def handle_stop(event: dict[str, Any]) -> dict[str, Any]:
+def handle_stop(event: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     msg = event.get("last_assistant_message") or ""
     chars = len(msg)
     klass = payload_class(chars, TOOL_LARGE, None)
@@ -277,13 +289,13 @@ def handle_stop(event: dict[str, Any]) -> dict[str, Any]:
         return {
             "continue": True,
             "systemMessage": f"hookrail: stop closeout failed: {exc}",
-        }
+        }, None
     if persisted is None:
         return {
             "continue": True,
             "systemMessage": "hookrail: stop closeout failed; no manifest was persisted.",
-        }
-    return out
+        }, None
+    return out, persisted
 
 
 HANDLERS = {
@@ -301,6 +313,8 @@ def noop_for(event_name: str) -> dict[str, Any]:
 
 
 def main() -> int:
+    event: dict[str, Any] | None = None
+    manifest_path: str | None = None
     try:
         event = read_json()
         name = event.get("hook_event_name")
@@ -310,9 +324,13 @@ def main() -> int:
                 "continue": True,
                 "systemMessage": f"hookrail: unsupported hook {name!r}; no-op.",
             }
+            try_append_trace(event, False, None)
         else:
-            output = handler(event)
+            output, manifest_path = handler(event)
+            try_append_trace(event, manifest_path is not None, manifest_path)
     except Exception as exc:
+        if event is not None:
+            try_append_trace(event, False, manifest_path)
         # Context hooks must not poison stdout with malformed JSON. If the input was
         # malformed, the safest generic output is a stop-compatible continue object.
         output = {
