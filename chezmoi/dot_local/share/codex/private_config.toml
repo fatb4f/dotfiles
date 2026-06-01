@@ -13,7 +13,7 @@ log_dir = "/home/_404/.local/state/codex/log"
 sqlite_home = "/home/_404/.local/state/codex/sqlite"
 
 [features]
-hooks = false
+hooks = true
 shell_tool = true
 shell_snapshot = false
 
@@ -205,3 +205,41 @@ approval_mode = "approve"
 
 [apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_update_issue_comment]
 approval_mode = "approve"
+
+# hookrail begin
+
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear|compact"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = """sh -lc 'CODEX_HOME="${CODEX_HOME:-/home/_404/.local/share/codex}"; CODEX_STATE="${CODEX_STATE:-/home/_404/.local/state/codex}"; HOOKRAIL_STATE="${HOOKRAIL_STATE:-$CODEX_STATE/hookrail}"; export CODEX_HOME CODEX_STATE HOOKRAIL_STATE; exec "$CODEX_HOME/tools/hookrail/hooks/session-start"'"""
+timeout = 10
+statusMessage = "Hookrail: session start"
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = """sh -lc 'CODEX_HOME="${CODEX_HOME:-/home/_404/.local/share/codex}"; CODEX_STATE="${CODEX_STATE:-/home/_404/.local/state/codex}"; HOOKRAIL_STATE="${HOOKRAIL_STATE:-$CODEX_STATE/hookrail}"; export CODEX_HOME CODEX_STATE HOOKRAIL_STATE; exec "$CODEX_HOME/tools/hookrail/hooks/user-prompt-submit"'"""
+timeout = 10
+statusMessage = "Hookrail: checking prompt pressure"
+
+[[hooks.PostToolUse]]
+matcher = ".*"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = """sh -lc 'CODEX_HOME="${CODEX_HOME:-/home/_404/.local/share/codex}"; CODEX_STATE="${CODEX_STATE:-/home/_404/.local/state/codex}"; HOOKRAIL_STATE="${HOOKRAIL_STATE:-$CODEX_STATE/hookrail}"; export CODEX_HOME CODEX_STATE HOOKRAIL_STATE; exec "$CODEX_HOME/tools/hookrail/hooks/post-tool-use"'"""
+timeout = 10
+statusMessage = "Hookrail: capturing tool evidence"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = """sh -lc 'CODEX_HOME="${CODEX_HOME:-/home/_404/.local/share/codex}"; CODEX_STATE="${CODEX_STATE:-/home/_404/.local/state/codex}"; HOOKRAIL_STATE="${HOOKRAIL_STATE:-$CODEX_STATE/hookrail}"; export CODEX_HOME CODEX_STATE HOOKRAIL_STATE; exec "$CODEX_HOME/tools/hookrail/hooks/stop"'"""
+timeout = 10
+statusMessage = "Hookrail: writing closeout frame"
+
+# hookrail end
