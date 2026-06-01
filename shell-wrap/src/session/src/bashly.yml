@@ -52,6 +52,21 @@ commands:
         examples:
           - session lockout check
 
+  - name: break
+    help: Manage post-break workflow state
+    commands:
+      - name: mark-resume-pending
+        help: Mark Tomat work resume as pending after break
+        filename: commands/break_mark_resume_pending.sh
+        examples:
+          - session break mark-resume-pending
+
+      - name: consume-resume-pending
+        help: Consume pending Tomat work resume marker
+        filename: commands/break_consume_resume_pending.sh
+        examples:
+          - session break consume-resume-pending
+
   - name: auto-start
     help: Run graphical-session startup actions once per session
     filename: commands/auto_start.sh

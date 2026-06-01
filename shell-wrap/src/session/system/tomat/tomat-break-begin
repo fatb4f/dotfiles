@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+remaining_seconds="${TOMAT_REMAINING_SECONDS:?TOMAT_REMAINING_SECONDS required}"
+sudo_bin="${SUDO_BIN:-sudo}"
+session_bin="${SESSION_BIN:-/usr/local/bin/session}"
+loginctl_bin="${LOGINCTL_BIN:-loginctl}"
+
+case "$remaining_seconds" in
+  ''|*[!0-9]*)
+    printf 'tomat-break-begin: invalid TOMAT_REMAINING_SECONDS: %s\n' "$remaining_seconds" >&2
+    exit 64
+    ;;
+esac
+
+until_epoch="$(($(date +%s) + remaining_seconds))"
+
+"$sudo_bin" "$session_bin" lockout set "$until_epoch"
+"$loginctl_bin" lock-session

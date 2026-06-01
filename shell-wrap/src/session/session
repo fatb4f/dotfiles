@@ -30,6 +30,7 @@ session_usage() {
   printf "  %s   Deprecated alias for lock\n" "session-lock      "
   printf "  %s   Unlock the current session and clean up lock-side timers\n" "unlock            "
   printf "  %s   Manage break lockout deadline\n" "lockout           "
+  printf "  %s   Manage post-break workflow state\n" "break             "
   printf "  %s   Run graphical-session startup actions once per session\n" "auto-start        "
   printf "  %s   Deprecated alias for auto-start\n" "session-auto-start"
   printf "  %s   Internal helper: start Tomat work if daemon is idle\n" "tomat-start-work  "
@@ -264,6 +265,87 @@ session_lockout_check_usage() {
 }
 
 # :command.usage
+session_break_usage() {
+  printf "session break - Manage post-break workflow state\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session break COMMAND\n"
+  printf "  session break [COMMAND] --help | -h\n"
+  echo
+  # :command.usage_commands
+  printf "%s\n" "Commands:"
+  printf "  %s   Mark Tomat work resume as pending after break\n" "mark-resume-pending   "
+  printf "  %s   Consume pending Tomat work resume marker\n" "consume-resume-pending"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+session_break_mark_resume_pending_usage() {
+  printf "session break mark-resume-pending - Mark Tomat work resume as pending after break\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session break mark-resume-pending\n"
+  printf "  session break mark-resume-pending --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  session break mark-resume-pending\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+session_break_consume_resume_pending_usage() {
+  printf "session break consume-resume-pending - Consume pending Tomat work resume marker\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session break consume-resume-pending\n"
+  printf "  session break consume-resume-pending --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  session break consume-resume-pending\n"
+    echo
+
+  fi
+}
+
+# :command.usage
 session_auto_start_usage() {
   printf "session auto-start - Run graphical-session startup actions once per session\n\n"
 
@@ -449,6 +531,58 @@ inspect_args() {
 }
 
 # :command.user_lib
+# src/lib/break.sh
+# shellcheck shell=bash
+
+session_break_runtime_dir() {
+  if [[ -n "${SESSION_BREAK_DIR:-}" ]]; then
+    printf '%s\n' "$SESSION_BREAK_DIR"
+    return
+  fi
+
+  if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    printf '%s\n' "$XDG_RUNTIME_DIR/session-break"
+    return
+  fi
+
+  printf '/run/user/%s/session-break\n' "$(id -u)"
+}
+
+session_break_pending_file() {
+  if [[ -n "${SESSION_BREAK_PENDING_FILE:-}" ]]; then
+    printf '%s\n' "$SESSION_BREAK_PENDING_FILE"
+    return
+  fi
+
+  printf '%s/pending_resume\n' "$(session_break_runtime_dir)"
+}
+
+session_break_mark_resume_pending() {
+  local pending_file pending_dir tmp
+
+  pending_file="$(session_break_pending_file)"
+  pending_dir="$(dirname -- "$pending_file")"
+
+  mkdir -p "$pending_dir" || return $?
+
+  tmp="$(mktemp "$pending_dir/.pending_resume.XXXXXX")" || return $?
+  printf '%s\n' pending >"$tmp" || {
+    rm -f "$tmp"
+    return 1
+  }
+
+  mv -f "$tmp" "$pending_file"
+}
+
+session_break_consume_resume_pending() {
+  local pending_file
+
+  pending_file="$(session_break_pending_file)"
+
+  [[ -e "$pending_file" ]] || return 1
+  rm -f "$pending_file"
+}
+
 # src/lib/lockout.sh
 # shellcheck shell=bash
 
@@ -877,6 +1011,24 @@ session_lockout_check_command() {
 }
 
 # :command.function
+session_break_mark_resume_pending_command() {
+
+  # src/commands/break_mark_resume_pending.sh
+  session_break_mark_resume_pending
+  exit $?
+
+}
+
+# :command.function
+session_break_consume_resume_pending_command() {
+
+  # src/commands/break_consume_resume_pending.sh
+  session_break_consume_resume_pending
+  exit $?
+
+}
+
+# :command.function
 session_auto_start_command() {
 
   # src/commands/auto_start.sh
@@ -979,6 +1131,13 @@ parse_requirements() {
       action="lockout"
       shift
       session_lockout_parse_requirements "$@"
+      shift $#
+      ;;
+
+    break)
+      action="break"
+      shift
+      session_break_parse_requirements "$@"
       shift $#
       ;;
 
@@ -1426,6 +1585,177 @@ session_lockout_check_parse_requirements() {
 }
 
 # :command.parse_requirements
+session_break_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_break_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action=${1:-}
+
+  case $action in
+    -*) ;;
+
+    mark-resume-pending)
+      action="mark-resume-pending"
+      shift
+      session_break_mark_resume_pending_parse_requirements "$@"
+      shift $#
+      ;;
+
+    consume-resume-pending)
+      action="consume-resume-pending"
+      shift
+      session_break_consume_resume_pending_parse_requirements "$@"
+      shift $#
+      ;;
+
+    # :command.command_fallback
+    "")
+      session_break_usage >&2
+      exit 1
+      ;;
+
+    *)
+      printf "invalid command: %s\n" "$action" >&2
+      exit 1
+      ;;
+
+  esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+session_break_mark_resume_pending_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_break_mark_resume_pending_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="break mark-resume-pending"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+session_break_consume_resume_pending_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_break_consume_resume_pending_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="break consume-resume-pending"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
 session_auto_start_parse_requirements() {
   local key
 
@@ -1653,6 +1983,9 @@ run() {
     "lockout set") session_lockout_set_command ;;
     "lockout clear") session_lockout_clear_command ;;
     "lockout check") session_lockout_check_command ;;
+    "break") session_break_command ;;
+    "break mark-resume-pending") session_break_mark_resume_pending_command ;;
+    "break consume-resume-pending") session_break_consume_resume_pending_command ;;
     "auto-start") session_auto_start_command ;;
     "session-auto-start") session_session_auto_start_command ;;
     "tomat-start-work") session_tomat_start_work_command ;;

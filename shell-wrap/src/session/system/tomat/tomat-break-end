@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+sudo_bin="${SUDO_BIN:-sudo}"
+session_bin="${SESSION_BIN:-/usr/local/bin/session}"
+
+"$sudo_bin" "$session_bin" lockout clear || true
+"$session_bin" break mark-resume-pending

@@ -10,6 +10,7 @@
   [[ "$output" == *"  lock"* ]]
   [[ "$output" == *"  unlock"* ]]
   [[ "$output" == *"  lockout"* ]]
+  [[ "$output" == *"  break"* ]]
   [[ "$output" == *"  auto-start"* ]]
   [[ "$output" == *"  osd"* ]]
   [[ "$output" == *"session-lock"* ]]

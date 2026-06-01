@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-break_seconds="${1:?break duration in seconds required}"
-
-case "$break_seconds" in
-  ''|*[!0-9]*)
-    printf 'break-start.example: invalid break duration: %s\n' "$break_seconds" >&2
-    exit 64
-    ;;
-esac
-
-until_epoch="$(($(date +%s) + break_seconds))"
-
-sudo /usr/local/bin/session lockout set "$until_epoch"
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec "$script_dir/tomat-break-begin"

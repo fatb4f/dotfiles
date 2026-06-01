@@ -3,6 +3,7 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 session_src="$(cd -- "$script_dir/.." && pwd)/session"
+tomat_dir="$script_dir/tomat"
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   printf 'install-session-lockout: must run as root\n' >&2
@@ -10,8 +11,15 @@ if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
 fi
 
 install -o root -g root -m 0755 "$session_src" /usr/local/bin/session
+install -d -o root -g root -m 0755 /usr/local/libexec
+install -o root -g root -m 0755 "$tomat_dir/tomat-break-begin" /usr/local/libexec/tomat-break-begin
+install -o root -g root -m 0755 "$tomat_dir/tomat-break-end" /usr/local/libexec/tomat-break-end
+install -o root -g root -m 0755 "$tomat_dir/session-post-unlock" /usr/local/libexec/session-post-unlock
 install -d -o root -g root -m 0755 /run/session-lockout
 
 printf '%s\n' 'installed /usr/local/bin/session'
+printf '%s\n' 'installed /usr/local/libexec/tomat-break-begin'
+printf '%s\n' 'installed /usr/local/libexec/tomat-break-end'
+printf '%s\n' 'installed /usr/local/libexec/session-post-unlock'
 printf '%s\n' 'review system/pam/hyprlock.lockout.example before editing /etc/pam.d/hyprlock'
 printf '%s\n' 'review system/sudoers/session-lockout with visudo before installing to /etc/sudoers.d/session-lockout'

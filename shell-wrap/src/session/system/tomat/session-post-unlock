@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+session_bin="${SESSION_BIN:-/usr/local/bin/session}"
+tomat_bin="${TOMAT_BIN:-tomat}"
+
+if "$session_bin" break consume-resume-pending; then
+  "$tomat_bin" resume
+fi

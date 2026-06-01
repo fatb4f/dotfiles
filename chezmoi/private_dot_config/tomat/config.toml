@@ -6,8 +6,8 @@ sessions = 4
 
 # Required for break-lock:
 # Work automatically transitions into break, so the break_start hook fires.
-# Returning to work remains intentional/manual.
-auto_advance = "all"
+# Returning to work is resumed from the unlock edge after break_end marks it.
+auto_advance = "to-break"
 
 [sound]
 enabled = false
@@ -26,13 +26,21 @@ text_format = "{icon} {time} {phase} {state}"
 text_format_idle = ""
 
 [hooks.on_break_start]
-cmd = "/home/_404/.local/bin/session"
-args = ["lock"]
-timeout = 3
+cmd = "/usr/local/libexec/tomat-break-begin"
+timeout = 5
 capture_output = true
 
 [hooks.on_long_break_start]
-cmd = "/home/_404/.local/bin/session"
-args = ["lock"]
-timeout = 3
+cmd = "/usr/local/libexec/tomat-break-begin"
+timeout = 5
+capture_output = true
+
+[hooks.on_break_end]
+cmd = "/usr/local/libexec/tomat-break-end"
+timeout = 5
+capture_output = true
+
+[hooks.on_long_break_end]
+cmd = "/usr/local/libexec/tomat-break-end"
+timeout = 5
 capture_output = true
