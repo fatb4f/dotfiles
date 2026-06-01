@@ -1,7 +1,7 @@
 ---
 name: git-workflow
-description: "Use when establishing branching strategies, implementing Conventional Commits, creating or reviewing PRs, resolving PR review comments, merging PRs (including CI verification, auto-merge queues, and post-merge cleanup), managing PR review threads, merging PRs with signed commits, handling merge conflicts, creating releases, integrating Git with CI/CD, setting up git hooks (lefthook, captainhook, husky, pre-commit), or debugging hook-install failures in git worktrees."
-when_to_use: Use for Git status/diff/commit/branch/PR/release tasks, write-protected .git/index/refs failures, linked worktree metadata problems, hook install failures, conventional commit planning, and merge gates. Do not use for non-Git filesystem edits unless they are part of a Git workflow.
+description: "Use for Git status/diff/commit/branch/PR/release tasks, merge gates, hook setup, and git-worktree debugging."
+when_to_use: Use for Git status/diff/commit/branch/PR/release tasks, merge gates, hook setup, and write-protected .git/index/refs failures. Do not use for non-Git filesystem edits unless they are part of a Git workflow.
 license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
 compatibility: "Requires git, gh CLI."
 metadata:
@@ -19,49 +19,36 @@ allowed-tools:
 
 # Git Workflow Skill
 
-Expert patterns for Git version control: branching, commits, collaboration, and CI/CD.
+Use this skill for Git work that needs repo-aware status, staging, commits, PRs, merges, releases, or hook handling.
 
-## Critical Rules (Non-Negotiable)
+## Rules
 
-1. **No direct push to main** — always open a PR.
-2. **No merge before all review threads are resolved** — run the merge gate in `references/pull-request-workflow.md`.
-3. **No squash unless user asked** — atomic commits preserved; keeps GPG signatures and bisection.
-4. **No "tested/verified/working" without pasted command output** — if you cannot run the check, say so.
-5. **No edits to installed skill/plugin cache paths** (`~/.claude/skills/`, `~/.claude/plugins/cache/`, `**/.bare/**`) — always the repo worktree. Verify `pwd` first.
-6. **Force-push only with `--force-with-lease`** — never plain `--force`.
-7. **Use Git MCP for local Git writes when available** — stage, unstage, commit, checkout, branch, and init through the configured Git MCP server instead of shell Git writes.
+1. Prefer Git MCP write tools when available; use shell Git writes only when MCP is unavailable or the user explicitly asks.
+2. Stage only intentional paths.
+3. Do not claim verification without pasted command output.
+4. Force-push only with `--force-with-lease`.
+5. Never edit installed skill/plugin cache paths; stay in the repo worktree and verify `pwd` first.
+6. Keep commit history atomic unless the user asks otherwise.
 
-See `references/pull-request-workflow.md` for the merge-gate command, atomic-commit guidance, and review-thread SHA-citation pattern.
+See `references/pull-request-workflow.md` for merge gates and review-thread handling.
 
 ## Reference Files
 
-Load references on demand based on the task at hand:
+Load the matching reference only when the task needs it:
 
 | Reference | Content Triggers |
 |-----------|-----------------|
-| `references/branching-strategies.md` | Branching model, Git Flow, GitHub Flow, trunk-based, branch protection |
-| `references/commit-conventions.md` | Commit messages, conventional commits, semantic versioning, commitlint |
-| `references/pull-request-workflow.md` | PR create/review/merge, thread resolution, merge strategies, CODEOWNERS, signed commits + rebase |
+| `references/branching-strategies.md` | Branching models and branch protection |
+| `references/commit-conventions.md` | Commit messages, atomic commits, commit templates |
+| `references/pull-request-workflow.md` | PR create/review/merge, merge gates, thread resolution |
 | `references/ci-cd-integration.md` | GitHub Actions, GitLab CI, semantic release, deployment |
 | `references/advanced-git.md` | Rebase, cherry-pick, bisect, stash, worktrees, reflog, submodules, recovery |
-| `references/github-releases.md` | Release management, immutable releases, `--latest=false`, multi-branch |
-| `references/git-hooks-setup.md` | Hook frameworks, detection, recommended hooks per stage |
-| `references/claude-code-hooks.md` | Claude Code `settings.json` hooks — merge gate, cache-path rejection, auto-lint |
+| `references/github-releases.md` | Release management and immutable releases |
+| `references/git-hooks-setup.md` | Hook frameworks, detection, and installation |
+| `references/claude-code-hooks.md` | Claude Code `settings.json` hooks |
 | `references/code-quality-tools.md` | shellcheck, shfmt, git-absorb, difftastic |
 
-## Conventional Commits
-
-```
-<type>[scope]: <description>
-```
-
-**Types**: `feat` (MINOR), `fix` (PATCH), `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`
-
-**Breaking change**: Add `!` after type or `BREAKING CHANGE:` in footer.
-
 ## Local Git Write Workflow
-
-When Git MCP tools are available, use them for repository write operations:
 
 1. Discover the current Git MCP surface with `tool_search` if needed. Prefer `git-mcp-server` tools when both `git` and `git-mcp-server` namespaces are present.
 2. Use read-only commands or MCP status/diff tools to inspect the repository:
@@ -73,64 +60,17 @@ When Git MCP tools are available, use them for repository write operations:
 
 Use shell `git` writes only when no Git MCP write tool is available or the user explicitly asks for shell Git. If `.git` is write-protected from the shell but Git MCP is configured, do not report blocked until the MCP write path has been attempted.
 
-Common MCP write tools:
+## Git Closeout
 
-```text
-git_add
-git_commit
-git_reset
-git_checkout
-git_create_branch
-git_init
-```
-
-## Git Closeout Procedure
-
-Use this when Hookrail, AGENTS.md, or the user requests commit-before-summary closeout.
+Use this when Hookrail, AGENTS.md, or the user requests commit-before-summary closeout:
 
 1. Inspect repository status.
 2. Inspect unstaged and staged diffs.
-3. Stage only files directly related to the completed task.
+3. Stage only task-scoped files.
 4. Verify the staged diff.
-5. Generate a Conventional Commit message from the staged diff.
-6. Commit using Git MCP write tools when available.
-7. Check final status.
-8. Report commit SHA, staged files, and validation evidence.
-
-## Branch Naming
-
-```
-feature/TICKET-123-description
-fix/TICKET-456-bug-name
-release/1.2.0
-hotfix/1.2.1-security-patch
-```
-
-## Hook Detection
-
-Before first commit, detect and install hooks:
-
-```bash
-ls lefthook.yml .lefthook.yml captainhook.json .pre-commit-config.yaml .husky/pre-commit 2>/dev/null || echo "No hooks"
-```
-
-Install: lefthook.yml -> `lefthook install` | captainhook.json -> `composer install` | .husky/ -> `npm install` | .pre-commit-config.yaml -> `pre-commit install`
-
-## Critical Release Rules
-
-1. **Immutable releases**: Deleted releases permanently block tag reuse; bump version instead.
-2. **Multi-branch releases**: Use `--latest=false` from non-default branches.
-3. **Pre-release**: Version bumped, CI green, CHANGELOG updated, `git pull` BEFORE `gh release create`.
-
-## PR Merge Requirements
-
-Before merging: all threads resolved, CI checks green (including annotations), branch rebased, commits signed (if required). For signed commits + rebase-only repos, use local `git merge --ff-only`.
-
-## Verification
-
-```bash
-./scripts/verify-git-workflow.sh /path/to/repository
-```
+5. Commit with a Conventional Commit message.
+6. Check final status.
+7. Report commit SHA, staged files, and validation evidence.
 
 ---
 
