@@ -29,6 +29,7 @@ session_usage() {
   printf "  %s   Start Hyprlock through a transient user systemd unit\n" "lock              "
   printf "  %s   Deprecated alias for lock\n" "session-lock      "
   printf "  %s   Unlock the current session and clean up lock-side timers\n" "unlock            "
+  printf "  %s   Manage break lockout deadline\n" "lockout           "
   printf "  %s   Run graphical-session startup actions once per session\n" "auto-start        "
   printf "  %s   Deprecated alias for auto-start\n" "session-auto-start"
   printf "  %s   Internal helper: start Tomat work if daemon is idle\n" "tomat-start-work  "
@@ -140,6 +141,123 @@ session_unlock_usage() {
     # :command.usage_examples
     printf "%s\n" "Examples:"
     printf "  session unlock\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+session_lockout_usage() {
+  printf "session lockout - Manage break lockout deadline\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session lockout COMMAND\n"
+  printf "  session lockout [COMMAND] --help | -h\n"
+  echo
+  # :command.usage_commands
+  printf "%s\n" "Commands:"
+  printf "  %s   Set break lockout deadline\n" "set  "
+  printf "  %s   Clear break lockout deadline\n" "clear"
+  printf "  %s   Check whether unlock is currently allowed\n" "check"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+session_lockout_set_usage() {
+  printf "session lockout set - Set break lockout deadline\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session lockout set UNTIL_EPOCH\n"
+  printf "  session lockout set --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_args
+    printf "%s\n" "Arguments:"
+
+    # :argument.usage
+    printf "  %s\n" "UNTIL_EPOCH"
+    printf "    Unix epoch second until which unlock should be denied\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  session lockout set 1760000000\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+session_lockout_clear_usage() {
+  printf "session lockout clear - Clear break lockout deadline\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session lockout clear\n"
+  printf "  session lockout clear --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  session lockout clear\n"
+    echo
+
+  fi
+}
+
+# :command.usage
+session_lockout_check_usage() {
+  printf "session lockout check - Check whether unlock is currently allowed\n\n"
+
+  printf "%s\n" "Usage:"
+  printf "  session lockout check\n"
+  printf "  session lockout check --help | -h\n"
+  echo
+
+  # :command.long_usage
+  if [[ -n "$long_usage" ]]; then
+    # :command.usage_options
+    printf "%s\n" "Options:"
+
+    # :command.usage_fixed_flags
+    printf "  %s\n" "--help, -h"
+    printf "    Show this help\n"
+    echo
+
+    # :command.usage_examples
+    printf "%s\n" "Examples:"
+    printf "  session lockout check\n"
     echo
 
   fi
@@ -331,6 +449,90 @@ inspect_args() {
 }
 
 # :command.user_lib
+# src/lib/lockout.sh
+# shellcheck shell=bash
+
+SESSION_LOCKOUT_DIR="${SESSION_LOCKOUT_DIR:-/run/session-lockout}"
+SESSION_LOCKOUT_FILE="${SESSION_LOCKOUT_FILE:-$SESSION_LOCKOUT_DIR/until_epoch}"
+SESSION_LOCKOUT_MAX_SECONDS="${SESSION_LOCKOUT_MAX_SECONDS:-14400}"
+
+session_lockout_now() {
+  date +%s
+}
+
+session_lockout_is_epoch() {
+  [[ "${1:-}" =~ ^[0-9]+$ ]]
+}
+
+session_lockout_set() {
+  local until_epoch now max_until tmp
+
+  until_epoch="${1:?until_epoch required}"
+
+  if ! session_lockout_is_epoch "$until_epoch"; then
+    printf 'session lockout set: invalid epoch: %s\n' "$until_epoch" >&2
+    return 64
+  fi
+
+  now="$(session_lockout_now)"
+  max_until="$((now + SESSION_LOCKOUT_MAX_SECONDS))"
+
+  if ((until_epoch <= now)); then
+    printf 'session lockout set: deadline is not in the future\n' >&2
+    return 64
+  fi
+
+  if ((until_epoch > max_until)); then
+    printf 'session lockout set: deadline too far in future\n' >&2
+    return 64
+  fi
+
+  install -d -o root -g root -m 0755 "$SESSION_LOCKOUT_DIR" || return $?
+
+  tmp="$(mktemp "$SESSION_LOCKOUT_DIR/.until_epoch.XXXXXX")" || return $?
+  printf '%s\n' "$until_epoch" >"$tmp" || {
+    rm -f "$tmp"
+    return 1
+  }
+
+  chown root:root "$tmp" || {
+    rm -f "$tmp"
+    return 1
+  }
+
+  chmod 0444 "$tmp" || {
+    rm -f "$tmp"
+    return 1
+  }
+
+  mv -f "$tmp" "$SESSION_LOCKOUT_FILE"
+}
+
+session_lockout_clear() {
+  rm -f "$SESSION_LOCKOUT_FILE"
+}
+
+session_lockout_check() {
+  local until_epoch now
+
+  [[ -r "$SESSION_LOCKOUT_FILE" ]] || return 0
+
+  until_epoch="$(cat "$SESSION_LOCKOUT_FILE" 2>/dev/null || true)"
+
+  if ! session_lockout_is_epoch "$until_epoch"; then
+    return 0
+  fi
+
+  now="$(session_lockout_now)"
+
+  if ((now < until_epoch)); then
+    printf 'session lockout: unlock denied until %s\n' "$until_epoch" >&2
+    return 1
+  fi
+
+  return 0
+}
+
 # src/lib/notify.sh
 # shellcheck shell=bash
 notify_osd() {
@@ -648,6 +850,30 @@ session_unlock_command() {
 }
 
 # :command.function
+session_lockout_set_command() {
+
+  # src/commands/lockout_set.sh
+  session_lockout_set "${args[until_epoch]}"
+
+}
+
+# :command.function
+session_lockout_clear_command() {
+
+  # src/commands/lockout_clear.sh
+  session_lockout_clear
+
+}
+
+# :command.function
+session_lockout_check_command() {
+
+  # src/commands/lockout_check.sh
+  session_lockout_check
+
+}
+
+# :command.function
 session_auto_start_command() {
 
   # src/commands/auto_start.sh
@@ -743,6 +969,13 @@ parse_requirements() {
       action="unlock"
       shift
       session_unlock_parse_requirements "$@"
+      shift $#
+      ;;
+
+    lockout)
+      action="lockout"
+      shift
+      session_lockout_parse_requirements "$@"
       shift $#
       ;;
 
@@ -927,6 +1160,244 @@ session_unlock_parse_requirements() {
 
   # :command.command_filter
   action="unlock"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+session_lockout_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_lockout_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action=${1:-}
+
+  case $action in
+    -*) ;;
+
+    set)
+      action="set"
+      shift
+      session_lockout_set_parse_requirements "$@"
+      shift $#
+      ;;
+
+    clear)
+      action="clear"
+      shift
+      session_lockout_clear_parse_requirements "$@"
+      shift $#
+      ;;
+
+    check)
+      action="check"
+      shift
+      session_lockout_check_parse_requirements "$@"
+      shift $#
+      ;;
+
+    # :command.command_fallback
+    "")
+      session_lockout_usage >&2
+      exit 1
+      ;;
+
+    *)
+      printf "invalid command: %s\n" "$action" >&2
+      exit 1
+      ;;
+
+  esac
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+session_lockout_set_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_lockout_set_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="lockout set"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        # :argument.case
+        if [[ -z ${args['until_epoch']+x} ]]; then
+          args['until_epoch']=$1
+          shift
+        else
+          printf "invalid argument: %s\n" "$key" >&2
+          exit 1
+        fi
+
+        ;;
+
+    esac
+  done
+
+  # :command.required_args_filter
+  if [[ -z ${args['until_epoch']+x} ]]; then
+    printf "missing required argument: UNTIL_EPOCH\nusage: session lockout set UNTIL_EPOCH\n" >&2
+
+    exit 1
+  fi
+
+}
+
+# :command.parse_requirements
+session_lockout_clear_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_lockout_clear_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="lockout clear"
+
+  # :command.parse_requirements_while
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+
+      -?*)
+        printf "invalid option: %s\n" "$key" >&2
+        exit 1
+        ;;
+
+      *)
+        # :command.parse_requirements_case
+        # :command.parse_requirements_case_simple
+        printf "invalid argument: %s\n" "$key" >&2
+        exit 1
+
+        ;;
+
+    esac
+  done
+
+}
+
+# :command.parse_requirements
+session_lockout_check_parse_requirements() {
+  local key
+
+  # :command.fixed_flags_filter
+  while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+      --help | -h)
+        long_usage=yes
+        session_lockout_check_usage
+        exit
+        ;;
+
+      *)
+        break
+        ;;
+
+    esac
+  done
+
+  # :command.command_filter
+  action="lockout check"
 
   # :command.parse_requirements_while
   while [[ $# -gt 0 ]]; do
@@ -1175,6 +1646,10 @@ run() {
     "lock") session_lock_command ;;
     "session-lock") session_session_lock_command ;;
     "unlock") session_unlock_command ;;
+    "lockout") session_lockout_command ;;
+    "lockout set") session_lockout_set_command ;;
+    "lockout clear") session_lockout_clear_command ;;
+    "lockout check") session_lockout_check_command ;;
     "auto-start") session_auto_start_command ;;
     "session-auto-start") session_session_auto_start_command ;;
     "tomat-start-work") session_tomat_start_work_command ;;

@@ -37,7 +37,7 @@ EOF
 @test "tomat-start-work starts work when tomat is idle" {
   write_tomat '{"class":"idle"}'
 
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" tomat-start-work
+  run "$BATS_TEST_DIRNAME/../src/session/session" tomat-start-work
 
   [ "$status" -eq 0 ]
   [ "$(cat "$TOMAT_LOG")" = $'status\nstart' ]
@@ -46,7 +46,7 @@ EOF
 @test "tomat-start-work leaves active cycle alone" {
   write_tomat '{"class":"work"}'
 
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" tomat-start-work
+  run "$BATS_TEST_DIRNAME/../src/session/session" tomat-start-work
 
   [ "$status" -eq 0 ]
   [ "$(cat "$TOMAT_LOG")" = "status" ]
@@ -80,7 +80,7 @@ esac
 EOF
   chmod +x "$TOMAT_BIN"
 
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" tomat-start-work
+  run "$BATS_TEST_DIRNAME/../src/session/session" tomat-start-work
 
   [ "$status" -eq 0 ]
   [ "$(cat "$TOMAT_LOG")" = $'status\nstatus\nstart' ]
@@ -89,7 +89,7 @@ EOF
 @test "tomat-start-work fails open when tomat is missing" {
   export TOMAT_BIN="$tmpdir/missing-tomat"
 
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" tomat-start-work
+  run "$BATS_TEST_DIRNAME/../src/session/session" tomat-start-work
 
   [ "$status" -eq 0 ]
   [ ! -e "$TOMAT_LOG" ]

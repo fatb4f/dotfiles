@@ -27,6 +27,31 @@ commands:
     examples:
       - session unlock
 
+  - name: lockout
+    help: Manage break lockout deadline
+    commands:
+      - name: set
+        help: Set break lockout deadline
+        filename: commands/lockout_set.sh
+        args:
+          - name: until_epoch
+            help: Unix epoch second until which unlock should be denied
+            required: true
+        examples:
+          - session lockout set 1760000000
+
+      - name: clear
+        help: Clear break lockout deadline
+        filename: commands/lockout_clear.sh
+        examples:
+          - session lockout clear
+
+      - name: check
+        help: Check whether unlock is currently allowed
+        filename: commands/lockout_check.sh
+        examples:
+          - session lockout check
+
   - name: auto-start
     help: Run graphical-session startup actions once per session
     filename: commands/auto_start.sh

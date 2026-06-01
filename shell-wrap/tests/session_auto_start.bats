@@ -25,7 +25,7 @@ EOF
 }
 
 @test "auto-start uses a fixed transient unit and degrades when PartOf is rejected" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" auto-start
+  run "$BATS_TEST_DIRNAME/../src/session/session" auto-start
 
   [ "$status" -eq 0 ]
   [ "$(wc -l <"$SESSION_AUTO_START_LOG")" -eq 2 ]
@@ -34,7 +34,7 @@ EOF
 }
 
 @test "session-auto-start remains a compatibility alias for auto-start" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" session-auto-start
+  run "$BATS_TEST_DIRNAME/../src/session/session" session-auto-start
 
   [ "$status" -eq 0 ]
   [ "$(wc -l <"$SESSION_AUTO_START_LOG")" -eq 2 ]

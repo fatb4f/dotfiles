@@ -126,42 +126,42 @@ assert_notify_call() {
 }
 
 @test "volume-up hydrates final state and notifies" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" osd volume-up
+  run "$BATS_TEST_DIRNAME/../src/session/session" osd volume-up
 
   [ "$status" -eq 0 ]
   assert_notify_call "--hint=int:value:35" "audio" "audio-volume-high-symbolic" "Volume" "35%"
 }
 
 @test "volume-down hydrates final state and notifies" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" osd volume-down
+  run "$BATS_TEST_DIRNAME/../src/session/session" osd volume-down
 
   [ "$status" -eq 0 ]
   assert_notify_call "--hint=int:value:25" "audio" "audio-volume-high-symbolic" "Volume" "25%"
 }
 
 @test "volume-toggle hydrates muted state and notifies" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" osd volume-toggle
+  run "$BATS_TEST_DIRNAME/../src/session/session" osd volume-toggle
 
   [ "$status" -eq 0 ]
   assert_notify_call "--hint=int:value:0" "audio" "audio-volume-muted-symbolic" "Volume" "Muted"
 }
 
 @test "brightness-up hydrates final state and notifies" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" osd brightness-up
+  run "$BATS_TEST_DIRNAME/../src/session/session" osd brightness-up
 
   [ "$status" -eq 0 ]
   assert_notify_call "--hint=int:value:45" "brightness" "display-brightness-symbolic" "Brightness" "45%"
 }
 
 @test "brightness-down hydrates final state and notifies" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" osd brightness-down
+  run "$BATS_TEST_DIRNAME/../src/session/session" osd brightness-down
 
   [ "$status" -eq 0 ]
   assert_notify_call "--hint=int:value:35" "brightness" "display-brightness-symbolic" "Brightness" "35%"
 }
 
 @test "unknown osd actions fail clearly" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" osd nope
+  run "$BATS_TEST_DIRNAME/../src/session/session" osd nope
 
   [ "$status" -ne 0 ]
   [[ "$output" == *"session osd: unknown action: nope"* ]]

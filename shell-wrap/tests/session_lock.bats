@@ -34,7 +34,7 @@ EOF
 @test "lock starts hyprlock through transient systemd-run" {
   export SYSTEMD_RUN_EXIT_CODE=1
 
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" lock
+  run "$BATS_TEST_DIRNAME/../src/session/session" lock
 
   [ "$status" -eq 0 ]
   [ "$(cat "$SESSION_LOCK_LOG")" = "--user --collect --unit=tomat-break-lock /usr/bin/hyprlock" ]
@@ -44,7 +44,7 @@ EOF
 @test "session-lock remains a compatibility alias for lock" {
   export SYSTEMD_RUN_EXIT_CODE=1
 
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" session-lock
+  run "$BATS_TEST_DIRNAME/../src/session/session" session-lock
 
   [ "$status" -eq 0 ]
   [ "$(cat "$SESSION_LOCK_LOG")" = "--user --collect --unit=tomat-break-lock /usr/bin/hyprlock" ]

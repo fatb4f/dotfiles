@@ -3,12 +3,13 @@
 # shellcheck shell=bats
 
 @test "session help exposes the public surface and visible compatibility aliases" {
-  run "$BATS_TEST_DIRNAME/../src/cli.session/session" --help
+  run "$BATS_TEST_DIRNAME/../src/session/session" --help
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Session lock, startup, and OSD manager"* ]]
   [[ "$output" == *"  lock"* ]]
   [[ "$output" == *"  unlock"* ]]
+  [[ "$output" == *"  lockout"* ]]
   [[ "$output" == *"  auto-start"* ]]
   [[ "$output" == *"  osd"* ]]
   [[ "$output" == *"session-lock"* ]]
