@@ -51,6 +51,8 @@ include_only = [
   "CODEX_CACHE",
   "CODEX_BIN",
   "CODEX_SQLITE_HOME",
+
+  "HOOKRAIL_FEED_SENTINEL",
 ]
 exclude = [
   "*TOKEN*",
