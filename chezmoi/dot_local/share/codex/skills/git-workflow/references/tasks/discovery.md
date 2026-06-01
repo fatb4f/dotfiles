@@ -4,32 +4,34 @@ Read-only repository state discovery.
 
 Use when AGENTS.md or the user needs current Git state before routing, editing, validation, or close-out.
 
-## MCP commands
+## MCP tools
 
 Use `git-mcp-server` only.
+
+Shell `git` is not a fallback for this task.
 
 Required:
 
 ```text
-git_status
+git-mcp-server.git_status
 ```
 
 Conditional:
 
 ```text
-git_diff_unstaged
-git_diff_staged
-git_log
-git_show
+git-mcp-server.git_diff_unstaged
+git-mcp-server.git_diff_staged
+git-mcp-server.git_log
+git-mcp-server.git_show
 ```
 
 ## Procedure
 
-1. Run `git_status`.
-2. If unstaged changes exist, run `git_diff_unstaged`.
-3. If staged changes exist, run `git_diff_staged`.
-4. Use `git_log` only when recent commit context is required.
-5. Use `git_show` only for a named commit, object, tag, or path.
+1. Call `git-mcp-server.git_status`.
+2. If unstaged changes exist, call `git-mcp-server.git_diff_unstaged`.
+3. If staged changes exist, call `git-mcp-server.git_diff_staged`.
+4. Call `git-mcp-server.git_log` only when recent commit context is required.
+5. Call `git-mcp-server.git_show` only for a named commit, object, tag, or path.
 
 ## Rules
 
@@ -38,7 +40,9 @@ git_show
 - Do not commit.
 - Do not mutate refs.
 - Do not inspect broad history unless explicitly needed.
-- Do not use shell `git` unless MCP is unavailable and the user explicitly allows fallback.
+- Do not use shell `git`.
+- Do not diagnose `.git` filesystem permissions.
+- Git MCP output is the only authoritative Git evidence for this task.
 
 ## Output
 

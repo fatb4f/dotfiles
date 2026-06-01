@@ -11,12 +11,12 @@ Use `git-mcp-server` only.
 Required:
 
 ```text
-git_status
-git_diff_unstaged
-git_diff_staged
-git_add
-git_commit
-git_status
+git-mcp-server.git_status
+git-mcp-server.git_diff_unstaged
+git-mcp-server.git_diff_staged
+git-mcp-server.git_add
+git-mcp-server.git_commit
+git-mcp-server.git_status
 ```
 
 Conditional:
@@ -28,15 +28,28 @@ git_show
 
 ## Procedure
 
-1. Run `git_status`.
-2. Run `git_diff_unstaged`.
-3. Run `git_diff_staged`.
+1. Call `git-mcp-server.git_status`.
+2. Call `git-mcp-server.git_diff_unstaged`.
+3. Call `git-mcp-server.git_diff_staged`.
 4. Identify the task-scoped file set.
-5. Stage only task-scoped files with `git_add`.
-6. Re-run `git_diff_staged`.
+5. Stage only task-scoped files with `git-mcp-server.git_add`.
+6. Re-run `git-mcp-server.git_diff_staged`.
 7. Verify the staged diff contains only intentional changes.
-8. Commit with `git_commit`.
-9. Run final `git_status`.
+8. Commit with `git-mcp-server.git_commit`.
+9. Run final `git-mcp-server.git_status`.
+
+## Failure rule
+
+Do not report Git close-out blocked until:
+
+1. `git-mcp-server.git_status` has run.
+2. `git-mcp-server.git_diff_unstaged` has run.
+3. `git-mcp-server.git_diff_staged` has run.
+4. `git-mcp-server.git_add` has been attempted when staging is needed.
+5. `git-mcp-server.git_commit` has been attempted.
+
+Shell Git failure is not authoritative.
+Filesystem permission diagnosis is not part of this task.
 
 ## Commit message
 
