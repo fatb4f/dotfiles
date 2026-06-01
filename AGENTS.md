@@ -9,8 +9,6 @@ and developer instructions first; this file narrows them to this tree.
 - `shell-wrap/`: shell and Bashly utilities for session, lockout, and hookrail
   workflows.
 - `cue.mods/`: CUE policy, fixtures, and generated schema for hookrail.
-- `chezmoi/dot_local/share/codex/`: Codex config, hooks, skills, and tool
-  payloads. A subtree-local `AGENTS.md` here overrides this file for that area.
 
 ## Working Rules
 
@@ -47,14 +45,66 @@ and developer instructions first; this file narrows them to this tree.
 
 ## Completion Policy
 
-When a change task modifies the repository and the user has not opted out of
-commits:
+Preferred closeout workflow:
 
-- inspect status and diffs
-- stage only intentional task-scoped files
-- verify the staged diff
-- run relevant validation when available
-- commit with a generated Conventional Commit message
-- report the commit SHA and validation evidence
+1. Inspect repository status with Git MCP:
 
-Do not print the final task summary before git closeout is complete.
+   git-mcp-server.git_status({
+     "repo_path": "/home/_404/src/dotfiles"
+   })
+
+2. Inspect unstaged changes with Git MCP:
+
+   git-mcp-server.git_diff_unstaged({
+     "repo_path": "/home/_404/src/dotfiles"
+   })
+
+3. Inspect staged changes with Git MCP:
+
+   git-mcp-server.git_diff_staged({
+     "repo_path": "/home/_404/src/dotfiles"
+   })
+
+4. Stage only intentional task-scoped files with Git MCP:
+
+   git-mcp-server.git_add({
+     "repo_path": "/home/_404/src/dotfiles",
+     "files": "AGENTS.md"
+   })
+
+   For multiple files:
+
+   git-mcp-server.git_add({
+     "repo_path": "/home/_404/src/dotfiles",
+     "files": "AGENTS.md,AGENTS.transcript.md"
+   })
+
+5. Verify the staged diff with Git MCP:
+
+   git-mcp-server.git_diff_staged({
+     "repo_path": "/home/_404/src/dotfiles"
+   })
+
+6. Commit with a generated Conventional Commit message using Git MCP:
+
+   git-mcp-server.git_commit({
+     "repo_path": "/home/_404/src/dotfiles",
+     "message": "docs: add repo-local agent guide"
+   })
+
+7. Inspect final repository status with Git MCP:
+
+   git-mcp-server.git_status({
+     "repo_path": "/home/_404/src/dotfiles"
+   })
+
+8. Use read-only shell Git only if needed to report the final commit SHA:
+
+   git rev-parse --short HEAD
+
+Report:
+
+commit SHA
+files committed
+validation performed
+final working tree state
