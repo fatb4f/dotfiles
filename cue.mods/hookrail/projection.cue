@@ -69,6 +69,11 @@ package hookrail
 		_sessionStartFeedSentinelText: "\n  feedSentinel: \(hookInput.hookrail.feedSentinel)"
 	}
 
+	_eventFeedSentinelText: *null | string | null
+	if hookInput.hook_event_name != "SessionStart" && hookInput.hookrail.feedSentinel != null {
+		_eventFeedSentinelText: hookInput.hookrail.feedSentinel
+	}
+
 	_sessionStartRepoBranchText: *"none" | string
 	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.branch != null {
 		_sessionStartRepoBranchText: hookInput.hookrail.git.branch
@@ -126,13 +131,27 @@ package hookrail
 		_feedBytes: len(_agentText)
 		_feedSentinel: hookInput.hookrail.feedSentinel
 	}
-	if hookInput.hook_event_name == "UserPromptSubmit" && _agentText != null {
+	if hookInput.hook_event_name == "UserPromptSubmit" && hookInput.hookrail.feedSentinel != null {
+		_feedChannel: "stdout.systemMessage"
+		_feedStatus: "emitted"
+		_feedPayloadKind: "feed_sentinel"
+		_feedBytes: len(_eventFeedSentinelText)
+		_feedSentinel: hookInput.hookrail.feedSentinel
+	}
+	if hookInput.hook_event_name == "UserPromptSubmit" && _agentText != null && hookInput.hookrail.feedSentinel == null {
 		_feedChannel: "stdout.systemMessage"
 		_feedStatus: "emitted"
 		_feedPayloadKind: "compact_report"
 		_feedBytes: len(_agentText)
 	}
-	if hookInput.hook_event_name == "PostToolUse" && _agentText != null {
+	if hookInput.hook_event_name == "PostToolUse" && hookInput.hookrail.feedSentinel != null {
+		_feedChannel: "stdout.systemMessage"
+		_feedStatus: "emitted"
+		_feedPayloadKind: "feed_sentinel"
+		_feedBytes: len(_eventFeedSentinelText)
+		_feedSentinel: hookInput.hookrail.feedSentinel
+	}
+	if hookInput.hook_event_name == "PostToolUse" && _agentText != null && hookInput.hookrail.feedSentinel == null {
 		_feedChannel: "stdout.systemMessage"
 		_feedStatus: "emitted"
 		_feedPayloadKind: "compact_report"
@@ -236,7 +255,10 @@ package hookrail
 			hookSpecificOutput: {
 				hookEventName: "UserPromptSubmit"
 			}
-			if _payloadClass == "oversized" {
+			if _eventFeedSentinelText != null {
+				systemMessage: _eventFeedSentinelText
+			}
+			if _eventFeedSentinelText == null && _payloadClass == "oversized" {
 				systemMessage: _agentText
 			}
 		}
@@ -244,7 +266,10 @@ package hookrail
 	if hookInput.hook_event_name == "PostToolUse" {
 		_output: #ContextHookOutput & {
 			continue: true
-			if _agentText != null {
+			if _eventFeedSentinelText != null {
+				systemMessage: _eventFeedSentinelText
+			}
+			if _eventFeedSentinelText == null && _agentText != null {
 				systemMessage: _agentText
 			}
 			hookSpecificOutput: {
@@ -256,15 +281,20 @@ package hookrail
 	capture: _capture
 
 	_feedProof: *null | #HookFeedProof | null
-	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.feedProof != null {
+	if hookInput.hookrail.feedProof != null {
 		_feedProof: #HookFeedProof & {
-			hookEventName:        "SessionStart"
-			channel:              "stdout.systemMessage"
-			sentinel:             hookInput.hookrail.feedProof.sentinel
-			emitted:              hookInput.hookrail.feedProof.emitted
-			observedInTranscript: hookInput.hookrail.feedProof.observedInTranscript
-			reportedByAgent:      hookInput.hookrail.feedProof.reportedByAgent
-			toolCallBeforeReport:  hookInput.hookrail.feedProof.toolCallBeforeReport
+			hookEventName:            hookInput.hookrail.feedProof.hookEventName
+			channel:                  "stdout.systemMessage"
+			sentinel:                 hookInput.hookrail.feedProof.sentinel
+			emitted:                  hookInput.hookrail.feedProof.emitted
+			observedInTranscript:     hookInput.hookrail.feedProof.observedInTranscript
+			reportedByAgent:          hookInput.hookrail.feedProof.reportedByAgent
+			toolCallBeforeReport:     hookInput.hookrail.feedProof.extraToolCallBeforeReport
+			requiredToolCallOccurred: hookInput.hookrail.feedProof.requiredToolCallOccurred
+			extraToolCallBeforeReport: hookInput.hookrail.feedProof.extraToolCallBeforeReport
+			if hookInput.hookrail.feedProof.toolCallBeforeReport {
+				extraToolCallBeforeReport: true
+			}
 		}
 	}
 
@@ -340,7 +370,16 @@ package hookrail
 				source: "SessionStart"
 				sentinel: hookInput.hookrail.feedSentinel
 			}
-			if hookInput.hook_event_name == "UserPromptSubmit" && _agentText != null {
+			if hookInput.hook_event_name == "UserPromptSubmit" && hookInput.hookrail.feedSentinel != null {
+				enabled: true
+				status: "emitted"
+				payloadKind: "feed_sentinel"
+				channel: "stdout.systemMessage"
+				bytes: len(_eventFeedSentinelText)
+				source: "UserPromptSubmit"
+				sentinel: hookInput.hookrail.feedSentinel
+			}
+			if hookInput.hook_event_name == "UserPromptSubmit" && _agentText != null && hookInput.hookrail.feedSentinel == null {
 				enabled: true
 				status: "emitted"
 				payloadKind: "compact_report"
@@ -348,7 +387,16 @@ package hookrail
 				bytes: len(_agentText)
 				source: "UserPromptSubmit"
 			}
-			if hookInput.hook_event_name == "PostToolUse" && _agentText != null {
+			if hookInput.hook_event_name == "PostToolUse" && hookInput.hookrail.feedSentinel != null {
+				enabled: true
+				status: "emitted"
+				payloadKind: "feed_sentinel"
+				channel: "stdout.systemMessage"
+				bytes: len(_eventFeedSentinelText)
+				source: "PostToolUse"
+				sentinel: hookInput.hookrail.feedSentinel
+			}
+			if hookInput.hook_event_name == "PostToolUse" && _agentText != null && hookInput.hookrail.feedSentinel == null {
 				enabled: true
 				status: "emitted"
 				payloadKind: "compact_report"

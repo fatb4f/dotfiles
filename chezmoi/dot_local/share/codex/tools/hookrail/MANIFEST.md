@@ -8,6 +8,7 @@
 | Hook manifest pattern | `cue.mods/hookrail/manifest.cue`, Bashly persistence writer |
 | Capture policy | `cue.mods/hookrail/projection.cue` |
 | AgentFeed distinction | `cue.mods/hookrail/manifest.cue`, bounded `additionalContext` |
+| CLI projection | `bin/symlink_hookrail.tmpl` |
 | Atomic persistence | Bashly temp file + locked atomic `mv` |
 | Safe failure behavior | valid no-op JSON on context hooks when possible |
 | Doctor gates | `$CODEX_HOME/tools/hookrail/bin/hookrail doctor` |

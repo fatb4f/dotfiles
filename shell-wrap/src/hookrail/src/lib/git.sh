@@ -9,10 +9,10 @@ hookrail_enrich_input() {
 
   event_name="$(jq -r '.hook_event_name // ""' "$input_file")"
   case "$event_name" in
-    SessionStart|Stop) ;;
+    SessionStart|UserPromptSubmit|PostToolUse|Stop) ;;
     *)
-    cp "$input_file" "$output_file"
-    return 0
+      cp "$input_file" "$output_file"
+      return 0
       ;;
   esac
 
@@ -36,7 +36,20 @@ hookrail_enrich_input() {
   user_opted_out="$(hookrail_user_opted_out_of_commit "$input_file")"
   evidence_exists="$(hookrail_closeout_evidence_exists "$input_file" "$facts_file")"
   trace_head_changed="$(hookrail_prior_trace_head_changed "$input_file" "$facts_file")"
-  feed_sentinel="${HOOKRAIL_FEED_SENTINEL:-}"
+  case "$event_name" in
+    SessionStart)
+      feed_sentinel="${HOOKRAIL_SESSION_START_FEED_SENTINEL:-${HOOKRAIL_FEED_SENTINEL:-}}"
+      ;;
+    UserPromptSubmit)
+      feed_sentinel="${HOOKRAIL_USER_PROMPT_FEED_SENTINEL:-${HOOKRAIL_FEED_SENTINEL:-}}"
+      ;;
+    PostToolUse)
+      feed_sentinel="${HOOKRAIL_POST_TOOL_FEED_SENTINEL:-${HOOKRAIL_FEED_SENTINEL:-}}"
+      ;;
+    *)
+      feed_sentinel="${HOOKRAIL_FEED_SENTINEL:-}"
+      ;;
+  esac
 
   jq -c \
     --arg commitBeforeSummary "$commit_before_summary" \

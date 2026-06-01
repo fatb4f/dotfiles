@@ -18,11 +18,14 @@
       },
       "feedSentinel": "feed-sentinel-alpha",
       "feedProof": {
+        "hookEventName": "SessionStart",
         "sentinel": "feed-sentinel-alpha",
         "emitted": true,
         "observedInTranscript": true,
         "reportedByAgent": true,
-        "toolCallBeforeReport": false
+        "toolCallBeforeReport": false,
+        "requiredToolCallOccurred": false,
+        "extraToolCallBeforeReport": false
       }
     }
   }

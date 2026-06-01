@@ -14,11 +14,14 @@
         "unsafeRoot": false
       },
       "feedProof": {
+        "hookEventName": "SessionStart",
         "sentinel": "feed-sentinel-alpha",
         "emitted": false,
         "observedInTranscript": false,
         "reportedByAgent": false,
-        "toolCallBeforeReport": false
+        "toolCallBeforeReport": false,
+        "requiredToolCallOccurred": false,
+        "extraToolCallBeforeReport": false
       },
       "repoHints": {
         "agentsPath": null,
