@@ -2,6 +2,10 @@
 set -euo pipefail
 
 session_bin="${SESSION_LOCKOUT_INSTALL_BIN:-/usr/local/bin/session}"
+pam_gate="${SESSION_LOCKOUT_PAM_GATE_FILE:-/usr/local/libexec/pam-pomodoro-gate}"
+tomat_break_begin="${SESSION_LOCKOUT_TOMAT_BREAK_BEGIN_FILE:-/usr/local/libexec/tomat-break-begin}"
+tomat_break_end="${SESSION_LOCKOUT_TOMAT_BREAK_END_FILE:-/usr/local/libexec/tomat-break-end}"
+session_post_unlock="${SESSION_LOCKOUT_SESSION_POST_UNLOCK_FILE:-/usr/local/libexec/session-post-unlock}"
 run_dir="${SESSION_LOCKOUT_RUN_DIR:-/run/session-lockout}"
 sudoers_file="${SESSION_LOCKOUT_SUDOERS_FILE:-/etc/sudoers.d/session-lockout}"
 pam_file="${SESSION_LOCKOUT_PAM_FILE:-/etc/pam.d/hyprlock}"
@@ -56,6 +60,32 @@ check_session_binary() {
   fi
 }
 
+check_artifact() {
+  local path="$1"
+  local label="$2"
+  local meta
+
+  if [[ -e "$path" ]]; then
+    pass "$label exists path=$path"
+  else
+    fail "$label missing path=$path"
+    return
+  fi
+
+  if [[ -x "$path" ]]; then
+    pass "$label executable path=$path"
+  else
+    fail "$label not-executable path=$path"
+  fi
+
+  meta="$(owner_mode "$path" 2>/dev/null || true)"
+  if [[ "$meta" = "root:root 755" ]]; then
+    pass "$label ownership mode=$meta"
+  else
+    fail "$label ownership expected=root:root 755 actual=${meta:-unreadable}"
+  fi
+}
+
 check_run_dir() {
   local meta
 
@@ -102,6 +132,20 @@ check_sudoers() {
   fi
 }
 
+check_pam_gate() {
+  check_artifact "$pam_gate" "pam-gate"
+
+  if grep -Fx "exec \"\$session_bin\" lockout check" "$pam_gate" >/dev/null 2>&1; then
+    pass "pam-gate delegates path=$pam_gate"
+  else
+    fail "pam-gate delegates path=$pam_gate"
+  fi
+
+  if grep -REn '/run/user/.*/pomodoro/break-until|tomat|dbus|systemctl --user|hyprctl|notify-send' "$pam_gate" >/dev/null 2>&1; then
+    fail "pam-gate contains disallowed integration logic path=$pam_gate"
+  fi
+}
+
 check_pam() {
   if [[ ! -e "$pam_file" ]]; then
     skip "pam absent path=$pam_file"
@@ -110,16 +154,24 @@ check_pam() {
 
   pass "pam exists path=$pam_file"
 
-  if grep -Fx "auth requisite pam_exec.so quiet /usr/local/bin/session lockout check" "$pam_file" >/dev/null; then
+  if grep -Fx "auth requisite pam_exec.so quiet /usr/local/libexec/pam-pomodoro-gate" "$pam_file" >/dev/null; then
     pass "pam lockout-line path=$pam_file"
   else
     fail "pam lockout-line missing path=$pam_file"
   fi
 }
 
+check_tomat_hooks() {
+  check_artifact "$tomat_break_begin" "tomat-break-begin"
+  check_artifact "$tomat_break_end" "tomat-break-end"
+  check_artifact "$session_post_unlock" "session-post-unlock"
+}
+
 check_session_binary
+check_pam_gate
 check_run_dir
 check_sudoers
 check_pam
+check_tomat_hooks
 
 exit "$failed"

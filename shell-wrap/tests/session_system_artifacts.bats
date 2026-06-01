@@ -5,6 +5,7 @@
 setup() {
   system_dir="$BATS_TEST_DIRNAME/../src/session/system"
   pam_file="$system_dir/pam/hyprlock.lockout.example"
+  pam_gate="$system_dir/pam/pam-pomodoro-gate"
   sudoers_file="$system_dir/sudoers/session-lockout"
   install_script="$system_dir/install-session-lockout"
   activation_doc="$system_dir/ACTIVATION.md"
@@ -18,10 +19,20 @@ setup() {
   session_post_unlock="$tomat_dir/session-post-unlock"
 }
 
-@test "PAM fragment calls root-owned session lockout check" {
-  run grep -Fx "auth requisite pam_exec.so quiet /usr/local/bin/session lockout check" "$pam_file"
+@test "PAM fragment calls root-owned compatibility gate" {
+  run grep -Fx "auth requisite pam_exec.so quiet /usr/local/libexec/pam-pomodoro-gate" "$pam_file"
 
   [ "$status" -eq 0 ]
+}
+
+@test "pam gate delegates to canonical session lockout check" {
+  run grep -Fx 'exec "$session_bin" lockout check' "$pam_gate"
+
+  [ "$status" -eq 0 ]
+
+  run grep -F "/run/user/\$UID/pomodoro/break-until" "$pam_gate"
+
+  [ "$status" -eq 1 ]
 }
 
 @test "PAM fragment does not call the user session projection" {
@@ -49,13 +60,13 @@ setup() {
 }
 
 @test "integration artifacts do not call session-state or compositor tools" {
-  run grep -REn "tomat status|dbus|systemctl --user|hyprctl|notify-send" "$system_dir"
+  run grep -REn "tomat status|dbus|systemctl --user|hyprctl|notify-send" "$pam_file" "$sudoers_file" "$install_script" "$activation_doc" "$tomat_dir"
 
   [ "$status" -eq 1 ]
 }
 
 @test "PAM-facing lockout check does not depend on Tomat or user daemons" {
-  run grep -REn "tomat|dbus|systemctl --user|hyprctl|notify-send" "$lockout_lib" "$lockout_check_cmd"
+  run grep -REn "tomat|dbus|systemctl --user|hyprctl|notify-send" "$lockout_lib" "$lockout_check_cmd" "$pam_gate"
 
   [ "$status" -eq 1 ]
 }
@@ -70,6 +81,10 @@ setup() {
   [ "$status" -eq 0 ]
 
   run grep -Fx 'install -d -o root -g root -m 0755 /usr/local/libexec' "$install_script"
+
+  [ "$status" -eq 0 ]
+
+  run grep -Fx "install -o root -g root -m 0755 \"\$pam_dir/pam-pomodoro-gate\" /usr/local/libexec/pam-pomodoro-gate" "$install_script"
 
   [ "$status" -eq 0 ]
 

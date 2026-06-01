@@ -9,6 +9,10 @@ setup() {
 
   export PATH="$mockbin:$PATH"
   export SESSION_LOCKOUT_INSTALL_BIN="$tmpdir/usr-local-bin-session"
+  export SESSION_LOCKOUT_PAM_GATE_FILE="$tmpdir/libexec-pam-pomodoro-gate"
+  export SESSION_LOCKOUT_TOMAT_BREAK_BEGIN_FILE="$tmpdir/libexec-tomat-break-begin"
+  export SESSION_LOCKOUT_TOMAT_BREAK_END_FILE="$tmpdir/libexec-tomat-break-end"
+  export SESSION_LOCKOUT_SESSION_POST_UNLOCK_FILE="$tmpdir/libexec-session-post-unlock"
   export SESSION_LOCKOUT_RUN_DIR="$tmpdir/run-session-lockout"
   export SESSION_LOCKOUT_SUDOERS_FILE="$tmpdir/sudoers-session-lockout"
   export SESSION_LOCKOUT_PAM_FILE="$tmpdir/pam-hyprlock"
@@ -25,13 +29,25 @@ if [[ "${1:-}" != "-c" ]]; then
   exit $?
 fi
 
-case "${3:-}" in
-  "$SESSION_LOCKOUT_INSTALL_BIN")
-    printf '%s\n' "${SESSION_LOCKOUT_TEST_BIN_META:-root:root 755}"
-    ;;
-  "$SESSION_LOCKOUT_RUN_DIR")
-    printf '%s\n' "${SESSION_LOCKOUT_TEST_RUN_META:-root:root 755}"
-    ;;
+  case "${3:-}" in
+    "$SESSION_LOCKOUT_INSTALL_BIN")
+      printf '%s\n' "${SESSION_LOCKOUT_TEST_BIN_META:-root:root 755}"
+      ;;
+    "$SESSION_LOCKOUT_PAM_GATE_FILE")
+      printf '%s\n' "${SESSION_LOCKOUT_TEST_PAM_GATE_META:-root:root 755}"
+      ;;
+    "$SESSION_LOCKOUT_TOMAT_BREAK_BEGIN_FILE")
+      printf '%s\n' "${SESSION_LOCKOUT_TEST_TOMAT_BREAK_BEGIN_META:-root:root 755}"
+      ;;
+    "$SESSION_LOCKOUT_TOMAT_BREAK_END_FILE")
+      printf '%s\n' "${SESSION_LOCKOUT_TEST_TOMAT_BREAK_END_META:-root:root 755}"
+      ;;
+    "$SESSION_LOCKOUT_SESSION_POST_UNLOCK_FILE")
+      printf '%s\n' "${SESSION_LOCKOUT_TEST_SESSION_POST_UNLOCK_META:-root:root 755}"
+      ;;
+    "$SESSION_LOCKOUT_RUN_DIR")
+      printf '%s\n' "${SESSION_LOCKOUT_TEST_RUN_META:-root:root 755}"
+      ;;
   *)
     /usr/bin/stat "$@"
     ;;
@@ -45,6 +61,11 @@ set -euo pipefail
 exit "${SESSION_LOCKOUT_TEST_VISUDO_STATUS:-0}"
 EOF
   chmod +x "$VISUDO_BIN"
+
+  write_pam_gate
+  write_tomat_hook "$SESSION_LOCKOUT_TOMAT_BREAK_BEGIN_FILE"
+  write_tomat_hook "$SESSION_LOCKOUT_TOMAT_BREAK_END_FILE"
+  write_tomat_hook "$SESSION_LOCKOUT_SESSION_POST_UNLOCK_FILE"
 }
 
 write_session_bin() {
@@ -63,11 +84,34 @@ EOF
   chmod +x "$SESSION_LOCKOUT_INSTALL_BIN"
 }
 
+write_pam_gate() {
+  cat >"$SESSION_LOCKOUT_PAM_GATE_FILE" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+session_bin="${SESSION_BIN:-/usr/local/bin/session}"
+
+exec "$session_bin" lockout check
+EOF
+  chmod +x "$SESSION_LOCKOUT_PAM_GATE_FILE"
+}
+
+write_tomat_hook() {
+  local path="$1"
+
+  cat >"$path" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+exit 0
+EOF
+  chmod +x "$path"
+}
+
 @test "install checker reports ready installed state" {
   write_session_bin 0
   mkdir -p "$SESSION_LOCKOUT_RUN_DIR"
   printf '%s\n' 'Cmnd_Alias SESSION_LOCKOUT_SET = /usr/local/bin/session lockout set *' >"$SESSION_LOCKOUT_SUDOERS_FILE"
-  printf '%s\n' 'auth requisite pam_exec.so quiet /usr/local/bin/session lockout check' >"$SESSION_LOCKOUT_PAM_FILE"
+  printf '%s\n' 'auth requisite pam_exec.so quiet /usr/local/libexec/pam-pomodoro-gate' >"$SESSION_LOCKOUT_PAM_FILE"
 
   run "$checker"
 
@@ -75,6 +119,16 @@ EOF
   [[ "$output" == *"PASS session-bin exists"* ]]
   [[ "$output" == *"PASS session-bin ownership mode=root:root 755"* ]]
   [[ "$output" == *"PASS session-bin lockout-check"* ]]
+  [[ "$output" == *"PASS pam-gate exists"* ]]
+  [[ "$output" == *"PASS pam-gate executable"* ]]
+  [[ "$output" == *"PASS pam-gate ownership mode=root:root 755"* ]]
+  [[ "$output" == *"PASS pam-gate delegates"* ]]
+  [[ "$output" == *"PASS tomat-break-begin exists"* ]]
+  [[ "$output" == *"PASS tomat-break-begin executable"* ]]
+  [[ "$output" == *"PASS tomat-break-end exists"* ]]
+  [[ "$output" == *"PASS tomat-break-end executable"* ]]
+  [[ "$output" == *"PASS session-post-unlock exists"* ]]
+  [[ "$output" == *"PASS session-post-unlock executable"* ]]
   [[ "$output" == *"PASS run-dir ownership mode=root:root 755"* ]]
   [[ "$output" == *"PASS sudoers visudo-check"* ]]
   [[ "$output" == *"PASS pam lockout-line"* ]]
@@ -106,6 +160,16 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"SKIP sudoers inaccessible path=$inaccessible_sudoers_file run-as-root=true"* ]]
   [[ "$output" != *"SKIP sudoers absent"* ]]
+}
+
+@test "install checker fails missing pam gate artifact" {
+  write_session_bin 0
+  rm -f "$SESSION_LOCKOUT_PAM_GATE_FILE"
+
+  run "$checker"
+
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"FAIL pam-gate missing"* ]]
 }
 
 @test "install checker fails missing session binary" {

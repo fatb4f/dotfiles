@@ -78,7 +78,7 @@ password auth stack:
 
 ```pam
 # session-lockout begin
-auth requisite pam_exec.so quiet /usr/local/bin/session lockout check
+auth requisite pam_exec.so quiet /usr/local/libexec/pam-pomodoro-gate
 # session-lockout end
 ```
 
@@ -124,7 +124,7 @@ Remove or comment the PAM block:
 
 ```pam
 # session-lockout begin
-auth requisite pam_exec.so quiet /usr/local/bin/session lockout check
+auth requisite pam_exec.so quiet /usr/local/libexec/pam-pomodoro-gate
 # session-lockout end
 ```
 
