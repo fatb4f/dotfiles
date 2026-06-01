@@ -80,7 +80,15 @@ check_run_dir() {
 }
 
 check_sudoers() {
+  local sudoers_dir
+
   if [[ ! -e "$sudoers_file" ]]; then
+    sudoers_dir="$(dirname -- "$sudoers_file")"
+    if [[ -e "$sudoers_dir" && ! -x "$sudoers_dir" ]]; then
+      skip "sudoers inaccessible path=$sudoers_file run-as-root=true"
+      return
+    fi
+
     skip "sudoers absent path=$sudoers_file"
     return
   fi

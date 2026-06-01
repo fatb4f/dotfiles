@@ -91,6 +91,23 @@ EOF
   [[ "$output" == *"SKIP pam absent"* ]]
 }
 
+@test "install checker reports inaccessible sudoers separately from absent" {
+  write_session_bin 0
+  private_dir="$tmpdir/private-sudoers.d"
+  inaccessible_sudoers_file="$private_dir/session-lockout"
+  mkdir -p "$private_dir"
+  printf '%s\n' 'Cmnd_Alias SESSION_LOCKOUT_SET = /usr/local/bin/session lockout set *' >"$inaccessible_sudoers_file"
+  chmod 000 "$private_dir"
+
+  run env SESSION_LOCKOUT_SUDOERS_FILE="$inaccessible_sudoers_file" "$checker"
+
+  chmod 700 "$private_dir"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"SKIP sudoers inaccessible path=$inaccessible_sudoers_file run-as-root=true"* ]]
+  [[ "$output" != *"SKIP sudoers absent"* ]]
+}
+
 @test "install checker fails missing session binary" {
   run "$checker"
 
