@@ -24,6 +24,8 @@ package hookrail
 		closeoutEvidenceExists: bool
 		priorTraceHeadChanged:  bool
 		stopHookActive:         bool
+		sessionRisk?:           #SessionRisk
+		stopPolicyAction?:      #HookrailStopPolicyAction
 		willBlock:              bool
 	}
 	output: #StopOutput

@@ -6,6 +6,22 @@ package hookrail
 
 #PayloadClass: "small" | "large" | "oversized"
 
+#SessionRisk: "normal" | "warn" | "stop"
+
+#HookrailStopPolicyAction: "git_closeout_gate" | "short_git_closeout_gate" | "block_fresh_session_handoff"
+
+#HookrailFeedPolicy: {
+	SessionStart:    "emit_context_frame_once"
+	UserPromptSubmit: "trace_only"
+	PostToolUse:     "trace_only"
+	Stop:            "emit_only_if_blocking_or_handoff"
+}
+
+#HookrailStopPolicy: {
+	sessionRisk: #SessionRisk
+	action:      #HookrailStopPolicyAction
+}
+
 #Thresholds: {
 	promptLargeChars:     *50000 | int & >=0
 	promptOversizedChars: *100000 | int & >=0
@@ -30,6 +46,7 @@ package hookrail
 	frameText:    *null | string | null
 	feedSentinel: *null | string | null
 	feedProof:    *null | #HookFeedProofInput | null
+	sessionRisk:  *"normal" | #SessionRisk | null
 	env: {
 		commitBeforeSummary: *true | bool
 		userOptedOut:        *false | bool

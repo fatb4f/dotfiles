@@ -1,0 +1,24 @@
+{
+  "hookInput": {
+    "cwd": "/tmp/repo",
+    "hook_event_name": "Stop",
+    "last_assistant_message": "dirty repo closeout fixture with warn risk",
+    "model": "gpt-5.5",
+    "permission_mode": "default",
+    "session_id": "sess_stop_dirty_risk_warn",
+    "stop_hook_active": false,
+    "transcript_path": null,
+    "turn_id": "turn_stop_dirty_risk_warn",
+    "hookrail": {
+      "sessionRisk": "warn",
+      "git": {
+        "isRepo": true,
+        "dirty": true
+      },
+      "closeout": {
+        "evidenceExists": false,
+        "priorTraceHeadChanged": false
+      }
+    }
+  }
+}

@@ -38,6 +38,19 @@ package hookrail
 
 	_userOptedOut: hookInput.hookrail.env.userOptedOut
 
+	_sessionRisk: *"normal" | #SessionRisk
+	if hookInput.hookrail.sessionRisk != null {
+		_sessionRisk: hookInput.hookrail.sessionRisk
+	}
+
+	_stopPolicyAction: *"git_closeout_gate" | #HookrailStopPolicyAction
+	if hookInput.hook_event_name == "Stop" && _sessionRisk == "warn" {
+		_stopPolicyAction: "short_git_closeout_gate"
+	}
+	if hookInput.hook_event_name == "Stop" && _sessionRisk == "stop" {
+		_stopPolicyAction: "block_fresh_session_handoff"
+	}
+
 	_gitIsRepo: hookInput.hookrail.git.isRepo
 
 	_gitDirty: hookInput.hookrail.git.dirty
@@ -51,8 +64,16 @@ package hookrail
 		_stopActive: hookInput.stop_hook_active
 	}
 
-	_closeoutRequired: _commitBeforeSummary && !_userOptedOut && hookInput.hook_event_name == "Stop" && _gitIsRepo && _gitDirty && !_closeoutEvidenceExists && !_priorTraceHeadChanged && !_stopActive
+	_closeoutRequired: _commitBeforeSummary && !_userOptedOut && hookInput.hook_event_name == "Stop" && _gitIsRepo && _gitDirty && !_closeoutEvidenceExists && !_priorTraceHeadChanged && !_stopActive && _stopPolicyAction == "git_closeout_gate"
 	_stopRecursionGuard: hookInput.hook_event_name == "Stop" && _stopActive
+	_sessionRiskHandoff: hookInput.hook_event_name == "Stop" && (_stopPolicyAction == "short_git_closeout_gate" || _stopPolicyAction == "block_fresh_session_handoff")
+	_sessionRiskHandoffText: *"" | string
+	if hookInput.hook_event_name == "Stop" && _stopPolicyAction == "short_git_closeout_gate" {
+		_sessionRiskHandoffText: "hookrail: session risk is elevated; finish in a fresh session instead of running full git closeout here."
+	}
+	if hookInput.hook_event_name == "Stop" && _stopPolicyAction == "block_fresh_session_handoff" {
+		_sessionRiskHandoffText: "hookrail: session risk is high; stop this run and continue in a fresh session."
+	}
 
 	_sessionStartStatusSummary: *"clean working tree" | string
 	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo && hookInput.hookrail.git.statusSummary != null {
@@ -100,6 +121,9 @@ package hookrail
 	if _stopRecursionGuard {
 		_agentText: "hookrail: git closeout gate already active; continuing without repeat block."
 	}
+	if _sessionRiskHandoff {
+		_agentText: _sessionRiskHandoffText
+	}
 	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.frameText != null {
 		_agentText: hookInput.hookrail.frameText
 	}
@@ -144,14 +168,7 @@ package hookrail
 		_feedPayloadKind: "compact_report"
 		_feedBytes: len(_agentText)
 	}
-	if hookInput.hook_event_name == "PostToolUse" && hookInput.hookrail.feedSentinel != null {
-		_feedChannel: "stdout.systemMessage"
-		_feedStatus: "emitted"
-		_feedPayloadKind: "feed_sentinel"
-		_feedBytes: len(_eventFeedSentinelText)
-		_feedSentinel: hookInput.hookrail.feedSentinel
-	}
-	if hookInput.hook_event_name == "PostToolUse" && _agentText != null && hookInput.hookrail.feedSentinel == null {
+	if hookInput.hook_event_name == "PostToolUse" && hookInput.hookrail.feedSentinel == null && _agentText != null {
 		_feedChannel: "stdout.systemMessage"
 		_feedStatus: "emitted"
 		_feedPayloadKind: "compact_report"
@@ -233,7 +250,7 @@ package hookrail
 			systemMessage: "hookrail: git closeout gate already active; continuing without repeat block."
 		}
 	}
-	if hookInput.hook_event_name == "Stop" && !_closeoutRequired && !_stopRecursionGuard {
+	if hookInput.hook_event_name == "Stop" && !_closeoutRequired && !_stopRecursionGuard && !_sessionRiskHandoff {
 		_output: #StopOutput & {
 			continue: true
 		}
@@ -263,13 +280,18 @@ package hookrail
 			}
 		}
 	}
+	if _sessionRiskHandoff {
+		_output: #StopOutput & {
+			decision:     "block"
+			reason:       "session-risk-handoff"
+			stopReason:   _sessionRiskHandoffText
+			systemMessage: _sessionRiskHandoffText
+		}
+	}
 	if hookInput.hook_event_name == "PostToolUse" {
 		_output: #ContextHookOutput & {
 			continue: true
-			if _eventFeedSentinelText != null {
-				systemMessage: _eventFeedSentinelText
-			}
-			if _eventFeedSentinelText == null && _agentText != null {
+			if _agentText != null {
 				systemMessage: _agentText
 			}
 			hookSpecificOutput: {
@@ -299,7 +321,7 @@ package hookrail
 	}
 
 	_capture: #CaptureDecision & {
-		persist: (hookInput.hook_event_name == "UserPromptSubmit" && _payloadClass != "small") || (hookInput.hook_event_name == "Stop" && (_closeoutRequired || _stopRecursionGuard)) || (hookInput.hook_event_name == "PostToolUse" && _payloadClass != "small")
+		persist: (hookInput.hook_event_name == "UserPromptSubmit" && _payloadClass != "small") || (hookInput.hook_event_name == "Stop" && (_closeoutRequired || _stopRecursionGuard || _sessionRiskHandoff)) || (hookInput.hook_event_name == "PostToolUse" && _payloadClass != "small")
 		reason: *"hookrail-projection" | string
 		if hookInput.hook_event_name == "UserPromptSubmit" {
 			reason: "prompt-metadata"
@@ -310,8 +332,11 @@ package hookrail
 		if hookInput.hook_event_name == "SessionStart" {
 			reason: "session-start-frame"
 		}
-		if hookInput.hook_event_name == "Stop" && !_closeoutRequired && !_stopRecursionGuard {
+		if hookInput.hook_event_name == "Stop" && !_closeoutRequired && !_stopRecursionGuard && !_sessionRiskHandoff {
 			reason: "stop-closeout"
+		}
+		if _sessionRiskHandoff {
+			reason: "session-risk-handoff"
 		}
 		if _closeoutRequired {
 			reason: "git-closeout-required"
@@ -386,15 +411,6 @@ package hookrail
 				channel: "stdout.systemMessage"
 				bytes: len(_agentText)
 				source: "UserPromptSubmit"
-			}
-			if hookInput.hook_event_name == "PostToolUse" && hookInput.hookrail.feedSentinel != null {
-				enabled: true
-				status: "emitted"
-				payloadKind: "feed_sentinel"
-				channel: "stdout.systemMessage"
-				bytes: len(_eventFeedSentinelText)
-				source: "PostToolUse"
-				sentinel: hookInput.hookrail.feedSentinel
 			}
 			if hookInput.hook_event_name == "PostToolUse" && _agentText != null && hookInput.hookrail.feedSentinel == null {
 				enabled: true
