@@ -8,16 +8,26 @@ tomat_bin="${SESSION_VERIFY_TOMAT_BIN:-tomat}"
 pgrep_bin="${SESSION_VERIFY_PGREP_BIN:-pgrep}"
 python_bin="${SESSION_VERIFY_PYTHON_BIN:-python3}"
 run_live_lock_test=no
+json_mode=no
+output_path=""
 failed=0
+checks_tsv="$(mktemp)"
+live_lock_requested=false
+live_lock_status=skipped
+live_lock_ok=null
+
+trap 'rm -f "$checks_tsv"' EXIT
 
 usage() {
   cat <<'EOF'
 verify-tomat-break-flow - verify installed Tomat break lockout wiring
 
 Usage:
-  verify-tomat-break-flow [--live-lock-test]
+  verify-tomat-break-flow [--json] [--output PATH] [--live-lock-test]
 
 Options:
+  --json             Emit only JSON to stdout.
+  --output PATH      Write the JSON report to PATH.
   --live-lock-test   Run the real tomat-break-begin hook with a 3 second deadline.
                      This can lock the session. The default verifier never does this.
 EOF
@@ -27,7 +37,20 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --live-lock-test)
       run_live_lock_test=yes
+      live_lock_requested=true
       shift
+      ;;
+    --json)
+      json_mode=yes
+      shift
+      ;;
+    --output)
+      if [[ $# -lt 2 ]]; then
+        printf 'verify-tomat-break-flow: --output requires a path\n' >&2
+        exit 64
+      fi
+      output_path="$2"
+      shift 2
       ;;
     --help|-h)
       usage
@@ -40,58 +63,90 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+record_check() {
+  local id description status detail ok
+
+  id="$1"
+  description="$2"
+  status="$3"
+  detail="$4"
+
+  case "$status" in
+    pass)
+      ok=true
+      ;;
+    fail)
+      ok=false
+      failed=1
+      ;;
+    skip)
+      ok=null
+      ;;
+    *)
+      printf 'verify-tomat-break-flow: invalid check status: %s\n' "$status" >&2
+      exit 70
+      ;;
+  esac
+
+  printf '%s\t%s\t%s\t%s\t%s\n' "$id" "$description" "$status" "$ok" "$detail" >>"$checks_tsv"
+}
+
 pass() {
-  printf 'PASS %s\n' "$*"
+  record_check "$1" "$2" pass "$3"
 }
 
 fail() {
-  printf 'FAIL %s\n' "$*"
-  failed=1
+  record_check "$1" "$2" fail "$3"
 }
 
 skip() {
-  printf 'SKIP %s\n' "$*"
+  record_check "$1" "$2" skip "$3"
 }
 
 check_executable() {
-  local label path
+  local id label path
 
-  label="$1"
-  path="$2"
+  id="$1"
+  label="$2"
+  path="$3"
 
   if [[ -x "$path" ]]; then
-    pass "$label executable path=$path"
+    pass "$id" "$label executable" "$path"
   elif [[ -e "$path" ]]; then
-    fail "$label not-executable path=$path"
+    fail "$id" "$label not executable" "$path"
   else
-    fail "$label missing path=$path"
+    fail "$id" "$label missing" "$path"
   fi
 }
 
 check_static_install() {
-  check_executable "tomat-break-begin" "$libexec_dir/tomat-break-begin"
-  check_executable "tomat-break-end" "$libexec_dir/tomat-break-end"
-  check_executable "session-post-unlock" "$libexec_dir/session-post-unlock"
+  check_executable "libexec.tomat_break_begin.executable" "tomat-break-begin" "$libexec_dir/tomat-break-begin"
+  check_executable "libexec.tomat_break_end.executable" "tomat-break-end" "$libexec_dir/tomat-break-end"
+  check_executable "libexec.session_post_unlock.executable" "session-post-unlock" "$libexec_dir/session-post-unlock"
 }
 
 check_hypridle_config() {
   if [[ ! -r "$hypridle_conf" ]]; then
-    fail "hypridle-config missing-or-unreadable path=$hypridle_conf"
+    fail "config.hypridle.readable" "hypridle config readable" "$hypridle_conf"
     return
   fi
 
+  pass "config.hypridle.readable" "hypridle config readable" "$hypridle_conf"
+
   if grep -Fx "    on_unlock_cmd = /usr/local/libexec/session-post-unlock" "$hypridle_conf" >/dev/null; then
-    pass "hypridle on-unlock hook"
+    pass "config.hypridle.on_unlock" "hypridle on-unlock hook configured" "/usr/local/libexec/session-post-unlock"
   else
-    fail "hypridle on-unlock hook missing path=$hypridle_conf"
+    fail "config.hypridle.on_unlock" "hypridle on-unlock hook configured" "$hypridle_conf"
   fi
 }
 
 check_tomat_config() {
   if [[ ! -r "$tomat_config" ]]; then
-    fail "tomat-config missing-or-unreadable path=$tomat_config"
+    fail "config.tomat.readable" "tomat config readable" "$tomat_config"
     return
   fi
+
+  pass "config.tomat.readable" "tomat config readable" "$tomat_config"
 
   if "$python_bin" - "$tomat_config" <<'PY'
 import sys
@@ -116,40 +171,121 @@ for keys, value in expected.items():
         raise SystemExit(f"{'.'.join(keys)}={node!r}, expected {value!r}")
 PY
   then
-    pass "tomat config hooks"
+    pass "config.tomat.hooks" "tomat break hooks configured" "$tomat_config"
   else
-    fail "tomat config hooks path=$tomat_config"
+    fail "config.tomat.hooks" "tomat break hooks configured" "$tomat_config"
   fi
 }
 
 check_live_dependencies() {
   if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
-    pass "xdg-runtime-dir set path=$XDG_RUNTIME_DIR"
+    pass "runtime.xdg_runtime_dir" "XDG_RUNTIME_DIR set" "$XDG_RUNTIME_DIR"
   else
-    fail "xdg-runtime-dir missing"
+    fail "runtime.xdg_runtime_dir" "XDG_RUNTIME_DIR set" "missing"
   fi
 
   if "$pgrep_bin" -x hypridle >/dev/null 2>&1; then
-    pass "hypridle process running"
+    pass "runtime.hypridle.running" "hypridle process running" "hypridle"
   else
-    fail "hypridle process not-running"
+    fail "runtime.hypridle.running" "hypridle process running" "not-running"
   fi
 
   if "$tomat_bin" status >/dev/null 2>&1; then
-    pass "tomat status"
+    pass "runtime.tomat.status" "tomat status succeeds" "$tomat_bin status"
   else
-    fail "tomat status"
+    fail "runtime.tomat.status" "tomat status succeeds" "$tomat_bin status"
   fi
 }
 
 check_hook_smoke() {
   if [[ "$run_live_lock_test" != yes ]]; then
-    skip "live-lock-test disabled"
+    skip "live_lock_test" "live lock test" "disabled"
     return
   fi
 
-  TOMAT_REMAINING_SECONDS=3 "$libexec_dir/tomat-break-begin"
-  pass "live-lock-test tomat-break-begin"
+  live_lock_status=fail
+  live_lock_ok=false
+  if TOMAT_REMAINING_SECONDS=3 "$libexec_dir/tomat-break-begin"; then
+    live_lock_status=pass
+    live_lock_ok=true
+    pass "live_lock_test" "live lock test" "$libexec_dir/tomat-break-begin"
+  else
+    fail "live_lock_test" "live lock test" "$libexec_dir/tomat-break-begin"
+  fi
+}
+
+render_text() {
+  local _id description status _ok detail
+
+  while IFS=$'\t' read -r _id description status _ok detail; do
+    case "$status" in
+      pass)
+        printf 'PASS %s detail=%s\n' "$description" "$detail"
+        ;;
+      fail)
+        printf 'FAIL %s detail=%s\n' "$description" "$detail"
+        ;;
+      skip)
+        printf 'SKIP %s detail=%s\n' "$description" "$detail"
+        ;;
+    esac
+  done <"$checks_tsv"
+
+  print_manual_checklist
+}
+
+render_json() {
+  local destination="${1:-}"
+
+  "$python_bin" - "$checks_tsv" "$failed" "$live_lock_requested" "$live_lock_ok" "$live_lock_status" "$destination" <<'PY'
+import datetime as dt
+import json
+import sys
+from pathlib import Path
+
+checks_path, failed, live_requested, live_ok, live_status, destination = sys.argv[1:]
+checks = []
+for line in Path(checks_path).read_text().splitlines():
+    check_id, description, status, ok, detail = line.split("\t", 4)
+    checks.append({
+        "id": check_id,
+        "description": description,
+        "status": status,
+        "ok": {"true": True, "false": False, "null": None}[ok],
+        "detail": detail,
+    })
+
+manual_checklist = [
+    "start Tomat with short work and break durations",
+    "observe work-to-break transition",
+    "verify the session locks at break start",
+    "try unlocking before the deadline; expected denial",
+    "unlock after the deadline; expected success",
+    "verify /usr/local/libexec/session-post-unlock fired",
+    "verify pending resume marker was consumed",
+    "verify tomat resumed paused Work",
+    "repeat unlock; expected no second tomat resume",
+]
+
+report = {
+    "schema": "tomat-break-flow.verify.v1",
+    "timestamp": dt.datetime.now(dt.UTC).isoformat().replace("+00:00", "Z"),
+    "ok": failed == "0",
+    "checks": checks,
+    "live_lock_test": {
+        "requested": live_requested == "true",
+        "ok": {"true": True, "false": False, "null": None}[live_ok],
+        "status": live_status,
+    },
+    "manual_checklist": manual_checklist,
+}
+
+encoded = json.dumps(report, indent=2, sort_keys=True) + "\n"
+if destination:
+    Path(destination).write_text(encoded)
+else:
+    sys.stdout.write(encoded)
+PY
 }
 
 print_manual_checklist() {
@@ -173,6 +309,15 @@ check_hypridle_config
 check_tomat_config
 check_live_dependencies
 check_hook_smoke
-print_manual_checklist
+
+if [[ -n "$output_path" ]]; then
+  render_json "$output_path"
+fi
+
+if [[ "$json_mode" = yes ]]; then
+  render_json
+else
+  render_text
+fi
 
 exit "$failed"
