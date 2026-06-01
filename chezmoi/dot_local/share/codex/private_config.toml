@@ -26,6 +26,7 @@ writable_roots = [
   "/home/_404/src",
   "/home/_404/.local/share/codex",
   "/home/_404/.local/share/chezmoi",
+  "/home/_404/.config/chezmoi",
 ]
 
 [shell_environment_policy]
