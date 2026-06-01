@@ -1,0 +1,11 @@
+{
+  "cwd": "/tmp/repo",
+  "hook_event_name": "Stop",
+  "last_assistant_message": "done",
+  "model": "gpt-5.5",
+  "permission_mode": "default",
+  "session_id": "sess_123",
+  "stop_hook_active": false,
+  "transcript_path": null,
+  "turn_id": "turn_005"
+}

@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+install-to-codex-home - install hookrail and optionally append Codex config
+
+Usage:
+  install-to-codex-home [--append-config]
+
+Environment:
+  CODEX_HOME   Codex home directory. Defaults to $HOME/.codex if unset.
+
+Behavior:
+  - copies this tree to $CODEX_HOME/tools/hookrail
+  - preserves executable modes for bin/ and hooks/
+  - with --append-config, appends config/hookrail.config.toml to $CODEX_HOME/config.toml
+    between idempotent marker comments
+USAGE
+}
+
+append_config=no
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --append-config)
+      append_config=yes
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'install-to-codex-home: unknown option: %s\n' "$1" >&2
+      exit 64
+      ;;
+  esac
+done
+
+src_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+: "${CODEX_HOME:=${HOME:?HOME is required}/.codex}"
+install_root="$CODEX_HOME/tools/hookrail"
+config_path="$CODEX_HOME/config.toml"
+
+mkdir -p "$CODEX_HOME/tools"
+rm -rf "$install_root.tmp"
+mkdir -p "$install_root.tmp"
+
+# Copy contents without depending on rsync.
+( cd "$src_root" && tar cf - . ) | ( cd "$install_root.tmp" && tar xf - )
+chmod +x "$install_root.tmp"/bin/* "$install_root.tmp"/hooks/* "$install_root.tmp"/scripts/*
+rm -rf "$install_root"
+mv "$install_root.tmp" "$install_root"
+
+printf 'installed hookrail: %s\n' "$install_root"
+
+if [[ "$append_config" = yes ]]; then
+  mkdir -p "$(dirname -- "$config_path")"
+  touch "$config_path"
+
+  begin='# hookrail begin'
+  end='# hookrail end'
+
+  tmp="$(mktemp)"
+  awk -v begin="$begin" -v end="$end" '
+    $0 == begin {skip=1; next}
+    $0 == end {skip=0; next}
+    skip != 1 {print}
+  ' "$config_path" >"$tmp"
+
+  {
+    cat "$tmp"
+    printf '\n%s\n' "$begin"
+    cat "$src_root/config/hookrail.config.toml"
+    printf '%s\n' "$end"
+  } >"$config_path"
+  rm -f "$tmp"
+
+  printf 'updated config: %s\n' "$config_path"
+fi
+
+printf 'verify with: %s/bin/hookrail-doctor\n' "$install_root"

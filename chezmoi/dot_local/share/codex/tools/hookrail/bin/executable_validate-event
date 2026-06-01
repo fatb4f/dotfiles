@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+import json, sys
+
+try:
+    data = json.load(sys.stdin)
+except Exception as exc:
+    print(f"invalid JSON: {exc}", file=sys.stderr)
+    raise SystemExit(1)
+
+name = data.get("hook_event_name")
+if name not in {"SessionStart", "UserPromptSubmit", "PostToolUse", "Stop"}:
+    print(f"unsupported hook_event_name: {name!r}", file=sys.stderr)
+    raise SystemExit(1)
+
+print(f"ok {name}")

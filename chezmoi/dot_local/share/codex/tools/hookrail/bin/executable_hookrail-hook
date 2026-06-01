@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+
+def env_int(name: str, default: int) -> int:
+    try:
+        return int(os.environ.get(name, str(default)))
+    except ValueError:
+        return default
+
+
+PROMPT_LARGE = env_int("HOOKRAIL_PROMPT_LARGE_CHARS", 50_000)
+PROMPT_OVERSIZED = env_int("HOOKRAIL_PROMPT_OVERSIZED_CHARS", 100_000)
+TOOL_LARGE = env_int("HOOKRAIL_TOOL_LARGE_CHARS", 50_000)
+AGENT_FEED_CHARS = env_int("HOOKRAIL_AGENT_FEED_CHARS", 2_000)
+
+
+class HookrailError(Exception):
+    pass
+
+
+def read_json() -> dict[str, Any]:
+    try:
+        data = json.load(sys.stdin)
+    except Exception as exc:
+        raise HookrailError(f"invalid JSON input: {exc}") from exc
+    if not isinstance(data, dict):
+        raise HookrailError("hook input must be a JSON object")
+    return data
+
+
+def payload_class(chars: int, large: int, oversized: int | None = None) -> str:
+    if oversized is not None and chars >= oversized:
+        return "oversized"
+    if chars >= large:
+        return "large"
+    return "small"
+
+
+def json_chars(value: Any) -> int:
+    if isinstance(value, str):
+        return len(value)
+    try:
+        return len(json.dumps(value, ensure_ascii=False, sort_keys=True))
+    except Exception:
+        return len(str(value))
+
+
+def truncate(text: str, limit: int = AGENT_FEED_CHARS) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 80)] + "\n...[hookrail truncated bounded agentFeed]..."
+
+
+def state_root() -> Path | None:
+    raw = os.environ.get("HOOKRAIL_STATE")
+    if not raw:
+        return None
+    return Path(raw)
+
+
+def turn_dir(event: dict[str, Any]) -> Path | None:
+    root = state_root()
+    if root is None:
+        return None
+    session_id = event.get("session_id") or "unknown-session"
+    turn_id = event.get("turn_id") or "session"
+    return root / "runs" / str(session_id) / str(turn_id)
+
+
+def next_event_path(events_dir: Path, hook_event_name: str) -> Path:
+    events_dir.mkdir(parents=True, exist_ok=True)
+    existing = sorted(events_dir.glob("[0-9][0-9][0-9][0-9][0-9][0-9]-*.json"))
+    if existing:
+        try:
+            seq = int(existing[-1].name.split("-", 1)[0]) + 1
+        except Exception:
+            seq = len(existing) + 1
+    else:
+        seq = 1
+    slug = "".join(ch.lower() if ch.isalnum() else "-" for ch in hook_event_name).strip("-")
+    return events_dir / f"{seq:06d}-{slug}.json"
+
+
+def atomic_write_json(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, indent=2, sort_keys=True)
+            fh.write("\n")
+        os.replace(tmp_name, path)
+    except Exception:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
+def persist_manifest(event: dict[str, Any], manifest: dict[str, Any]) -> str | None:
+    d = turn_dir(event)
+    if d is None:
+        return None
+    p = next_event_path(d / "events", event.get("hook_event_name", "unknown"))
+    manifest["capture"]["path"] = str(p)
+    atomic_write_json(p, manifest)
+    return str(p)
+
+
+def base_output_context(hook_name: str, text: str | None) -> dict[str, Any]:
+    out: dict[str, Any] = {"continue": True}
+    if hook_name in {"SessionStart", "UserPromptSubmit", "PostToolUse"}:
+        specific: dict[str, Any] = {"hookEventName": hook_name}
+        if text:
+            specific["additionalContext"] = truncate(text)
+        out["hookSpecificOutput"] = specific
+    elif text:
+        out["systemMessage"] = truncate(text)
+    return out
+
+
+def build_manifest(event: dict[str, Any], chars: int, klass: str, persist: bool, reason: str, agent_text: str | None, output: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": "hookrail.manifest.v1",
+        "hookEventName": event.get("hook_event_name"),
+        "sessionID": event.get("session_id", "unknown-session"),
+        "turnID": event.get("turn_id", "session"),
+        "cwd": event.get("cwd", ""),
+        "model": event.get("model", ""),
+        "transcriptPath": event.get("transcript_path"),
+        "payload": {
+            "chars": chars,
+            "class": klass,
+        },
+        "capture": {
+            "persist": persist,
+            "reason": reason,
+        },
+        "agentFeed": {
+            "inject": bool(agent_text),
+            "budgetChars": AGENT_FEED_CHARS,
+            **({"text": truncate(agent_text)} if agent_text else {}),
+        },
+        "output": output,
+    }
+
+
+def handle_session_start(event: dict[str, Any]) -> dict[str, Any]:
+    source = event.get("source", "unknown")
+    text = None
+    root = state_root()
+    frame_path = root / "frames" / "current.md" if root else None
+    if frame_path and frame_path.exists():
+        text = "hookrail frame:\n" + frame_path.read_text(encoding="utf-8", errors="replace")
+    elif source == "resume":
+        text = "hookrail: resumed session; prefer compact frame/handoff when prior context pressure is high."
+    out = base_output_context("SessionStart", text)
+    manifest = build_manifest(event, 0, "small", bool(text), "session-start-frame", text, out)
+    if text:
+        persist_manifest(event, manifest)
+    return out
+
+
+def handle_user_prompt_submit(event: dict[str, Any]) -> dict[str, Any]:
+    prompt = event.get("prompt", "")
+    chars = len(prompt)
+    klass = payload_class(chars, PROMPT_LARGE, PROMPT_OVERSIZED)
+    text = None
+    if klass != "small":
+        text = f"hookrail: prompt payload is {klass} ({chars} chars). Prefer compact handoff/frame before continuing long sessions."
+    out = base_output_context("UserPromptSubmit", text)
+    if klass == "oversized":
+        out["systemMessage"] = text
+    manifest = build_manifest(event, chars, klass, klass != "small", "prompt-pressure", text, out)
+    if klass != "small":
+        persist_manifest(event, manifest)
+    return out
+
+
+def handle_post_tool_use(event: dict[str, Any]) -> dict[str, Any]:
+    response = event.get("tool_response")
+    chars = json_chars(response)
+    klass = payload_class(chars, TOOL_LARGE, None)
+    text = None
+    if klass != "small":
+        digest = hashlib.sha256(json.dumps(response, ensure_ascii=False, sort_keys=True, default=str).encode()).hexdigest()[:16]
+        text = f"hookrail: large tool response captured out-of-band candidate ({chars} chars, sha256:{digest}). Injecting bounded summary only."
+    out = base_output_context("PostToolUse", text)
+    manifest = build_manifest(event, chars, klass, klass != "small", "tool-output-budget", text, out)
+    if klass != "small":
+        persist_manifest(event, manifest)
+    return out
+
+
+def handle_stop(event: dict[str, Any]) -> dict[str, Any]:
+    msg = event.get("last_assistant_message") or ""
+    chars = len(msg)
+    klass = payload_class(chars, TOOL_LARGE, None)
+    text = "hookrail: stop observed; closeout frame can be generated from persisted hook manifests."
+    out = {"continue": True, "systemMessage": text}
+    manifest = build_manifest(event, chars, klass, True, "stop-closeout", text, out)
+    persist_manifest(event, manifest)
+    return out
+
+
+HANDLERS = {
+    "SessionStart": handle_session_start,
+    "UserPromptSubmit": handle_user_prompt_submit,
+    "PostToolUse": handle_post_tool_use,
+    "Stop": handle_stop,
+}
+
+
+def noop_for(event_name: str) -> dict[str, Any]:
+    if event_name in {"SessionStart", "UserPromptSubmit", "PostToolUse"}:
+        return {"continue": True, "hookSpecificOutput": {"hookEventName": event_name}}
+    return {"continue": True}
+
+
+def main() -> int:
+    try:
+        event = read_json()
+        name = event.get("hook_event_name")
+        handler = HANDLERS.get(name)
+        if handler is None:
+            output = {"continue": True, "systemMessage": f"hookrail: unsupported hook {name!r}; no-op."}
+        else:
+            output = handler(event)
+    except Exception as exc:
+        # Context hooks must not poison stdout with malformed JSON. If the input was
+        # malformed, the safest generic output is a stop-compatible continue object.
+        output = {"continue": True, "suppressOutput": True, "systemMessage": f"hookrail no-op after adapter error: {exc}"}
+    json.dump(output, sys.stdout, sort_keys=True, separators=(",", ":"))
+    sys.stdout.write("\n")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

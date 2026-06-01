@@ -1,0 +1,46 @@
+# Hookrail lifecycle hook wiring for Codex config.toml.
+#
+# Install hookrail to:
+#   $CODEX_HOME/tools/hookrail
+#
+# Then copy or append this file into one active Codex config layer:
+#   $CODEX_HOME/config.toml
+#   <repo>/.codex/config.toml
+#
+# Codex hooks are enabled by default, but this keeps the dependency explicit.
+[features]
+hooks = true
+
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear|compact"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; HOOKRAIL_STATE=\"${CODEX_STATE:-$CODEX_HOME/state}/hookrail\"; export CODEX_HOME HOOKRAIL_STATE; exec \"$CODEX_HOME/tools/hookrail/hooks/session-start\"'"
+timeout = 10
+statusMessage = "Hookrail: loading session frame"
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; HOOKRAIL_STATE=\"${CODEX_STATE:-$CODEX_HOME/state}/hookrail\"; export CODEX_HOME HOOKRAIL_STATE; exec \"$CODEX_HOME/tools/hookrail/hooks/user-prompt-submit\"'"
+timeout = 10
+statusMessage = "Hookrail: checking prompt pressure"
+
+[[hooks.PostToolUse]]
+matcher = "*"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; HOOKRAIL_STATE=\"${CODEX_STATE:-$CODEX_HOME/state}/hookrail\"; export CODEX_HOME HOOKRAIL_STATE; exec \"$CODEX_HOME/tools/hookrail/hooks/post-tool-use\"'"
+timeout = 30
+statusMessage = "Hookrail: capturing tool evidence"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; HOOKRAIL_STATE=\"${CODEX_STATE:-$CODEX_HOME/state}/hookrail\"; export CODEX_HOME HOOKRAIL_STATE; exec \"$CODEX_HOME/tools/hookrail/hooks/stop\"'"
+timeout = 30
+statusMessage = "Hookrail: writing closeout frame"
