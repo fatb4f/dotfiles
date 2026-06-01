@@ -4,9 +4,8 @@ name: git-workflow
 description: "Thin task index for Git discovery and close-out using git-mcp-server."
 when_to_use: Use when AGENTS.md or the user references git.discovery or git.closeout. Do not use for broad Git workflows unless one of these task names applies.
 allowed-tools:
-
-* MCP(git-mcp-server:*)
-* Read
+  - "MCP(git-mcp-server:*)"
+  - Read
 
 ---
 
