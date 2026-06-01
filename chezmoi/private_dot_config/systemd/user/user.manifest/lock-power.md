@@ -13,7 +13,7 @@ These units are runtime-triggered only. They should not be enabled directly.
 loginctl lock-session
 → logind Lock signal
 → hypridle lock_cmd
-→ cli.session lock
+→ session lock
 → locked-session-halt.timer
 → locked-session-halt.service
 ```

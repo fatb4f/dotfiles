@@ -26,13 +26,13 @@ text_format = "{icon} {time} {phase} {state}"
 text_format_idle = ""
 
 [hooks.on_break_start]
-cmd = "/home/_404/.local/bin/cli.session"
+cmd = "/home/_404/.local/bin/session"
 args = ["lock"]
 timeout = 3
 capture_output = true
 
 [hooks.on_long_break_start]
-cmd = "/home/_404/.local/bin/cli.session"
+cmd = "/home/_404/.local/bin/session"
 args = ["lock"]
 timeout = 3
 capture_output = true

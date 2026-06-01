@@ -6,7 +6,7 @@ PartOf=graphical-session.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/_404/.local/bin/cli.session auto-start
+ExecStart=/home/_404/.local/bin/session auto-start
 RemainAfterExit=yes
 
 [Install]

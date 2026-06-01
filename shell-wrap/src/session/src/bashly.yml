@@ -1,0 +1,60 @@
+name: session
+help: Session lock, startup, and OSD manager
+version: 1.0.0
+
+environment_variables:
+  - name: XDG_SESSION_ID
+    help: Current logind session id.
+  - name: XDG_CONFIG_HOME
+    help: Configuration root used to locate hyprlock config.
+
+commands:
+  - name: lock
+    help: Start Hyprlock through a transient user systemd unit
+    filename: commands/lock.sh
+    examples:
+      - session lock
+
+  - name: session-lock
+    help: Deprecated alias for lock
+    filename: commands/session_lock.sh
+    examples:
+      - session session-lock
+
+  - name: unlock
+    help: Unlock the current session and clean up lock-side timers
+    filename: commands/unlock.sh
+    examples:
+      - session unlock
+
+  - name: auto-start
+    help: Run graphical-session startup actions once per session
+    filename: commands/auto_start.sh
+    examples:
+      - session auto-start
+
+  - name: session-auto-start
+    help: Deprecated alias for auto-start
+    filename: commands/session_auto_start.sh
+    examples:
+      - session session-auto-start
+
+  - name: tomat-start-work
+    help: "Internal helper: start Tomat work if daemon is idle"
+    filename: commands/tomat_start_work.sh
+    examples:
+      - session tomat-start-work
+
+  - name: osd
+    help: Apply an on-screen display update
+    filename: commands/osd.sh
+    args:
+      - name: action
+        help: OSD action to execute
+        required: true
+    examples:
+      - session osd volume-up
+      - session osd volume-down
+      - session osd volume-toggle
+      - session osd brightness-up
+      - session osd brightness-down

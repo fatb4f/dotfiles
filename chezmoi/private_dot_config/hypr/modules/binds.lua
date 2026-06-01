@@ -1,6 +1,6 @@
 local home = os.getenv("HOME")
 local menu = home .. "/.local/bin/app-launcher"
-local session = home .. "/.local/bin/cli.session"
+local session = home .. "/.local/bin/session"
 local session_osd = session .. " osd "
 
 -- launch
