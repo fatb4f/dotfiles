@@ -51,3 +51,16 @@ Use only when the domain `AGENTS.md` file does not exist.
 ## Stop
 
 Stop after the routed task or close-out report.
+
+## Close-out
+
+git-mcp-server.git_status
+git-mcp-server.git_diff_unstaged
+git-mcp-server.git_diff_staged
+git-mcp-server.git_add
+git-mcp-server.git_commit
+git-mcp-server.git_status
+
+chezmoi status
+chezmoi diff
+chezmoi apply
