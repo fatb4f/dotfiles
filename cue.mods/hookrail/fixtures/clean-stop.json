@@ -1,0 +1,19 @@
+{
+  "hookInput": {
+    "cwd": "/tmp/repo",
+    "hook_event_name": "Stop",
+    "last_assistant_message": "clean repo closeout fixture",
+    "model": "gpt-5.5",
+    "permission_mode": "default",
+    "session_id": "sess_stop_clean",
+    "stop_hook_active": false,
+    "transcript_path": null,
+    "turn_id": "turn_stop_clean",
+    "hookrail": {
+      "git": {
+        "isRepo": true,
+        "dirty": false
+      }
+    }
+  }
+}
