@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
 from datetime import UTC, datetime
@@ -68,6 +69,138 @@ def state_root() -> Path | None:
     if not raw:
         return None
     return Path(raw)
+
+
+def git_cmd(cwd: str | Path, args: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "-C", str(cwd), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+        text=True,
+        timeout=2,
+        check=False,
+    )
+
+
+def is_git_repo(cwd: str | Path | None) -> bool:
+    if not cwd:
+        return False
+    try:
+        proc = git_cmd(cwd, ["rev-parse", "--is-inside-work-tree"])
+    except Exception:
+        return False
+    return proc.returncode == 0 and proc.stdout.strip() == "true"
+
+
+def git_dirty(cwd: str | Path | None) -> bool:
+    if not cwd or not is_git_repo(cwd):
+        return False
+    try:
+        proc = git_cmd(cwd, ["status", "--porcelain"])
+    except Exception:
+        return False
+    return proc.returncode == 0 and bool(proc.stdout.strip())
+
+
+def git_head(cwd: str | Path | None) -> str | None:
+    if not cwd or not is_git_repo(cwd):
+        return None
+    try:
+        proc = git_cmd(cwd, ["rev-parse", "HEAD"])
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    head = proc.stdout.strip()
+    return head or None
+
+
+def commit_before_summary_enabled() -> bool:
+    raw_env = os.environ.get("HOOKRAIL_COMMIT_BEFORE_SUMMARY")
+    if raw_env is not None:
+        return raw_env.strip().lower() not in {"0", "false", "no", "off"}
+
+    root = state_root()
+    if root is not None:
+        policy_path = root / "policy.json"
+        if policy_path.exists():
+            try:
+                policy = json.loads(policy_path.read_text(encoding="utf-8"))
+                return bool(policy.get("commitBeforeSummary", True))
+            except Exception:
+                return True
+
+    return True
+
+
+def user_opted_out_of_commit(event: dict[str, Any]) -> bool:
+    for key in ("commit_before_summary", "commitBeforeSummary"):
+        if event.get(key) is False:
+            return True
+    return False
+
+
+def git_closeout_evidence_path(event: dict[str, Any]) -> Path | None:
+    d = turn_dir(event)
+    if d is None:
+        return None
+    return d / "git-closeout.json"
+
+
+def trace_head_changed(event: dict[str, Any], current_head: str | None) -> bool:
+    root = state_root()
+    session_id = event.get("session_id")
+    if root is None or not session_id or not current_head:
+        return False
+
+    trace_path = root / "trace" / f"{session_id}.jsonl"
+    if not trace_path.exists():
+        return False
+
+    cwd = event.get("cwd", "")
+    turn_id = event.get("turn_id", "session")
+    try:
+        for line in trace_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            if not line:
+                continue
+            row = json.loads(line)
+            if row.get("cwd") != cwd:
+                continue
+            if row.get("turnID") not in {turn_id, "session"}:
+                continue
+            row_head = row.get("gitHead")
+            if row_head and row_head != current_head:
+                return True
+    except Exception:
+        return False
+    return False
+
+
+def commit_evidence_exists(event: dict[str, Any]) -> bool:
+    evidence_path = git_closeout_evidence_path(event)
+    if evidence_path is not None and evidence_path.exists():
+        return True
+    return trace_head_changed(event, git_head(event.get("cwd")))
+
+
+def build_git_closeout_reason() -> str:
+    return """Before final summary, complete git closeout.
+
+Use the git-workflow procedure:
+
+1. Inspect `git status --short`.
+2. Inspect unstaged and staged diffs.
+3. Stage only files directly related to this completed task.
+4. Verify the staged diff.
+5. Generate an accurate Conventional Commit message from the staged diff.
+6. Commit using configured Git MCP write tools when available; otherwise use shell git.
+7. Check final git status.
+8. Then print the final summary with:
+   - commit SHA
+   - staged/committed files
+   - validation commands and results
+
+Do not print the final task summary until the commit succeeds, or until you clearly explain why committing is impossible."""
 
 
 def turn_dir(event: dict[str, Any]) -> Path | None:
@@ -143,6 +276,7 @@ def append_trace(
         "sessionID": event.get("session_id", "unknown-session"),
         "turnID": event.get("turn_id", "session"),
         "cwd": event.get("cwd", ""),
+        "gitHead": git_head(event.get("cwd")),
         "model": event.get("model", ""),
         "transcriptPath": event.get("transcript_path"),
         "persisted": persisted,
@@ -278,6 +412,44 @@ def handle_stop(event: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
     msg = event.get("last_assistant_message") or ""
     chars = len(msg)
     klass = payload_class(chars, TOOL_LARGE, None)
+    cwd = event.get("cwd")
+    if (
+        commit_before_summary_enabled()
+        and not user_opted_out_of_commit(event)
+        and is_git_repo(cwd)
+        and git_dirty(cwd)
+        and not commit_evidence_exists(event)
+    ):
+        if event.get("stop_hook_active") is True:
+            out = {
+                "continue": True,
+                "systemMessage": "hookrail: git closeout gate already active; continuing without repeat block.",
+            }
+            manifest = build_manifest(
+                event, chars, klass, True, "git-closeout-recursion-guard", msg or None, out
+            )
+            try:
+                persisted = persist_manifest(event, manifest)
+            except Exception:
+                persisted = None
+            return out, persisted
+
+        out = {"decision": "block", "reason": build_git_closeout_reason()}
+        manifest = build_manifest(
+            event,
+            chars,
+            klass,
+            True,
+            "git-closeout-required",
+            build_git_closeout_reason(),
+            out,
+        )
+        try:
+            persisted = persist_manifest(event, manifest)
+        except Exception:
+            persisted = None
+        return out, persisted
+
     out = {"continue": True}
     warning = stop_warning(event, chars)
     if warning:

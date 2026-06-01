@@ -1,0 +1,11 @@
+{
+  "cwd": "/tmp/repo",
+  "hook_event_name": "Stop",
+  "last_assistant_message": "dirty repo active closeout fixture",
+  "model": "gpt-5.5",
+  "permission_mode": "default",
+  "session_id": "sess_stop_dirty_active",
+  "stop_hook_active": true,
+  "transcript_path": null,
+  "turn_id": "turn_stop_dirty_active"
+}

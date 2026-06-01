@@ -38,6 +38,46 @@ def report(ok: bool, msg: str) -> None:
     if not ok:
         failed = 1
 
+def run_hook(hook_cmd: list[str], event: dict, env: dict) -> tuple[subprocess.CompletedProcess[bytes], dict | None]:
+    proc = subprocess.run(
+        hook_cmd,
+        input=json.dumps(event).encode(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    try:
+        out = json.loads(proc.stdout.decode())
+    except Exception:
+        out = None
+    return proc, out
+
+def git(*args: str, cwd: Path) -> subprocess.CompletedProcess[bytes]:
+    return subprocess.run(
+        ["git", "-C", str(cwd), *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+def init_git_fixture(path: Path, dirty: bool) -> None:
+    git("init", cwd=path)
+    git("config", "user.name", "Hookrail Doctor", cwd=path)
+    git("config", "user.email", "hookrail-doctor@example.invalid", cwd=path)
+    (path / "file.txt").write_text("x\n", encoding="utf-8")
+    git("add", "file.txt", cwd=path)
+    git("commit", "-m", "test: initial fixture", cwd=path)
+    if dirty:
+        with (path / "file.txt").open("a", encoding="utf-8") as fh:
+            fh.write("y\n")
+
+def stop_fixture(name: str, cwd: Path, active: bool = False) -> dict:
+    data = json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+    data["cwd"] = str(cwd)
+    data["stop_hook_active"] = active
+    data["session_id"] = f"test-session-{name}"
+    data["turn_id"] = "test-turn"
+    return data
+
 for path in required:
     report(path.exists(), f"exists {path.relative_to(ROOT)}")
 
@@ -59,7 +99,7 @@ with tempfile.TemporaryDirectory() as td:
             stdout = proc.stdout.decode()
             out = json.loads(stdout)
             report(isinstance(out, dict), f"{fixture.name} stdout JSON object")
-            report("continue" in out or "hookSpecificOutput" in out or "systemMessage" in out, f"{fixture.name} output shape")
+            report("continue" in out or "decision" in out or "hookSpecificOutput" in out or "systemMessage" in out, f"{fixture.name} output shape")
             report(stdout.lstrip().startswith("{"), f"{fixture.name} stdout starts with JSON object")
             if fixture.name == "stop.json":
                 report(out == {"continue": True}, f"{fixture.name} default output is bare continue")
@@ -115,5 +155,59 @@ with tempfile.TemporaryDirectory() as td:
         any(data.get("hookEventName") == "Stop" for _path, data in manifests),
         "Stop persists manifest",
     )
+
+    clean_repo = Path(td) / "clean-repo"
+    dirty_repo = Path(td) / "dirty-repo"
+    evidence_repo = Path(td) / "evidence-repo"
+    clean_repo.mkdir()
+    dirty_repo.mkdir()
+    evidence_repo.mkdir()
+    init_git_fixture(clean_repo, dirty=False)
+    init_git_fixture(dirty_repo, dirty=True)
+    init_git_fixture(evidence_repo, dirty=True)
+
+    policy_path = Path(td) / "policy.json"
+    policy_path.write_text(json.dumps({"commitBeforeSummary": True}), encoding="utf-8")
+
+    proc, out = run_hook(hook_cmd, stop_fixture("stop-clean.json", clean_repo), env)
+    report(proc.returncode == 0, "Stop clean repo exits 0")
+    report(not proc.stderr, "Stop clean repo stderr empty")
+    report(out == {"continue": True}, "clean repo Stop returns bare continue")
+
+    proc, out = run_hook(hook_cmd, stop_fixture("stop-dirty.json", dirty_repo), env)
+    report(proc.returncode == 0, "Stop dirty repo exits 0")
+    report(not proc.stderr, "Stop dirty repo stderr empty")
+    report(isinstance(out, dict), "Stop dirty repo stdout JSON object")
+    report(out is not None and out.get("decision") == "block", "dirty repo without evidence blocks")
+    report(out is not None and "git-workflow" in out.get("reason", ""), "dirty block reason names git-workflow")
+
+    proc, out = run_hook(hook_cmd, stop_fixture("stop-dirty-active.json", dirty_repo, active=True), env)
+    report(proc.returncode == 0, "Stop dirty active exits 0")
+    report(not proc.stderr, "Stop dirty active stderr empty")
+    report(isinstance(out, dict), "Stop dirty active stdout JSON object")
+    report(out is not None and out.get("continue") is True and out.get("decision") != "block", "dirty active Stop does not repeat block")
+
+    evidence_event = stop_fixture("stop-dirty.json", evidence_repo)
+    evidence_dir = Path(td) / "runs" / evidence_event["session_id"] / evidence_event["turn_id"]
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    (evidence_dir / "git-closeout.json").write_text(
+        json.dumps(
+            {
+                "schema": "hookrail.git-closeout.v1",
+                "sessionID": evidence_event["session_id"],
+                "turnID": evidence_event["turn_id"],
+                "cwd": str(evidence_repo),
+                "commit": "976e9f15e23e445ae521bf5293e77d404fff790d",
+                "committedFiles": [],
+                "validation": [],
+                "statusAfter": "clean",
+            }
+        ),
+        encoding="utf-8",
+    )
+    proc, out = run_hook(hook_cmd, evidence_event, env)
+    report(proc.returncode == 0, "Stop dirty evidence exits 0")
+    report(not proc.stderr, "Stop dirty evidence stderr empty")
+    report(out == {"continue": True}, "dirty repo with closeout evidence continues")
 
 sys.exit(failed)

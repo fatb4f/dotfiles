@@ -84,6 +84,19 @@ git_create_branch
 git_init
 ```
 
+## Git Closeout Procedure
+
+Use this when Hookrail, AGENTS.md, or the user requests commit-before-summary closeout.
+
+1. Inspect repository status.
+2. Inspect unstaged and staged diffs.
+3. Stage only files directly related to the completed task.
+4. Verify the staged diff.
+5. Generate a Conventional Commit message from the staged diff.
+6. Commit using Git MCP write tools when available.
+7. Check final status.
+8. Report commit SHA, staged files, and validation evidence.
+
 ## Branch Naming
 
 ```
