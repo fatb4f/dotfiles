@@ -20,6 +20,13 @@
 
   So the current dotfiles state is “good hook/runtime contract, missing registry/router layer.”
 
+  Issue-level assessment against the current state:
+
+  - `#26` is mostly satisfied by the pre-projection runtime fact flow in `shell-wrap/src/hookrail/src/lib/hook.sh`, `shell-wrap/src/hookrail/src/lib/git.sh`, and `cue.mods/hookrail/projection.cue`. The repo already derives runtime facts before Stop projection and feeds them into the CUE decision path; the remaining gap is the fail-safe/runtime-proof edge cases called out in the issue note.
+  - `#27` is partially satisfied by `shell-wrap/src/hookrail/src/lib/doctor.sh`, `shell-wrap/src/hookrail/hookrail`, and the deployed Bashly adapter under `chezmoi/dot_local/share/codex/tools/hookrail/bin/executable_hookrail-hook`. Those paths prove the active Bashly runtime path in the normal case, but the issue is still open because the active-path proof set is not yet exhaustive enough for the missing cases.
+  - `#28` is only partially satisfied by the existing trace and observability surfaces in `cue.mods/hookrail/projection.cue`, `shell-wrap/src/hookrail/src/lib/persist.sh`, `shell-wrap/src/hookrail/src/lib/doctor.sh`, and `chezmoi/dot_local/share/codex/tools/hookrail/bin/executable_hookrail-doctor`. The repo already emits trace rows and persists hook artifacts, but the remaining requirement is stronger active trace coverage, especially large-output reporting.
+  - `#29` remains the current repo-local operational bug: first-class closeout evidence is still the missing operational artifact, even though the Stop gate, closeout packet, and trace wiring are already present in `cue.mods/hookrail/projection.cue`, `shell-wrap/src/hookrail/src/lib/doctor.sh`, and `shell-wrap/src/hookrail/src/lib/git.sh`.
+
   What Should Be Ported From frame
 
   Port the declarative control-plane shape, not the runtime machinery.
