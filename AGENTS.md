@@ -1,93 +1,52 @@
 # AGENTS.md
 
-## Purpose
-
-This file is the root routing and scope-control contract for this repository.
-
-Use it to:
-
-* classify the task by domain
-* load exactly one starting domain authority
-* avoid broad repo scans
-* run repo-level Git and chezmoi close-out when requested
-
-Do not use this file as a general repo explanation or policy dump.
+Root router only.
 
 ## Repo map
 
 ```text
 dotfiles repo
-├── chezmoi/                   # source dotfiles and deployed runtime material
-│   └── dot_local/share/codex/tools/hookrail/
-├── cue.mods/hookrail/         # CUE contracts, feed shape, projection, closeout
-├── shell-wrap/src/hookrail/    # Bashly and shell-adapter implementation
-└── authority/                 # reserved future typed surface
+├── dotfile lifecycle
+│   └── chezmoi/
+│
+├── Codex runtime / Hookrail
+│   ├── cue.mods/hookrail/      # contracts, feeds, projections
+│   └── shell-wrap/src/hookrail/ # shell/Bashly execution adapters
+│
+└── shell adapter substrate
+    └── shell-wrap/             # Bashly pattern mechanics
 ```
 
-## Domain authorities
+## Routing
 
-A domain authority is the `AGENTS.md` file at the root of the selected task
-domain when that file exists.
+Pick one row. Load one starting authority. Do not recurse.
 
-Do not recursively discover `AGENTS.md` files.
+| Task pattern                                  | Start here             | Skill task                                                                                                                   |
+| --------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| chezmoi dotfile lifecycle                     | `chezmoi/AGENTS.md`    | `chezmoi-workflow`                                                                                                           |
+| Hookrail contracts / feeds / projections      | `cue.mods/AGENTS.md`   | domain-local                                                                                                                 |
+| Bashly / shell wrappers / executable adapters | `shell-wrap/AGENTS.md` | domain-local                                                                                                                 |
+| Git state discovery                           | root                   | `git-workflow: git.discovery`                                                                                                |
+| repo close-out                                | root                   | `git-workflow: git.discovery` → `chezmoi-workflow: chezmoi.closeout` → `git-workflow: git.closeout` only if commit requested |
 
-Choose one starting authority by task pattern.
+## Limits
 
-| Task pattern | Starting authority |
-| --- | --- |
-| chezmoi dotfile lifecycle work | `chezmoi/AGENTS.md` when present; otherwise the nearest file in the touched `chezmoi/` subtree |
-| Hookrail contract, feed, projection, manifest, or closeout work | `cue.mods/AGENTS.md` when present; otherwise `cue.mods/hookrail/projection.cue` and the other touched contract files |
-| Bashly, shell-wrapper, command-dispatch, or executable adapter work | `shell-wrap/AGENTS.md` when present; otherwise `shell-wrap/src/hookrail/src/bashly.yml` and the touched command or library file |
-| repo-level Git and chezmoi close-out | this root `AGENTS.md` |
+* Do not scan the repo broadly.
+* Do not recursively read `AGENTS.md`.
+* Do not inspect unrelated domains.
+* Do not expand `authority/` unless explicitly requested.
+* Do not compare against legacy frame systems.
 
-## Routing rules
+## Fallback starts
 
-### chezmoi dotfile lifecycle
+Use only when the domain `AGENTS.md` file does not exist.
 
-Use `chezmoi/AGENTS.md` when it exists and the task involves:
+| Domain        | Fallback                                 |
+| ------------- | ---------------------------------------- |
+| `chezmoi/`    | nearest touched file in `chezmoi/`       |
+| `cue.mods/`   | `cue.mods/hookrail/projection.cue`       |
+| `shell-wrap/` | `shell-wrap/src/hookrail/src/bashly.yml` |
 
-* chezmoi-managed dotfiles
-* source/rendered lifecycle
-* `chezmoi status`, `chezmoi diff`, or drift review
-* dotfile materialization
-* dotfile close-out
+## Stop
 
-If `chezmoi/AGENTS.md` does not exist yet, start with the nearest file in the
-touched `chezmoi/` subtree.
-
-Do not inspect Hookrail or shell-wrapper domains unless the selected authority
-explicitly identifies a cross-domain task.
-
-### Hookrail contract and projection
-
-Use `cue.mods/AGENTS.md` when it exists and the task involves:
-
-* Hookrail contracts
-* CUE modules
-* feed shape
-* projection semantics
-* generated hook inputs or outputs
-* manifest or closeout semantics
-
-If `cue.mods/AGENTS.md` does not exist yet, start with
-`cue.mods/hookrail/projection.cue`.
-
-`cue.mods/hookrail/` is part of the repo's Codex runtime. It is not a passive
-dotfiles payload.
-
-### Bashly and shell-wrapper
-
-Use `shell-wrap/AGENTS.md` when it exists and the task involves:
-
-* Bashly command shape
-* shell wrapper mechanics
-* command dispatch
-* generated shell adapters
-* executable Hookrail adapter behavior
-
-If `shell-wrap/AGENTS.md` does not exist yet, start with
-`shell-wrap/src/hookrail/src/bashly.yml`.
-
-`shell-wrap/src/hookrail/` is part of the repo's Codex runtime. It is the
-executable shell-adapter side of Hookrail.
-
+Stop after the routed task or close-out report.
