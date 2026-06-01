@@ -72,6 +72,16 @@ Skip steps only when the task is already narrower.
 * Do not stage or commit from this domain.
 * Do not expand into Git close-out; hand off to `git-workflow`.
 
+## Apply rule
+
+For `chezmoi.apply`, require an explicit target path.
+
+If the user says "apply it" after a previous edit, apply only the paths from the immediately preceding chezmoi task.
+
+Do not rediscover broadly.
+Do not explain options.
+Do not force.
+
 ## Stop
 
 Stop after the selected `chezmoi-workflow` task report.
