@@ -2,7 +2,7 @@
 
 hookrail_run_doctor() {
   local cue_dir hookrail_bin fixture tmp_root output_json manifest persisted_count
-  local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file
+  local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file context_artifact closeout_packet
 
   cue_dir="$(hookrail_cue_dir)"
   hookrail_bin="${HOOKRAIL_BIN:-$(hookrail_script_dir)/hookrail}"
@@ -108,11 +108,22 @@ hookrail_run_doctor() {
   }
   trace_file="$(find "$tmp_root/trace" -type f -name '*.jsonl' | sort | sed -n '1p')"
   hookrail_doctor_check "trace records frame proof" -- bash -c 'jq -e "select(.hookEventName == \"SessionStart\" and .frame.generated == true and .persisted == false)" "$1"' bash "$trace_file"
+  context_artifact="$(find "$tmp_root/runs" -type f -name 'context-frame-input.json' | sort | sed -n '1p')"
+  hookrail_doctor_check "context frame input artifact exists" -- test -n "$context_artifact"
+  hookrail_doctor_check "context frame input artifact vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#ContextFrameInput"' bash "$cue_dir" "$context_artifact"
   [[ -z "$(find "$clean_repo" -path "$clean_repo/.git" -prune -o -type f -name '*frame*' -print)" ]] || {
     printf 'FAIL repo contains frame artifact\n' >&2
     return 1
   }
   printf 'PASS no repo-persisted frame artifact\n'
+
+  jq --arg cwd "$dirty_repo" '.hookInput.cwd = $cwd | .hookInput' "$cue_dir/fixtures/dirty-stop.json" |
+    HOOKRAIL_STATE="$tmp_root" "$hookrail_bin" hook >"$output_json"
+  hookrail_doctor_check "runtime dirty stop blocks" -- jq -e '.decision == "block"' "$output_json"
+  closeout_packet="$(find "$tmp_root/runs/sess_stop_dirty/turn_stop_dirty" -type f -name 'closeout-packet.json' | sort | sed -n '1p')"
+  hookrail_doctor_check "closeout packet artifact exists" -- test -n "$closeout_packet"
+  hookrail_doctor_check "closeout packet artifact vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#CloseoutPacket"' bash "$cue_dir" "$closeout_packet"
+  hookrail_doctor_check "closeout packet includes stop input facts" -- jq -e '.git.dirty == true and (.git.changedFileSample | length) == 1 and .stopDecisionInput.willBlock == true and (.validation.statuses | length) >= 2' "$closeout_packet"
 
   jq --arg cwd "$clean_repo" '.hookInput.cwd = $cwd | .hookInput' "$cue_dir/fixtures/session-start-clean.json" |
     HOOKRAIL_STATE="$tmp_root" HOOKRAIL_GIT_FACTS_HELPER="$tmp_root/missing-helper" "$hookrail_bin" hook >"$output_json" 2>/dev/null

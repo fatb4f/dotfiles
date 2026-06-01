@@ -51,6 +51,97 @@ hookrail_persist_manifest() {
   ) 9>"$lock_file"
 }
 
+hookrail_persist_runtime_artifacts() {
+  local input_json output_json event_name turn_dir lock_file tmp final
+
+  input_json="${1:?input JSON path required}"
+  output_json="${2:?output JSON path required}"
+  event_name="$(jq -r '.hook_event_name // ""' "$input_json")"
+
+  case "$event_name" in
+    SessionStart|Stop) ;;
+    *) return 0 ;;
+  esac
+
+  turn_dir="$(hookrail_turn_dir_from_input "$input_json")"
+  lock_file="$turn_dir/.lock"
+  mkdir -p "$turn_dir"
+
+  (
+    flock -x 9
+    if [[ "$event_name" == "SessionStart" ]]; then
+      tmp="$(mktemp "$turn_dir/.tmp.context-frame-input.XXXXXX.json")"
+      final="$turn_dir/context-frame-input.json"
+      jq -n \
+        --arg timestamp "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+        --slurpfile input "$input_json" '
+          ($input[0]) as $in
+          | {
+              schema: "hookrail.context_frame_input.v1",
+              generatedAt: $timestamp,
+              sessionID: ($in.session_id // "unknown-session"),
+              turnID: ($in.turn_id // "session"),
+              source: $in.source,
+              cwd: $in.cwd,
+              git: $in.hookrail.gitFacts,
+              hints: ($in.hookrail.repoHints // {
+                agentsPath: null,
+                codexConfigPath: null,
+                packageFiles: []
+              })
+            }
+        ' >"$tmp"
+      (cd "$(hookrail_cue_dir)" && cue vet -c=false . "$tmp" -d '#ContextFrameInput')
+      mv "$tmp" "$final"
+      printf '%s\n' "$final"
+      return 0
+    fi
+
+    tmp="$(mktemp "$turn_dir/.tmp.closeout-packet.XXXXXX.json")"
+    final="$turn_dir/closeout-packet.json"
+    jq -n \
+      --arg timestamp "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+      --slurpfile input "$input_json" \
+      --slurpfile output "$output_json" '
+        ($input[0]) as $in
+        | ($output[0]) as $out
+        | ($in.hookrail.gitFacts // {isRepo: false}) as $facts
+        | {
+            schema: "hookrail.closeout_packet.v1",
+            generatedAt: $timestamp,
+            sessionID: ($in.session_id // "unknown-session"),
+            turnID: ($in.turn_id // "session"),
+            cwd: $in.cwd,
+            git: {
+              isRepo: ($in.hookrail.git.isRepo // false),
+              dirty: ($in.hookrail.git.dirty // false),
+              head: ($in.hookrail.git.head // null),
+              facts: $facts,
+              changedFileSample: ($facts.changedSample // []),
+              truncated: ($facts.truncated // false)
+            },
+            validation: ($in.hookrail.validation // {statuses: []}),
+            stopDecisionInput: {
+              commitBeforeSummary: (if ($in.hookrail.env | has("commitBeforeSummary")) then $in.hookrail.env.commitBeforeSummary else true end),
+              userOptedOut: (if ($in.hookrail.env | has("userOptedOut")) then $in.hookrail.env.userOptedOut else false end),
+              closeoutEvidenceExists: (if ($in.hookrail.closeout | has("evidenceExists")) then $in.hookrail.closeout.evidenceExists else false end),
+              priorTraceHeadChanged: (if ($in.hookrail.closeout | has("priorTraceHeadChanged")) then $in.hookrail.closeout.priorTraceHeadChanged else false end),
+              stopHookActive: (if ($in | has("stop_hook_active")) then $in.stop_hook_active else false end),
+              willBlock: (($out.decision // "") == "block")
+            },
+            output: $out
+          }
+      ' >"$tmp"
+    (cd "$(hookrail_cue_dir)" && cue vet -c=false . "$tmp" -d '#CloseoutPacket')
+    mv "$tmp" "$final"
+    printf '%s\n' "$final"
+  ) 9>"$lock_file"
+}
+
+hookrail_try_persist_runtime_artifacts() {
+  hookrail_persist_runtime_artifacts "$@" >/dev/null 2>&1 || true
+}
+
 hookrail_safe_component() {
   local value
 

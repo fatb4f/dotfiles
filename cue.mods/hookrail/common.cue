@@ -41,6 +41,7 @@ package hookrail
 		evidenceExists:        *false | bool
 		priorTraceHeadChanged: *false | bool
 	}
+	validation?: #ValidationSurface
 	gitFacts?: #GitFacts
 	repoHints?: #RepoHints
 	...
@@ -87,4 +88,14 @@ package hookrail
 	agentsPath:       string | null
 	codexConfigPath:  string | null
 	packageFiles: [...string]
+}
+
+#ValidationSurface: {
+	statuses: [...#ValidationStatus]
+}
+
+#ValidationStatus: {
+	name:   string
+	status: "green" | "yellow" | "red" | "unknown" | "skipped"
+	detail?: string
 }

@@ -38,7 +38,7 @@ hookrail_append_trace() {
             root: ($git.root // null),
             branch: ($git.branch // null),
             head: ($git.head // null),
-            clean: ($git.clean // null),
+            clean: (if ($git | has("clean")) then $git.clean else null end),
             counts: ($git.counts // null),
             truncated: ($git.truncated // false),
             operation: ($git.operation.state // null)

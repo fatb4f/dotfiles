@@ -1,35 +1,69 @@
 # shellcheck shell=bash
 
 hookrail_enrich_input() {
-  local input_file output_file event_name facts_file hints_file
+  local input_file output_file event_name facts_file hints_file validation_file
+  local cwd commit_before_summary user_opted_out evidence_exists trace_head_changed
 
   input_file="${1:?input JSON path required}"
   output_file="${2:?output JSON path required}"
 
   event_name="$(jq -r '.hook_event_name // ""' "$input_file")"
-  if [[ "$event_name" != "SessionStart" ]]; then
+  case "$event_name" in
+    SessionStart|Stop) ;;
+    *)
     cp "$input_file" "$output_file"
     return 0
-  fi
+      ;;
+  esac
+
+  cwd="$(jq -r '.cwd // "."' "$input_file")"
 
   facts_file="$(mktemp "${TMPDIR:-/tmp}/hookrail-git-facts.XXXXXX.json")"
   hints_file="$(mktemp "${TMPDIR:-/tmp}/hookrail-repo-hints.XXXXXX.json")"
+  validation_file="$(mktemp "${TMPDIR:-/tmp}/hookrail-validation.XXXXXX.json")"
 
-  if ! hookrail_git_facts "$(jq -r '.cwd // "."' "$input_file")" >"$facts_file"; then
-    rm -f "$facts_file" "$hints_file"
+  if ! hookrail_git_facts "$cwd" >"$facts_file"; then
+    rm -f "$facts_file" "$hints_file" "$validation_file"
     return 1
   fi
-  if ! hookrail_repo_hints "$(jq -r '.cwd // "."' "$input_file")" "$facts_file" >"$hints_file"; then
-    rm -f "$facts_file" "$hints_file"
+  if ! hookrail_repo_hints "$cwd" "$facts_file" >"$hints_file"; then
+    rm -f "$facts_file" "$hints_file" "$validation_file"
     return 1
   fi
+  hookrail_validation_statuses "$facts_file" >"$validation_file"
 
-  jq -c --slurpfile gitFacts "$facts_file" --slurpfile repoHints "$hints_file" '
+  commit_before_summary="$(hookrail_commit_before_summary_enabled)"
+  user_opted_out="$(hookrail_user_opted_out_of_commit "$input_file")"
+  evidence_exists="$(hookrail_closeout_evidence_exists "$input_file" "$facts_file")"
+  trace_head_changed="$(hookrail_prior_trace_head_changed "$input_file" "$facts_file")"
+
+  jq -c \
+    --arg commitBeforeSummary "$commit_before_summary" \
+    --arg userOptedOut "$user_opted_out" \
+    --arg evidenceExists "$evidence_exists" \
+    --arg traceHeadChanged "$trace_head_changed" \
+    --slurpfile gitFacts "$facts_file" \
+    --slurpfile repoHints "$hints_file" \
+    --slurpfile validation "$validation_file" '
     .hookrail = (.hookrail // {})
     | .hookrail.gitFacts = $gitFacts[0]
     | .hookrail.repoHints = $repoHints[0]
+    | .hookrail.validation = $validation[0]
+    | .hookrail.git = {
+        isRepo: ($gitFacts[0].isRepo // false),
+        dirty: (if ($gitFacts[0].isRepo // false) then (if (($gitFacts[0] | has("clean")) and ($gitFacts[0].clean == false)) then true else false end) else false end),
+        head: ($gitFacts[0].head // null)
+      }
+    | .hookrail.closeout = {
+        evidenceExists: ($evidenceExists == "true"),
+        priorTraceHeadChanged: ($traceHeadChanged == "true")
+      }
+    | .hookrail.env = ((.hookrail.env // {}) + {
+        commitBeforeSummary: ($commitBeforeSummary == "true"),
+        userOptedOut: ($userOptedOut == "true")
+      })
   ' "$input_file" >"$output_file"
-  rm -f "$facts_file" "$hints_file"
+  rm -f "$facts_file" "$hints_file" "$validation_file"
 }
 
 hookrail_git_facts() {
@@ -203,6 +237,120 @@ hookrail_repo_hints() {
       }
     '
   rm -f "$packages_file"
+}
+
+hookrail_validation_statuses() {
+  local facts_file
+
+  facts_file="${1:?git facts JSON path required}"
+  jq -n --slurpfile gitFacts "$facts_file" '
+    ($gitFacts[0]) as $git
+    | {
+        statuses: [
+          {
+            name: "gitFacts",
+            status: (if ($git.isRepo // false) and ($git.unsafeRoot // false) then "red" else "green" end),
+            detail: (if ($git.isRepo // false) then "captured" else "cwd is not a git repository" end)
+          },
+          {
+            name: "dirtyState",
+            status: (if ($git.isRepo // false) then (if (($git | has("clean")) and ($git.clean == false)) then "red" else "green" end) else "unknown" end),
+            detail: (if ($git.isRepo // false) then "from git status --porcelain=v1" else "not applicable" end)
+          }
+        ]
+      }
+  '
+}
+
+hookrail_commit_before_summary_enabled() {
+  local raw_env policy_path
+
+  raw_env="${HOOKRAIL_COMMIT_BEFORE_SUMMARY:-}"
+  if [[ -n "$raw_env" ]]; then
+    case "${raw_env,,}" in
+      0|false|no|off) printf 'false\n' ;;
+      *) printf 'true\n' ;;
+    esac
+    return 0
+  fi
+
+  policy_path="$(hookrail_state_dir)/policy.json"
+  if [[ -f "$policy_path" ]]; then
+    jq -r 'if (has("commitBeforeSummary") and (.commitBeforeSummary == false)) then "false" else "true" end' "$policy_path" 2>/dev/null || {
+      printf 'true\n'
+    }
+    return 0
+  fi
+
+  printf 'true\n'
+}
+
+hookrail_user_opted_out_of_commit() {
+  local input_file
+
+  input_file="${1:?input JSON path required}"
+  jq -r 'if (.commit_before_summary == false or .commitBeforeSummary == false) then "true" else "false" end' "$input_file"
+}
+
+hookrail_turn_dir_from_input() {
+  local input_file state_dir session_id turn_id safe_session safe_turn
+
+  input_file="${1:?input JSON path required}"
+  state_dir="$(hookrail_state_dir)"
+  session_id="$(jq -r '.session_id // "unknown-session"' "$input_file")"
+  turn_id="$(jq -r '.turn_id // "session"' "$input_file")"
+  safe_session="$(hookrail_safe_component "$session_id")"
+  safe_turn="$(hookrail_safe_component "$turn_id")"
+  printf '%s/runs/%s/%s\n' "$state_dir" "$safe_session" "$safe_turn"
+}
+
+hookrail_closeout_evidence_exists() {
+  local input_file facts_file turn_dir head
+
+  input_file="${1:?input JSON path required}"
+  facts_file="${2:?git facts JSON path required}"
+  turn_dir="$(hookrail_turn_dir_from_input "$input_file")"
+  [[ -f "$turn_dir/git-closeout.json" ]] && {
+    printf 'true\n'
+    return 0
+  }
+
+  head="$(jq -r '.head // empty' "$facts_file")"
+  if [[ -n "$head" ]] && [[ "$(hookrail_prior_trace_head_changed "$input_file" "$facts_file")" == "true" ]]; then
+    printf 'true\n'
+    return 0
+  fi
+
+  printf 'false\n'
+}
+
+hookrail_prior_trace_head_changed() {
+  local input_file facts_file state_dir session_id safe_session trace_file cwd turn_id head
+
+  input_file="${1:?input JSON path required}"
+  facts_file="${2:?git facts JSON path required}"
+  head="$(jq -r '.head // empty' "$facts_file")"
+  [[ -n "$head" ]] || {
+    printf 'false\n'
+    return 0
+  }
+
+  state_dir="$(hookrail_state_dir)"
+  session_id="$(jq -r '.session_id // "unknown-session"' "$input_file")"
+  safe_session="$(hookrail_safe_component "$session_id")"
+  trace_file="$state_dir/trace/$safe_session.jsonl"
+  [[ -f "$trace_file" ]] || {
+    printf 'false\n'
+    return 0
+  }
+
+  cwd="$(jq -r '.cwd // ""' "$input_file")"
+  turn_id="$(jq -r '.turn_id // "session"' "$input_file")"
+  jq -e --arg cwd "$cwd" --arg turnID "$turn_id" --arg head "$head" '
+    select((.cwd // "") == $cwd)
+    | select((.turnID // "session") == $turnID or (.turnID // "session") == "session")
+    | select((.git.head // null) != null and (.git.head // null) != $head)
+  ' "$trace_file" >/dev/null 2>&1 && printf 'true\n' || printf 'false\n'
 }
 
 hookrail_nearest_file() {

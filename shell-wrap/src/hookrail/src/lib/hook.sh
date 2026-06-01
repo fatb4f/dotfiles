@@ -67,6 +67,7 @@ hookrail_run_hook() {
     return 0
   }
 
+  hookrail_try_persist_runtime_artifacts "$normalized_json" "$output_json"
   hookrail_try_append_trace "$normalized_json" "$output_json" "$manifest_path"
   cat "$output_json"
 }
