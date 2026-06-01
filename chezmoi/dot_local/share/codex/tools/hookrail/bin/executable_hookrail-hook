@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Legacy rollback adapter.
 
-Active Hookrail wrappers use the Bashly-generated adapter at
-shell-wrap/src/hookrail/hookrail, with CUE semantics in cue.mods/hookrail.
+Active Hookrail wrappers use the Bashly-generated adapter deployed at
+$CODEX_HOME/tools/hookrail/bin/hookrail, with CUE semantics in cue.mods/hookrail.
 Keep this file only as a temporary rollback artifact.
 """
 from __future__ import annotations

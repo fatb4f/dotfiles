@@ -40,17 +40,45 @@ done
 src_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 : "${CODEX_HOME:=${HOME:?HOME is required}/.codex}"
 install_root="$CODEX_HOME/tools/hookrail"
+cue_root="$CODEX_HOME/cue.mods/hookrail"
 config_path="$CODEX_HOME/config.toml"
+
+repo_root="$src_root"
+while [[ "$repo_root" != / && ! -x "$repo_root/shell-wrap/src/hookrail/hookrail" ]]; do
+  repo_root="$(dirname -- "$repo_root")"
+done
+if [[ ! -x "$repo_root/shell-wrap/src/hookrail/hookrail" ]]; then
+  printf 'install-to-codex-home: unable to locate generated hookrail CLI\n' >&2
+  exit 1
+fi
 
 mkdir -p "$CODEX_HOME/tools"
 rm -rf "$install_root.tmp"
 mkdir -p "$install_root.tmp"
+mkdir -p "$CODEX_HOME/cue.mods"
+rm -rf "$cue_root.tmp"
+mkdir -p "$cue_root.tmp"
 
 # Copy contents without depending on rsync.
 ( cd "$src_root" && tar cf - . ) | ( cd "$install_root.tmp" && tar xf - )
+
+for dir in bin hooks scripts; do
+  while IFS= read -r path; do
+    base="${path##*/}"
+    target="$install_root.tmp/$dir/${base#executable_}"
+    mv "$path" "$target"
+  done < <(find "$install_root.tmp/$dir" -maxdepth 1 -type f -name 'executable_*' | sort)
+done
+
 chmod +x "$install_root.tmp"/bin/* "$install_root.tmp"/hooks/* "$install_root.tmp"/scripts/*
+cp "$repo_root/shell-wrap/src/hookrail/hookrail" "$install_root.tmp/bin/hookrail"
+chmod +x "$install_root.tmp/bin/hookrail"
 rm -rf "$install_root"
 mv "$install_root.tmp" "$install_root"
+
+( cd "$repo_root/cue.mods/hookrail" && tar cf - . ) | ( cd "$cue_root.tmp" && tar xf - )
+rm -rf "$cue_root"
+mv "$cue_root.tmp" "$cue_root"
 
 printf 'installed hookrail: %s\n' "$install_root"
 
@@ -79,4 +107,4 @@ if [[ "$append_config" = yes ]]; then
   printf 'updated config: %s\n' "$config_path"
 fi
 
-printf 'verify with: %s\n' "$HOME/src/dotfiles/shell-wrap/src/hookrail/hookrail doctor"
+printf 'verify with: %s\n' "$CODEX_HOME/tools/hookrail/bin/hookrail doctor"

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Legacy behavior doctor.
 
-The primary doctor is now `shell-wrap/src/hookrail/hookrail doctor`.
+The primary doctor is now `$CODEX_HOME/tools/hookrail/bin/hookrail doctor`.
 Keep this file only as a temporary rollback artifact for the legacy Python
 adapter.
 """
@@ -15,17 +15,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-HOOK = next(
-    (
-        path
-        for path in (
-            ROOT / "bin" / "hookrail-hook",
-            ROOT / "bin" / "executable_hookrail-hook",
-        )
-        if path.exists()
-    ),
-    ROOT / "bin" / "hookrail-hook",
-)
+HOOK = ROOT / "bin" / "hookrail"
 FIXTURES = ROOT / "fixtures" / "hooks"
 
 required = [

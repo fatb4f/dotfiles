@@ -23,6 +23,18 @@ and appends the hook block to:
 $CODEX_HOME/config.toml
 ```
 
+The hook adapters execute the deployed Bashly CLI at:
+
+```text
+$CODEX_HOME/tools/hookrail/bin/hookrail
+```
+
+That deployed CLI resolves its CUE module from:
+
+```text
+$CODEX_HOME/cue.mods/hookrail
+```
+
 ## Project-local install
 
 Copy `config/hookrail.config.toml` into:

@@ -10,7 +10,7 @@
 | AgentFeed distinction | `cue.mods/hookrail/manifest.cue`, bounded `additionalContext` |
 | Atomic persistence | Bashly temp file + locked atomic `mv` |
 | Safe failure behavior | valid no-op JSON on context hooks when possible |
-| Doctor gates | `shell-wrap/src/hookrail/hookrail doctor` |
+| Doctor gates | `$CODEX_HOME/tools/hookrail/bin/hookrail doctor` |
 
 ## Legacy rollback retained
 
@@ -22,7 +22,7 @@ chezmoi/dot_local/share/codex/tools/hookrail/cue.mod/
 ```
 
 These files are not the active path. Active hook wrappers call the
-Bashly-generated adapter in `shell-wrap/src/hookrail/hookrail`.
+Bashly-generated adapter deployed at `$CODEX_HOME/tools/hookrail/bin/hookrail`.
 
 ## Explicitly excluded
 
