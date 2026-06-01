@@ -240,14 +240,18 @@ hookrail_run_doctor() {
   hookrail_doctor_projection_is "$cue_dir/fixtures/clean-stop.json" '.continue == true' "clean stop continues"
   hookrail_doctor_projection_is "$cue_dir/fixtures/dirty-stop-active.json" '.continue == true and (.systemMessage | contains("already active"))' "active stop continues"
   hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-clean.json" '.systemMessage | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "session start projects bounded frame"
-  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-feed-sentinel.json" '.systemMessage | contains("schema: hookrail.contextFrame.v1")' "session start projects sentinel frame"
+  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-feed-sentinel.json" '.systemMessage | contains("schema: hookrail.contextFrame.v1") and contains("feed-sentinel-alpha")' "session start projects sentinel frame"
 
   output_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-output.XXXXXX.json")"
   manifest="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-manifest.XXXXXX.json")"
   proof_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-proof.XXXXXX.json")"
+  trace_row="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-trace-row.XXXXXX.json")"
   hookrail_doctor_check "feed sentinel manifest emits" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.manifest" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-feed-sentinel.json" "$manifest"
   hookrail_doctor_check "feed sentinel manifest vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookManifest"' bash "$cue_dir" "$manifest"
   hookrail_doctor_check "feed sentinel agent feed emits" -- jq -e '.agentFeed.status == "emitted" and .agentFeed.channel == "stdout.systemMessage" and .agentFeed.payloadKind == "feed_sentinel" and .agentFeed.sentinel == "feed-sentinel-alpha"' "$manifest"
+  hookrail_doctor_check "feed sentinel trace row emits" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.traceRow" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-feed-sentinel.json" "$trace_row"
+  hookrail_doctor_check "feed sentinel trace row vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#TraceRow"' bash "$cue_dir" "$trace_row"
+  hookrail_doctor_check "feed sentinel trace row includes sentinel" -- jq -e '.feedSentinel == "feed-sentinel-alpha"' "$trace_row"
   hookrail_doctor_check "feed proof green" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.feedProof" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-feed-sentinel.json" "$proof_json"
   hookrail_doctor_check "feed proof vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookFeedProof"' bash "$cue_dir" "$proof_json"
   hookrail_doctor_check "feed proof result green" -- jq -e '.result == "green" and .channel == "stdout.systemMessage" and .sentinel == "feed-sentinel-alpha"' "$proof_json"
@@ -258,7 +262,7 @@ hookrail_run_doctor() {
   hookrail_doctor_check "no-feed proof red" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.feedProof" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-no-feed.json" "$proof_json"
   hookrail_doctor_check "no-feed proof vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookFeedProof"' bash "$cue_dir" "$proof_json"
   hookrail_doctor_check "no-feed proof result red" -- jq -e '.result == "red" and .emitted == false and .observedInTranscript == false' "$proof_json"
-  rm -f "$output_json" "$manifest" "$proof_json"
+  rm -f "$output_json" "$manifest" "$proof_json" "$trace_row"
 
   tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/hookrail-doctor-state.XXXXXX")"
   output_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-adapter-output.XXXXXX.json")"
@@ -463,7 +467,7 @@ hookrail_fallback_output() {
 
 hookrail_enrich_input() {
   local input_file output_file event_name facts_file hints_file validation_file
-  local cwd commit_before_summary user_opted_out evidence_exists trace_head_changed
+  local cwd commit_before_summary user_opted_out evidence_exists trace_head_changed feed_sentinel
 
   input_file="${1:?input JSON path required}"
   output_file="${2:?output JSON path required}"
@@ -497,12 +501,14 @@ hookrail_enrich_input() {
   user_opted_out="$(hookrail_user_opted_out_of_commit "$input_file")"
   evidence_exists="$(hookrail_closeout_evidence_exists "$input_file" "$facts_file")"
   trace_head_changed="$(hookrail_prior_trace_head_changed "$input_file" "$facts_file")"
+  feed_sentinel="${HOOKRAIL_FEED_SENTINEL:-}"
 
   jq -c \
     --arg commitBeforeSummary "$commit_before_summary" \
     --arg userOptedOut "$user_opted_out" \
     --arg evidenceExists "$evidence_exists" \
     --arg traceHeadChanged "$trace_head_changed" \
+    --arg feedSentinel "$feed_sentinel" \
     --slurpfile gitFacts "$facts_file" \
     --slurpfile repoHints "$hints_file" \
     --slurpfile validation "$validation_file" '
@@ -526,6 +532,7 @@ hookrail_enrich_input() {
         commitBeforeSummary: ($commitBeforeSummary == "true"),
         userOptedOut: ($userOptedOut == "true")
       })
+    | .hookrail.feedSentinel = (if $feedSentinel == "" then null else $feedSentinel end)
   ' "$input_file" >"$output_file"
   rm -f "$facts_file" "$hints_file" "$validation_file"
 }

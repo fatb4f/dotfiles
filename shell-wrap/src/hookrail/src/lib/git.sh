@@ -2,7 +2,7 @@
 
 hookrail_enrich_input() {
   local input_file output_file event_name facts_file hints_file validation_file
-  local cwd commit_before_summary user_opted_out evidence_exists trace_head_changed
+  local cwd commit_before_summary user_opted_out evidence_exists trace_head_changed feed_sentinel
 
   input_file="${1:?input JSON path required}"
   output_file="${2:?output JSON path required}"
@@ -36,12 +36,14 @@ hookrail_enrich_input() {
   user_opted_out="$(hookrail_user_opted_out_of_commit "$input_file")"
   evidence_exists="$(hookrail_closeout_evidence_exists "$input_file" "$facts_file")"
   trace_head_changed="$(hookrail_prior_trace_head_changed "$input_file" "$facts_file")"
+  feed_sentinel="${HOOKRAIL_FEED_SENTINEL:-}"
 
   jq -c \
     --arg commitBeforeSummary "$commit_before_summary" \
     --arg userOptedOut "$user_opted_out" \
     --arg evidenceExists "$evidence_exists" \
     --arg traceHeadChanged "$trace_head_changed" \
+    --arg feedSentinel "$feed_sentinel" \
     --slurpfile gitFacts "$facts_file" \
     --slurpfile repoHints "$hints_file" \
     --slurpfile validation "$validation_file" '
@@ -65,6 +67,7 @@ hookrail_enrich_input() {
         commitBeforeSummary: ($commitBeforeSummary == "true"),
         userOptedOut: ($userOptedOut == "true")
       })
+    | .hookrail.feedSentinel = (if $feedSentinel == "" then null else $feedSentinel end)
   ' "$input_file" >"$output_file"
   rm -f "$facts_file" "$hints_file" "$validation_file"
 }
