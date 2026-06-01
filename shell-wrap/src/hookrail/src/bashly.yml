@@ -1,0 +1,16 @@
+name: hookrail
+help: CUE-first Codex hook adapter
+version: 0.1.0
+
+commands:
+  - name: hook
+    help: Read a Codex hook JSON object from stdin and emit native hook JSON
+    filename: commands/hook.sh
+    examples:
+      - hookrail hook < fixture.json
+
+  - name: doctor
+    help: Run Hookrail slice-1 validation checks
+    filename: commands/doctor.sh
+    examples:
+      - hookrail doctor
