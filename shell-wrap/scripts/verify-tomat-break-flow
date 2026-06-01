@@ -1,0 +1,178 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+libexec_dir="${SESSION_VERIFY_LIBEXEC_DIR:-/usr/local/libexec}"
+hypridle_conf="${SESSION_VERIFY_HYPRIDLE_CONF:-${HOME:-}/.config/hypr/hypridle.conf}"
+tomat_config="${SESSION_VERIFY_TOMAT_CONFIG:-${HOME:-}/.config/tomat/config.toml}"
+tomat_bin="${SESSION_VERIFY_TOMAT_BIN:-tomat}"
+pgrep_bin="${SESSION_VERIFY_PGREP_BIN:-pgrep}"
+python_bin="${SESSION_VERIFY_PYTHON_BIN:-python3}"
+run_live_lock_test=no
+failed=0
+
+usage() {
+  cat <<'EOF'
+verify-tomat-break-flow - verify installed Tomat break lockout wiring
+
+Usage:
+  verify-tomat-break-flow [--live-lock-test]
+
+Options:
+  --live-lock-test   Run the real tomat-break-begin hook with a 3 second deadline.
+                     This can lock the session. The default verifier never does this.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --live-lock-test)
+      run_live_lock_test=yes
+      shift
+      ;;
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    *)
+      printf 'verify-tomat-break-flow: unknown option: %s\n' "$1" >&2
+      exit 64
+      ;;
+  esac
+done
+
+pass() {
+  printf 'PASS %s\n' "$*"
+}
+
+fail() {
+  printf 'FAIL %s\n' "$*"
+  failed=1
+}
+
+skip() {
+  printf 'SKIP %s\n' "$*"
+}
+
+check_executable() {
+  local label path
+
+  label="$1"
+  path="$2"
+
+  if [[ -x "$path" ]]; then
+    pass "$label executable path=$path"
+  elif [[ -e "$path" ]]; then
+    fail "$label not-executable path=$path"
+  else
+    fail "$label missing path=$path"
+  fi
+}
+
+check_static_install() {
+  check_executable "tomat-break-begin" "$libexec_dir/tomat-break-begin"
+  check_executable "tomat-break-end" "$libexec_dir/tomat-break-end"
+  check_executable "session-post-unlock" "$libexec_dir/session-post-unlock"
+}
+
+check_hypridle_config() {
+  if [[ ! -r "$hypridle_conf" ]]; then
+    fail "hypridle-config missing-or-unreadable path=$hypridle_conf"
+    return
+  fi
+
+  if grep -Fx "    on_unlock_cmd = /usr/local/libexec/session-post-unlock" "$hypridle_conf" >/dev/null; then
+    pass "hypridle on-unlock hook"
+  else
+    fail "hypridle on-unlock hook missing path=$hypridle_conf"
+  fi
+}
+
+check_tomat_config() {
+  if [[ ! -r "$tomat_config" ]]; then
+    fail "tomat-config missing-or-unreadable path=$tomat_config"
+    return
+  fi
+
+  if "$python_bin" - "$tomat_config" <<'PY'
+import sys
+import tomllib
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = tomllib.loads(path.read_text())
+expected = {
+    ("timer", "auto_advance"): "to-break",
+    ("hooks", "on_break_start", "cmd"): "/usr/local/libexec/tomat-break-begin",
+    ("hooks", "on_long_break_start", "cmd"): "/usr/local/libexec/tomat-break-begin",
+    ("hooks", "on_break_end", "cmd"): "/usr/local/libexec/tomat-break-end",
+    ("hooks", "on_long_break_end", "cmd"): "/usr/local/libexec/tomat-break-end",
+}
+
+for keys, value in expected.items():
+    node = data
+    for key in keys:
+        node = node[key]
+    if node != value:
+        raise SystemExit(f"{'.'.join(keys)}={node!r}, expected {value!r}")
+PY
+  then
+    pass "tomat config hooks"
+  else
+    fail "tomat config hooks path=$tomat_config"
+  fi
+}
+
+check_live_dependencies() {
+  if [[ -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    pass "xdg-runtime-dir set path=$XDG_RUNTIME_DIR"
+  else
+    fail "xdg-runtime-dir missing"
+  fi
+
+  if "$pgrep_bin" -x hypridle >/dev/null 2>&1; then
+    pass "hypridle process running"
+  else
+    fail "hypridle process not-running"
+  fi
+
+  if "$tomat_bin" status >/dev/null 2>&1; then
+    pass "tomat status"
+  else
+    fail "tomat status"
+  fi
+}
+
+check_hook_smoke() {
+  if [[ "$run_live_lock_test" != yes ]]; then
+    skip "live-lock-test disabled"
+    return
+  fi
+
+  TOMAT_REMAINING_SECONDS=3 "$libexec_dir/tomat-break-begin"
+  pass "live-lock-test tomat-break-begin"
+}
+
+print_manual_checklist() {
+  cat <<'EOF'
+INFO manual-checklist start
+INFO start Tomat with short work and break durations
+INFO observe work-to-break transition
+INFO verify the session locks at break start
+INFO try unlocking before the deadline; expected denial
+INFO unlock after the deadline; expected success
+INFO verify /usr/local/libexec/session-post-unlock fired
+INFO verify pending resume marker was consumed
+INFO verify tomat resumed paused Work
+INFO repeat unlock; expected no second tomat resume
+INFO manual-checklist end
+EOF
+}
+
+check_static_install
+check_hypridle_config
+check_tomat_config
+check_live_dependencies
+check_hook_smoke
+print_manual_checklist
+
+exit "$failed"
