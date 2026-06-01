@@ -24,3 +24,7 @@ hookrail_project_persist() {
 hookrail_project_file_stem() {
   hookrail_cue_export "$1" '#HookProjection.capture.fileStem'
 }
+
+hookrail_project_trace_row() {
+  hookrail_cue_export "$1" '#HookProjection.traceRow'
+}

@@ -54,24 +54,33 @@ package hookrail
 	_closeoutRequired: _commitBeforeSummary && !_userOptedOut && hookInput.hook_event_name == "Stop" && _gitIsRepo && _gitDirty && !_closeoutEvidenceExists && !_priorTraceHeadChanged && !_stopActive
 	_stopRecursionGuard: hookInput.hook_event_name == "Stop" && _stopActive
 
-	_sessionStartFrame: *null | #SessionStartFrame | null
-	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.frameText == null && hookInput.hookrail.gitFacts != _|_ {
-		_sessionStartFrame: #SessionStartFrame & {
-			source: hookInput.source
-			cwd:    hookInput.cwd
-			git:    hookInput.hookrail.gitFacts
-			hints:  hookInput.hookrail.repoHints | *{
-				agentsPath:      null
-				codexConfigPath: null
-				packageFiles:    []
-			}
-			if hookInput.hookrail.gitFacts.isRepo {
-				text: "hookrail session frame\nrepo: \(hookInput.hookrail.gitFacts.name) \(hookInput.hookrail.gitFacts.branch) @ \(hookInput.hookrail.gitFacts.head)\nroot: \(hookInput.hookrail.gitFacts.root)\nstate: clean=\(hookInput.hookrail.gitFacts.clean) staged=\(hookInput.hookrail.gitFacts.counts.staged) unstaged=\(hookInput.hookrail.gitFacts.counts.unstaged) untracked=\(hookInput.hookrail.gitFacts.counts.untracked) truncated=\(hookInput.hookrail.gitFacts.truncated)\noperation: \(hookInput.hookrail.gitFacts.operation.state)\nlast commit: \(hookInput.hookrail.gitFacts.lastCommit.subject)"
-			}
-			if !hookInput.hookrail.gitFacts.isRepo {
-				text: "hookrail session frame\ncwd: \(hookInput.cwd)\nrepo: none"
-			}
-		}
+	_sessionStartStatusSummary: *"clean working tree" | string
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo && hookInput.hookrail.git.statusSummary != null {
+		_sessionStartStatusSummary: hookInput.hookrail.git.statusSummary
+	}
+
+	_sessionStartTranscriptPath: *"none" | string
+	if hookInput.transcript_path != null {
+		_sessionStartTranscriptPath: hookInput.transcript_path
+	}
+
+	_sessionStartRepoBranchText: *"none" | string
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.branch != null {
+		_sessionStartRepoBranchText: hookInput.hookrail.git.branch
+	}
+
+	_sessionStartRepoHeadText: *"none" | string
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.head != null {
+		_sessionStartRepoHeadText: hookInput.hookrail.git.head
+	}
+
+	_sessionStartFrameGenerated: *false | bool
+	_sessionStartFrameSchema: *null | string | null
+	_sessionStartFrameText: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo && hookInput.hookrail.frameText == null {
+		_sessionStartFrameGenerated: true
+		_sessionStartFrameSchema: "hookrail.contextFrame.v1"
+		_sessionStartFrameText: "schema: hookrail.contextFrame.v1\nsource: SessionStart\nrepo:\n  root: \(hookInput.hookrail.git.root)\n  branch: \(_sessionStartRepoBranchText)\n  head: \(_sessionStartRepoHeadText)\n  dirty: \(hookInput.hookrail.git.dirty)\n  statusSummary: \(_sessionStartStatusSummary)\nsession:\n  id: \(hookInput.session_id)\n  cwd: \(hookInput.cwd)\n  model: \(hookInput.model)\n  transcriptPath: \(_sessionStartTranscriptPath)\ninstructions: Use only the bounded repo facts below. Treat traces, manifests, and repo state files as runtime evidence only, not injected memory."
 	}
 
 	_agentText: *null | string
@@ -84,14 +93,69 @@ package hookrail
 	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.frameText != null {
 		_agentText: hookInput.hookrail.frameText
 	}
-	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrame != null {
-		_agentText: _sessionStartFrame.text
+	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null {
+		_agentText: _sessionStartFrameText
 	}
 	if hookInput.hook_event_name == "UserPromptSubmit" && _payloadClass != "small" {
 		_agentText: "hookrail: prompt payload is \(_payloadClass) (\(_payloadChars) chars). Prefer compact handoff/frame before continuing long sessions."
 	}
 	if hookInput.hook_event_name == "PostToolUse" && _payloadClass != "small" {
 		_agentText: "hookrail: large tool response captured out-of-band candidate (\(_payloadChars) chars). Injecting bounded summary only."
+	}
+
+	_sessionStartFrameSchema: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null {
+		_sessionStartFrameSchema: "hookrail.contextFrame.v1"
+	}
+
+	_sessionStartFrameChars: *0 | int
+	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null && _agentText != null {
+		_sessionStartFrameChars: len(_agentText)
+	}
+
+	_sessionStartGitRoot: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo {
+		_sessionStartGitRoot: hookInput.hookrail.git.root
+	}
+
+	_sessionStartGitBranch: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo {
+		_sessionStartGitBranch: hookInput.hookrail.git.branch
+	}
+
+	_sessionStartGitHead: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo {
+		_sessionStartGitHead: hookInput.hookrail.git.head
+	}
+
+	_sessionStartGitStatusSummary: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo {
+		_sessionStartGitStatusSummary: _sessionStartStatusSummary
+	}
+
+	_sessionStartGitDirty: *false | bool
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.git.isRepo {
+		_sessionStartGitDirty: hookInput.hookrail.git.dirty
+	}
+
+	_traceRow: #TraceRow & {
+		timestamp:       hookInput.hookrail.trace.timestamp
+		hookEventName:   hookInput.hook_event_name
+		sessionID:       hookInput.session_id
+		turnID:          _turnID
+		cwd:             hookInput.cwd
+		model:           hookInput.model
+		transcriptPath:  hookInput.transcript_path
+		frameGenerated:  _sessionStartFrameGenerated
+		frameSchema:     _sessionStartFrameSchema
+		frameChars:      _sessionStartFrameChars
+		gitIsRepo:       hookInput.hookrail.git.isRepo
+		gitRoot:         _sessionStartGitRoot
+		gitBranch:       _sessionStartGitBranch
+		gitHead:         _sessionStartGitHead
+		gitDirty:        _sessionStartGitDirty
+		gitStatusSummary: _sessionStartGitStatusSummary
+		manifestPath:    hookInput.hookrail.trace.manifestPath
 	}
 
 	output: _output
@@ -213,6 +277,8 @@ package hookrail
 		}
 		output: _output
 	}
+
+	traceRow: _traceRow
 
 	_turnID: *"session" | string
 	if hookInput.turn_id != _|_ {

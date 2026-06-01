@@ -8,6 +8,14 @@
     "source": "startup",
     "transcript_path": null,
     "hookrail": {
+      "git": {
+        "isRepo": true,
+        "dirty": false,
+        "head": "abc1234",
+        "root": "/tmp/repo",
+        "branch": "main",
+        "statusSummary": "clean working tree"
+      },
       "gitFacts": {
         "isRepo": true,
         "cwd": "/tmp/repo",
@@ -18,6 +26,7 @@
         "upstream": "origin/main",
         "unsafeRoot": false,
         "clean": true,
+        "statusSummary": "clean working tree",
         "counts": {
           "staged": 0,
           "unstaged": 0,

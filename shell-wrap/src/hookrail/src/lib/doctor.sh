@@ -2,7 +2,7 @@
 
 hookrail_run_doctor() {
   local cue_dir hookrail_bin fixture tmp_root output_json manifest persisted_count
-  local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file context_artifact closeout_packet
+  local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file trace_row context_artifact closeout_packet clean_head clean_head_short
 
   cue_dir="$(hookrail_cue_dir)"
   hookrail_bin="${HOOKRAIL_BIN:-$(hookrail_script_dir)/hookrail}"
@@ -38,7 +38,7 @@ hookrail_run_doctor() {
   hookrail_doctor_projection_is "$cue_dir/fixtures/dirty-stop.json" '.decision == "block"' "dirty stop blocks"
   hookrail_doctor_projection_is "$cue_dir/fixtures/clean-stop.json" '.continue == true' "clean stop continues"
   hookrail_doctor_projection_is "$cue_dir/fixtures/dirty-stop-active.json" '.continue == true and (.systemMessage | contains("already active"))' "active stop continues"
-  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-clean.json" '.hookSpecificOutput.additionalContext | contains("hookrail session frame")' "session start projects frame"
+  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-clean.json" '.hookSpecificOutput.additionalContext | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "session start projects bounded frame"
 
   tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/hookrail-doctor-state.XXXXXX")"
   output_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-adapter-output.XXXXXX.json")"
@@ -79,6 +79,8 @@ hookrail_run_doctor() {
   hookrail_doctor_init_git_fixture "$staged_repo"
   hookrail_doctor_init_git_fixture "$untracked_repo"
   mkdir -p "$non_git_repo"
+  clean_head="$(git -C "$clean_repo" rev-parse HEAD)"
+  clean_head_short="$(git -C "$clean_repo" rev-parse --short HEAD)"
 
   printf 'dirty\n' >"$dirty_repo/tracked.txt"
   printf 'staged\n' >"$staged_repo/staged.txt"
@@ -100,14 +102,17 @@ hookrail_run_doctor() {
 
   jq --arg cwd "$clean_repo" '.hookInput.cwd = $cwd | .hookInput' "$cue_dir/fixtures/session-start-clean.json" |
     HOOKRAIL_STATE="$tmp_root" "$hookrail_bin" hook >"$output_json"
-  hookrail_doctor_check "session start injects volatile frame" -- jq -e '.hookSpecificOutput.additionalContext | contains("hookrail session frame")' "$output_json"
+  hookrail_doctor_check "session start injects bounded frame" -- jq -e '.hookSpecificOutput.additionalContext | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "$output_json"
   persisted_count="$(find "$tmp_root/runs" -type f -name '*session-start*.json' 2>/dev/null | wc -l | tr -d ' ')"
   [[ "$persisted_count" == "0" ]] || {
     printf 'FAIL session frame persisted manifest count: got %s expected 0\n' "$persisted_count" >&2
     return 1
   }
   trace_file="$(find "$tmp_root/trace" -type f -name '*.jsonl' | sort | sed -n '1p')"
-  hookrail_doctor_check "trace records frame proof" -- bash -c 'jq -e "select(.hookEventName == \"SessionStart\" and .frame.generated == true and .persisted == false)" "$1"' bash "$trace_file"
+  trace_row="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-trace-row.XXXXXX.json")"
+  jq -e 'select(.hookEventName == "SessionStart" and .frameGenerated == true)' "$trace_file" >"$trace_row"
+  hookrail_doctor_check "trace row vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#TraceRow"' bash "$cue_dir" "$trace_row"
+  hookrail_doctor_check "trace records frame proof" -- bash -c 'jq -e --arg head "$2" "select(.hookEventName == \"SessionStart\" and .frameGenerated == true and .frameSchema == \"hookrail.contextFrame.v1\" and .gitDirty == false and .gitHead == \$head and .manifestPath == null and .frameChars > 0)" "$1"' bash "$trace_row" "$clean_head_short"
   context_artifact="$(find "$tmp_root/runs" -type f -name 'context-frame-input.json' | sort | sed -n '1p')"
   hookrail_doctor_check "context frame input artifact exists" -- test -n "$context_artifact"
   hookrail_doctor_check "context frame input artifact vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#ContextFrameInput"' bash "$cue_dir" "$context_artifact"

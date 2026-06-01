@@ -33,19 +33,26 @@ package hookrail
 		userOptedOut:        *false | bool
 	}
 	git: {
-		isRepo: *false | bool
-		dirty:  *false | bool
-		head:   *null | string | null
+		isRepo:        *false | bool
+		dirty:         *false | bool
+		head:          *null | string | null
+		root:          *null | string | null
+		branch:        *null | string | null
+		statusSummary:  *null | string | null
 	}
 	closeout: {
 		evidenceExists:        *false | bool
 		priorTraceHeadChanged: *false | bool
 	}
-	validation?: #ValidationSurface
-	gitFacts?: #GitFacts
-	repoHints?: #RepoHints
-	...
-}
+	trace: {
+		timestamp:    *"" | string
+		manifestPath: *null | string | null
+	}
+		validation?: #ValidationSurface
+		gitFacts?: #GitFacts
+		repoHints?: #RepoHints
+		...
+	}
 
 #GitFacts: {
 	isRepo: bool
@@ -55,6 +62,7 @@ package hookrail
 		name:       string
 		branch:     string | null
 		head:       string | null
+		statusSummary: string
 		upstream:   string | null
 		unsafeRoot: bool
 		clean:      bool

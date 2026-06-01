@@ -52,7 +52,10 @@ hookrail_enrich_input() {
     | .hookrail.git = {
         isRepo: ($gitFacts[0].isRepo // false),
         dirty: (if ($gitFacts[0].isRepo // false) then (if (($gitFacts[0] | has("clean")) and ($gitFacts[0].clean == false)) then true else false end) else false end),
-        head: ($gitFacts[0].head // null)
+        head: ($gitFacts[0].head // null),
+        root: ($gitFacts[0].root // null),
+        branch: ($gitFacts[0].branch // null),
+        statusSummary: ($gitFacts[0].statusSummary // null)
       }
     | .hookrail.closeout = {
         evidenceExists: ($evidenceExists == "true"),
@@ -154,6 +157,8 @@ hookrail_git_facts_builtin() {
       rows as $rows
       | ($rows | map(select(.code != "??"))) as $changed
       | ($rows | map(select(.code == "??"))) as $untracked
+      | ($rows | map(select(.code != "??" and .index != " "))) as $stagedRows
+      | ($rows | map(select(.code != "??" and .worktree != " "))) as $unstagedRows
       | {
           isRepo: true,
           cwd: $cwd,
@@ -165,8 +170,8 @@ hookrail_git_facts_builtin() {
           unsafeRoot: false,
           clean: (($changed | length) == 0 and ($untracked | length) == 0),
           counts: {
-            staged: ($rows | map(select(.code != "??" and .index != " ")) | length),
-            unstaged: ($rows | map(select(.code != "??" and .worktree != " ")) | length),
+            staged: ($stagedRows | length),
+            unstaged: ($unstagedRows | length),
             untracked: ($untracked | length)
           },
           changedSample: (
@@ -183,7 +188,14 @@ hookrail_git_facts_builtin() {
             subject: (if $lastSubject == "" then null else $lastSubject end),
             date: (if $lastDate == "" then null else $lastDate end),
             author: (if $lastAuthor == "" then null else $lastAuthor end)
-          }
+          },
+          statusSummary: (
+            if (($changed | length) + ($untracked | length)) == 0 then
+              "clean working tree"
+            else
+              "\($stagedRows | length) staged, \($unstagedRows | length) unstaged, \($untracked | length) untracked"
+            end
+          )
         }
     '
   rm -f "$status_file" "$op_file"
