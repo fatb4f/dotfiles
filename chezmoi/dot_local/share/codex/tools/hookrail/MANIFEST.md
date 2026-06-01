@@ -4,13 +4,25 @@
 
 | Fragment | Retained shape |
 |---|---|
-| CUE hook-schema authority | `cue/hooks.cue`, `cue/output.cue` |
-| Hook manifest pattern | `cue/manifest.cue`, Python manifest writer |
-| Capture policy | `cue/capture_policy.cue`, thresholds in `bin/hookrail-hook` |
-| AgentFeed distinction | `cue/agent_feed.cue`, bounded `additionalContext` |
-| Atomic persistence | temp file + `os.replace()` |
+| CUE hook-schema authority | `cue.mods/hookrail/hooks.cue`, `cue.mods/hookrail/output.cue` |
+| Hook manifest pattern | `cue.mods/hookrail/manifest.cue`, Bashly persistence writer |
+| Capture policy | `cue.mods/hookrail/projection.cue` |
+| AgentFeed distinction | `cue.mods/hookrail/manifest.cue`, bounded `additionalContext` |
+| Atomic persistence | Bashly temp file + locked atomic `mv` |
 | Safe failure behavior | valid no-op JSON on context hooks when possible |
-| Doctor gates | `bin/hookrail-doctor` |
+| Doctor gates | `shell-wrap/src/hookrail/hookrail doctor` |
+
+## Legacy rollback retained
+
+```text
+chezmoi/dot_local/share/codex/tools/hookrail/bin/executable_hookrail-hook
+chezmoi/dot_local/share/codex/tools/hookrail/bin/executable_hookrail-doctor
+chezmoi/dot_local/share/codex/tools/hookrail/cue/
+chezmoi/dot_local/share/codex/tools/hookrail/cue.mod/
+```
+
+These files are not the active path. Active hook wrappers call the
+Bashly-generated adapter in `shell-wrap/src/hookrail/hookrail`.
 
 ## Explicitly excluded
 

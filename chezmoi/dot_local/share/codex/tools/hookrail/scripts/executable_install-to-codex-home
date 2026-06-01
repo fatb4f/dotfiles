@@ -79,4 +79,4 @@ if [[ "$append_config" = yes ]]; then
   printf 'updated config: %s\n' "$config_path"
 fi
 
-printf 'verify with: %s/bin/hookrail-doctor\n' "$install_root"
+printf 'verify with: %s\n' "$HOME/src/dotfiles/shell-wrap/src/hookrail/hookrail doctor"
