@@ -3,15 +3,13 @@ name: git-workflow
 description: "Use for Git status/diff/commit/branch/PR/release tasks, merge gates, hook setup, and git-worktree debugging."
 when_to_use: Use for Git status/diff/commit/branch/PR/release tasks, merge gates, hook setup, and write-protected .git/index/refs failures. Do not use for non-Git filesystem edits unless they are part of a Git workflow.
 license: "(MIT AND CC-BY-SA-4.0). See LICENSE-MIT and LICENSE-CC-BY-SA-4.0"
-compatibility: "Requires git, gh CLI."
+compatibility: "Requires git-mcp-server and gh CLI."
 metadata:
   author: Netresearch DTT GmbH
   version: "1.14.0"
   repository: https://github.com/netresearch/git-workflow-skill
 allowed-tools:
-  - Bash(git:*)
   - Bash(gh:*)
-  - MCP(git:*)
   - MCP(git-mcp-server:*)
   - Read
   - Write
@@ -20,10 +18,11 @@ allowed-tools:
 # Git Workflow Skill
 
 Use this skill for Git work that needs repo-aware status, staging, commits, PRs, merges, releases, or hook handling.
+All Git read/write operations in this skill must go through `git-mcp-server`.
 
 ## Rules
 
-1. Prefer Git MCP write tools when available; use shell Git writes only when MCP is unavailable or the user explicitly asks.
+1. Use `git-mcp-server` tools for all Git reads and writes. Do not fall back to shell `git`.
 2. Stage only intentional paths.
 3. Do not claim verification without pasted command output.
 4. Force-push only with `--force-with-lease`.
@@ -50,7 +49,7 @@ Load the matching reference only when the task needs it:
 
 ## Local Git Write Workflow
 
-1. Discover the current Git MCP surface with `tool_search` if needed. Prefer `git-mcp-server` tools when both `git` and `git-mcp-server` namespaces are present.
+1. Use `git-mcp-server` tools for Git discovery, status, diffs, staging, commits, and history. Use `tool_search` only if you need to confirm the available tool names.
 2. Use read-only commands or MCP status/diff tools to inspect the repository:
    `git_status`, `git_diff_unstaged`, `git_diff_staged`, `git_log`, `git_show`.
 3. Stage only intentional paths with MCP `git_add`; never stage generated or unrelated files by accident.
