@@ -1,0 +1,9 @@
+# Allow break producers to update the root-owned lockout deadline.
+#
+# The wildcard is constrained by `session lockout set` validation:
+# the argument must be a future epoch and within SESSION_LOCKOUT_MAX_SECONDS.
+
+Cmnd_Alias SESSION_LOCKOUT_SET = /usr/local/bin/session lockout set *
+Cmnd_Alias SESSION_LOCKOUT_CLEAR = /usr/local/bin/session lockout clear
+
+%wheel ALL=(root) NOPASSWD: SESSION_LOCKOUT_SET, SESSION_LOCKOUT_CLEAR

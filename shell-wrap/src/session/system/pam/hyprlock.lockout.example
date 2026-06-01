@@ -1,0 +1,7 @@
+# PAM fragment for hyprlock break lockout enforcement.
+#
+# Install this line before the normal password auth stack in /etc/pam.d/hyprlock.
+# PAM must call the root-owned installation, not a user-home projection.
+
+auth requisite pam_exec.so quiet /usr/local/bin/session lockout check
+auth include system-auth
