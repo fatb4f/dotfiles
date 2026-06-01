@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+session_bin="${SESSION_LOCKOUT_INSTALL_BIN:-/usr/local/bin/session}"
+run_dir="${SESSION_LOCKOUT_RUN_DIR:-/run/session-lockout}"
+sudoers_file="${SESSION_LOCKOUT_SUDOERS_FILE:-/etc/sudoers.d/session-lockout}"
+pam_file="${SESSION_LOCKOUT_PAM_FILE:-/etc/pam.d/hyprlock}"
+visudo_bin="${VISUDO_BIN:-visudo}"
+
+failed=0
+
+pass() {
+  printf 'PASS %s\n' "$*"
+}
+
+fail() {
+  printf 'FAIL %s\n' "$*"
+  failed=1
+}
+
+skip() {
+  printf 'SKIP %s\n' "$*"
+}
+
+owner_mode() {
+  stat -c '%U:%G %a' "$1"
+}
+
+check_session_binary() {
+  local meta
+
+  if [[ -e "$session_bin" ]]; then
+    pass "session-bin exists path=$session_bin"
+  else
+    fail "session-bin missing path=$session_bin"
+    return
+  fi
+
+  if [[ -x "$session_bin" ]]; then
+    pass "session-bin executable path=$session_bin"
+  else
+    fail "session-bin not-executable path=$session_bin"
+  fi
+
+  meta="$(owner_mode "$session_bin" 2>/dev/null || true)"
+  if [[ "$meta" = "root:root 755" ]]; then
+    pass "session-bin ownership mode=$meta"
+  else
+    fail "session-bin ownership expected=root:root 755 actual=${meta:-unreadable}"
+  fi
+
+  if "$session_bin" lockout check >/dev/null 2>&1; then
+    pass "session-bin lockout-check"
+  else
+    fail "session-bin lockout-check"
+  fi
+}
+
+check_run_dir() {
+  local meta
+
+  if [[ ! -e "$run_dir" ]]; then
+    skip "run-dir absent path=$run_dir"
+    return
+  fi
+
+  if [[ -d "$run_dir" ]]; then
+    pass "run-dir directory path=$run_dir"
+  else
+    fail "run-dir not-directory path=$run_dir"
+    return
+  fi
+
+  meta="$(owner_mode "$run_dir" 2>/dev/null || true)"
+  if [[ "$meta" = "root:root 755" ]]; then
+    pass "run-dir ownership mode=$meta"
+  else
+    fail "run-dir ownership expected=root:root 755 actual=${meta:-unreadable}"
+  fi
+}
+
+check_sudoers() {
+  if [[ ! -e "$sudoers_file" ]]; then
+    skip "sudoers absent path=$sudoers_file"
+    return
+  fi
+
+  pass "sudoers exists path=$sudoers_file"
+
+  if "$visudo_bin" -cf "$sudoers_file" >/dev/null 2>&1; then
+    pass "sudoers visudo-check path=$sudoers_file"
+  else
+    fail "sudoers visudo-check path=$sudoers_file"
+  fi
+}
+
+check_pam() {
+  if [[ ! -e "$pam_file" ]]; then
+    skip "pam absent path=$pam_file"
+    return
+  fi
+
+  pass "pam exists path=$pam_file"
+
+  if grep -Fx "auth requisite pam_exec.so quiet /usr/local/bin/session lockout check" "$pam_file" >/dev/null; then
+    pass "pam lockout-line path=$pam_file"
+  else
+    fail "pam lockout-line missing path=$pam_file"
+  fi
+}
+
+check_session_binary
+check_run_dir
+check_sudoers
+check_pam
+
+exit "$failed"
