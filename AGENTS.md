@@ -17,7 +17,7 @@ structure and closeout expectations.
 - Use `rg` and `rg --files` for search and inventory work.
 - Use `apply_patch` for manual edits.
 - Do not revert, rewrite, or discard user changes you did not make.
-- Check `git status` and the relevant diff before making changes.
+- Git usage must flow through the git-mcp server
 - Keep edits task-scoped and avoid generated or rollback artifacts unless they
   are part of the request.
 - Read the surrounding README or module files before changing a subsystem.
@@ -32,7 +32,7 @@ structure and closeout expectations.
 
 ## Closeout
 
-When a task changes the repo and the user has not opted out of commits:
+Using the git-mcp server:
 
 1. Inspect status and unstaged/staged diffs.
 2. Stage only task-scoped files.
