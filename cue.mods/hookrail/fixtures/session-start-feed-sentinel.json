@@ -1,0 +1,29 @@
+{
+  "hookInput": {
+    "cwd": "/tmp/repo",
+    "hook_event_name": "SessionStart",
+    "model": "gpt-5.5",
+    "permission_mode": "default",
+    "session_id": "sess_feed_sentinel",
+    "source": "startup",
+    "transcript_path": null,
+    "hookrail": {
+      "git": {
+        "isRepo": true,
+        "dirty": false,
+        "head": "abc1234",
+        "root": "/tmp/repo",
+        "branch": "main",
+        "statusSummary": "clean working tree"
+      },
+      "feedSentinel": "feed-sentinel-alpha",
+      "feedProof": {
+        "sentinel": "feed-sentinel-alpha",
+        "emitted": true,
+        "observedInTranscript": true,
+        "reportedByAgent": true,
+        "toolCallBeforeReport": false
+      }
+    }
+  }
+}

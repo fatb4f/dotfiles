@@ -38,7 +38,26 @@ hookrail_run_doctor() {
   hookrail_doctor_projection_is "$cue_dir/fixtures/dirty-stop.json" '.decision == "block"' "dirty stop blocks"
   hookrail_doctor_projection_is "$cue_dir/fixtures/clean-stop.json" '.continue == true' "clean stop continues"
   hookrail_doctor_projection_is "$cue_dir/fixtures/dirty-stop-active.json" '.continue == true and (.systemMessage | contains("already active"))' "active stop continues"
-  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-clean.json" '.hookSpecificOutput.additionalContext | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "session start projects bounded frame"
+  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-clean.json" '.systemMessage | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "session start projects bounded frame"
+  hookrail_doctor_projection_is "$cue_dir/fixtures/session-start-feed-sentinel.json" '.systemMessage | contains("schema: hookrail.contextFrame.v1")' "session start projects sentinel frame"
+
+  output_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-output.XXXXXX.json")"
+  manifest="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-manifest.XXXXXX.json")"
+  proof_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-feed-proof.XXXXXX.json")"
+  hookrail_doctor_check "feed sentinel manifest emits" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.manifest" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-feed-sentinel.json" "$manifest"
+  hookrail_doctor_check "feed sentinel manifest vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookManifest"' bash "$cue_dir" "$manifest"
+  hookrail_doctor_check "feed sentinel agent feed emits" -- jq -e '.agentFeed.status == "emitted" and .agentFeed.channel == "stdout.systemMessage" and .agentFeed.payloadKind == "feed_sentinel" and .agentFeed.sentinel == "feed-sentinel-alpha"' "$manifest"
+  hookrail_doctor_check "feed proof green" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.feedProof" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-feed-sentinel.json" "$proof_json"
+  hookrail_doctor_check "feed proof vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookFeedProof"' bash "$cue_dir" "$proof_json"
+  hookrail_doctor_check "feed proof result green" -- jq -e '.result == "green" and .channel == "stdout.systemMessage" and .sentinel == "feed-sentinel-alpha"' "$proof_json"
+
+  hookrail_doctor_check "no-feed manifest emits" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.manifest" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-no-feed.json" "$output_json"
+  hookrail_doctor_check "no-feed manifest vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookManifest"' bash "$cue_dir" "$output_json"
+  hookrail_doctor_check "no-feed agent feed stays absent" -- jq -e '.agentFeed.status == "not_attempted" and .agentFeed.payloadKind == "none" and .agentFeed.enabled == false' "$output_json"
+  hookrail_doctor_check "no-feed proof red" -- bash -c 'cd "$1" && cue export . "$2" -e "#HookProjection.feedProof" --out json >"$3"' bash "$cue_dir" "$cue_dir/fixtures/session-start-no-feed.json" "$proof_json"
+  hookrail_doctor_check "no-feed proof vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookFeedProof"' bash "$cue_dir" "$proof_json"
+  hookrail_doctor_check "no-feed proof result red" -- jq -e '.result == "red" and .emitted == false and .observedInTranscript == false' "$proof_json"
+  rm -f "$output_json" "$manifest" "$proof_json"
 
   tmp_root="$(mktemp -d "${TMPDIR:-/tmp}/hookrail-doctor-state.XXXXXX")"
   output_json="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-adapter-output.XXXXXX.json")"
@@ -102,7 +121,7 @@ hookrail_run_doctor() {
 
   jq --arg cwd "$clean_repo" '.hookInput.cwd = $cwd | .hookInput' "$cue_dir/fixtures/session-start-clean.json" |
     HOOKRAIL_STATE="$tmp_root" "$hookrail_bin" hook >"$output_json"
-  hookrail_doctor_check "session start injects bounded frame" -- jq -e '.hookSpecificOutput.additionalContext | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "$output_json"
+  hookrail_doctor_check "session start injects bounded frame" -- jq -e '.systemMessage | contains("schema: hookrail.contextFrame.v1") and contains("instructions: Use only the bounded repo facts below.")' "$output_json"
   persisted_count="$(find "$tmp_root/runs" -type f -name '*session-start*.json' 2>/dev/null | wc -l | tr -d ' ')"
   [[ "$persisted_count" == "0" ]] || {
     printf 'FAIL session frame persisted manifest count: got %s expected 0\n' "$persisted_count" >&2
@@ -112,7 +131,7 @@ hookrail_run_doctor() {
   trace_row="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-trace-row.XXXXXX.json")"
   jq -e 'select(.hookEventName == "SessionStart" and .frameGenerated == true)' "$trace_file" >"$trace_row"
   hookrail_doctor_check "trace row vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#TraceRow"' bash "$cue_dir" "$trace_row"
-  hookrail_doctor_check "trace records frame proof" -- bash -c 'jq -e --arg head "$2" "select(.hookEventName == \"SessionStart\" and .frameGenerated == true and .frameSchema == \"hookrail.contextFrame.v1\" and .gitDirty == false and .gitHead == \$head and .manifestPath == null and .frameChars > 0)" "$1"' bash "$trace_row" "$clean_head_short"
+  hookrail_doctor_check "trace records frame proof" -- bash -c 'jq -e --arg head "$2" "select(.hookEventName == \"SessionStart\" and .frameGenerated == true and .frameSchema == \"hookrail.contextFrame.v1\" and .gitDirty == false and .gitHead == \$head and .manifestPath == null and .frameChars > 0 and .feedChannel == \"stdout.systemMessage\" and .feedStatus == \"emitted\" and .feedPayloadKind == \"context_frame\" and .feedBytes > 0 and .feedSentinel == null)" "$1"' bash "$trace_row" "$clean_head_short"
   context_artifact="$(find "$tmp_root/runs" -type f -name 'context-frame-input.json' | sort | sed -n '1p')"
   hookrail_doctor_check "context frame input artifact exists" -- test -n "$context_artifact"
   hookrail_doctor_check "context frame input artifact vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#ContextFrameInput"' bash "$cue_dir" "$context_artifact"
@@ -139,6 +158,10 @@ hookrail_run_doctor() {
   jq '.hookInput' "$cue_dir/fixtures/user-prompt-submit.json" |
     HOOKRAIL_CUE_DIR="$tmp_root/missing" "$hookrail_bin" hook >"$output_json" 2>/dev/null
   hookrail_doctor_check "fallback stdout JSON" -- jq -e '.continue == true and .suppressOutput == true' "$output_json"
+
+  jq '.hookInput | .hook_event_name = "PostToolUse"' "$cue_dir/fixtures/user-prompt-submit.json" |
+    HOOKRAIL_CUE_DIR="$tmp_root/missing" "$hookrail_bin" hook >"$output_json" 2>/dev/null
+  hookrail_doctor_check "post tool fallback avoids suppressOutput" -- jq -e '.continue == true and (.suppressOutput == null) and (.systemMessage | contains("safe fallback after adapter/CUE failure"))' "$output_json"
 
   hookrail_doctor_check "adapter invokes cue" -- grep -F 'cue export' "$hookrail_bin"
   if grep -F 'Before final summary' "$(hookrail_script_dir)/src/lib/hook.sh" "$(hookrail_script_dir)/src/lib/cue.sh" "$(hookrail_script_dir)/src/lib/persist.sh" >/dev/null; then

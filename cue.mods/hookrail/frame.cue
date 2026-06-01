@@ -40,6 +40,11 @@ package hookrail
 	gitHead:         string | null
 	gitDirty:        bool
 	gitStatusSummary: string | null
+	feedChannel:     string | null
+	feedStatus:      #AgentFeedStatus | null
+	feedPayloadKind: #AgentFeedPayloadKind | null
+	feedBytes:       int & >=0
+	feedSentinel:    string | null
 	manifestPath:    string | null
 }
 

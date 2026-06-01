@@ -28,6 +28,8 @@ package hookrail
 	thresholds?: #Thresholds
 	payloadChars: *null | int & >=0 | null
 	frameText:    *null | string | null
+	feedSentinel: *null | string | null
+	feedProof:    *null | #HookFeedProofInput | null
 	env: {
 		commitBeforeSummary: *true | bool
 		userOptedOut:        *false | bool

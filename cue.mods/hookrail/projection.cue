@@ -103,6 +103,37 @@ package hookrail
 		_agentText: "hookrail: large tool response captured out-of-band candidate (\(_payloadChars) chars). Injecting bounded summary only."
 	}
 
+	_feedChannel: *null | string | null
+	_feedStatus: *"not_attempted" | #AgentFeedStatus
+	_feedPayloadKind: *"none" | #AgentFeedPayloadKind
+	_feedBytes: *0 | int
+	_feedSentinel: *null | string | null
+	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null && hookInput.hookrail.feedSentinel == null {
+		_feedChannel: "stdout.systemMessage"
+		_feedStatus: "emitted"
+		_feedPayloadKind: "context_frame"
+		_feedBytes: len(_agentText)
+	}
+	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null && hookInput.hookrail.feedSentinel != null {
+		_feedChannel: "stdout.systemMessage"
+		_feedStatus: "emitted"
+		_feedPayloadKind: "feed_sentinel"
+		_feedBytes: len(_agentText)
+		_feedSentinel: hookInput.hookrail.feedSentinel
+	}
+	if hookInput.hook_event_name == "UserPromptSubmit" && _agentText != null {
+		_feedChannel: "stdout.systemMessage"
+		_feedStatus: "emitted"
+		_feedPayloadKind: "compact_report"
+		_feedBytes: len(_agentText)
+	}
+	if hookInput.hook_event_name == "PostToolUse" && _agentText != null {
+		_feedChannel: "stdout.systemMessage"
+		_feedStatus: "emitted"
+		_feedPayloadKind: "compact_report"
+		_feedBytes: len(_agentText)
+	}
+
 	_sessionStartFrameSchema: *null | string | null
 	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null {
 		_sessionStartFrameSchema: "hookrail.contextFrame.v1"
@@ -155,6 +186,11 @@ package hookrail
 		gitHead:         _sessionStartGitHead
 		gitDirty:        _sessionStartGitDirty
 		gitStatusSummary: _sessionStartGitStatusSummary
+		feedChannel:     _feedChannel
+		feedStatus:      _feedStatus
+		feedPayloadKind: _feedPayloadKind
+		feedBytes:       _feedBytes
+		feedSentinel:    _feedSentinel
 		manifestPath:    hookInput.hookrail.trace.manifestPath
 	}
 
@@ -181,11 +217,11 @@ package hookrail
 	if hookInput.hook_event_name == "SessionStart" {
 		_output: #ContextHookOutput & {
 			continue: true
+			if _agentText != null {
+				systemMessage: _agentText
+			}
 			hookSpecificOutput: {
 				hookEventName: "SessionStart"
-				if _agentText != null {
-					additionalContext: _agentText
-				}
 			}
 		}
 	}
@@ -194,9 +230,6 @@ package hookrail
 			continue: true
 			hookSpecificOutput: {
 				hookEventName: "UserPromptSubmit"
-				if _agentText != null {
-					additionalContext: _agentText
-				}
 			}
 			if _payloadClass == "oversized" {
 				systemMessage: _agentText
@@ -206,16 +239,29 @@ package hookrail
 	if hookInput.hook_event_name == "PostToolUse" {
 		_output: #ContextHookOutput & {
 			continue: true
+			if _agentText != null {
+				systemMessage: _agentText
+			}
 			hookSpecificOutput: {
 				hookEventName: "PostToolUse"
-				if _agentText != null {
-					additionalContext: _agentText
-				}
 			}
 		}
 	}
 
 	capture: _capture
+
+	_feedProof: *null | #HookFeedProof | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.feedProof != null {
+		_feedProof: #HookFeedProof & {
+			hookEventName:        "SessionStart"
+			channel:              "stdout.systemMessage"
+			sentinel:             hookInput.hookrail.feedProof.sentinel
+			emitted:              hookInput.hookrail.feedProof.emitted
+			observedInTranscript: hookInput.hookrail.feedProof.observedInTranscript
+			reportedByAgent:      hookInput.hookrail.feedProof.reportedByAgent
+			toolCallBeforeReport:  hookInput.hookrail.feedProof.toolCallBeforeReport
+		}
+	}
 
 	_capture: #CaptureDecision & {
 		persist: (hookInput.hook_event_name == "UserPromptSubmit" && _payloadClass != "small") || (hookInput.hook_event_name == "Stop" && (_closeoutRequired || _stopRecursionGuard)) || (hookInput.hook_event_name == "PostToolUse" && _payloadClass != "small")
@@ -268,15 +314,48 @@ package hookrail
 			class: _payloadClass
 		}
 		capture: _capture
-		agentFeed: {
-			inject:      _agentText != null
-			budgetChars: _thresholds.agentFeedChars
-			if _agentText != null {
-				text: _agentText
+		agentFeed: #AgentFeed & {
+			enabled: *false | bool
+			status: *"not_attempted" | #AgentFeedStatus
+			payloadKind: *"none" | #AgentFeedPayloadKind
+			if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null && hookInput.hookrail.feedSentinel == null {
+				enabled: true
+				status: "emitted"
+				payloadKind: "context_frame"
+				channel: "stdout.systemMessage"
+				bytes: len(_agentText)
+				source: "SessionStart"
+			}
+			if hookInput.hook_event_name == "SessionStart" && _sessionStartFrameText != null && hookInput.hookrail.feedSentinel != null {
+				enabled: true
+				status: "emitted"
+				payloadKind: "feed_sentinel"
+				channel: "stdout.systemMessage"
+				bytes: len(_agentText)
+				source: "SessionStart"
+				sentinel: hookInput.hookrail.feedSentinel
+			}
+			if hookInput.hook_event_name == "UserPromptSubmit" && _agentText != null {
+				enabled: true
+				status: "emitted"
+				payloadKind: "compact_report"
+				channel: "stdout.systemMessage"
+				bytes: len(_agentText)
+				source: "UserPromptSubmit"
+			}
+			if hookInput.hook_event_name == "PostToolUse" && _agentText != null {
+				enabled: true
+				status: "emitted"
+				payloadKind: "compact_report"
+				channel: "stdout.systemMessage"
+				bytes: len(_agentText)
+				source: "PostToolUse"
 			}
 		}
 		output: _output
 	}
+
+	feedProof: _feedProof
 
 	traceRow: _traceRow
 
