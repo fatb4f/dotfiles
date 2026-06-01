@@ -110,6 +110,18 @@ EOF
   [[ "$output" == *"unlock denied until 1300"* ]]
 }
 
+@test "lockout check propagates denial status to the shell" {
+  mkdir -p "$SESSION_LOCKOUT_DIR"
+  printf '%s\n' 1300 >"$SESSION_LOCKOUT_FILE"
+
+  set +e
+  "$BATS_TEST_DIRNAME/../src/session/session" lockout check >/dev/null 2>&1
+  actual_status="$?"
+  set -e
+
+  [ "$actual_status" -eq 1 ]
+}
+
 @test "lockout check allows unlock at or after the deadline" {
   mkdir -p "$SESSION_LOCKOUT_DIR"
   printf '%s\n' 1300 >"$SESSION_LOCKOUT_FILE"

@@ -854,6 +854,7 @@ session_lockout_set_command() {
 
   # src/commands/lockout_set.sh
   session_lockout_set "${args[until_epoch]}"
+  exit $?
 
 }
 
@@ -862,6 +863,7 @@ session_lockout_clear_command() {
 
   # src/commands/lockout_clear.sh
   session_lockout_clear
+  exit $?
 
 }
 
@@ -870,6 +872,7 @@ session_lockout_check_command() {
 
   # src/commands/lockout_check.sh
   session_lockout_check
+  exit $?
 
 }
 
