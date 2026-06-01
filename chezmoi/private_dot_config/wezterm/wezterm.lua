@@ -15,7 +15,7 @@ config.scrollback_lines = 10000
 config.keys = config.keys or {}
 table.insert(config.keys, {
   key = "Enter",
-  mods = "SHIFT",
+  mods = "CTRL",
   action = act.SendString("\r"),
 })
 
