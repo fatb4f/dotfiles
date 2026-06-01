@@ -118,3 +118,22 @@ EOF
   [ "$status" -eq 0 ]
   [ "$(cat "$TOMAT_HOOK_LOG")" = "session break consume-resume-pending" ]
 }
+
+@test "session-post-unlock is idempotent across repeated unlock events" {
+  export SESSION_BIN="$BATS_TEST_DIRNAME/../src/session/session"
+  export TOMAT_BIN="$mockbin/tomat"
+
+  "$SESSION_BIN" break mark-resume-pending
+
+  run "$hook_dir/session-post-unlock"
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$TOMAT_HOOK_LOG")" = "tomat resume" ]
+
+  : >"$TOMAT_HOOK_LOG"
+
+  run "$hook_dir/session-post-unlock"
+
+  [ "$status" -eq 0 ]
+  [ ! -s "$TOMAT_HOOK_LOG" ]
+}
