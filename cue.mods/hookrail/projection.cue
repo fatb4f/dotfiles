@@ -54,6 +54,26 @@ package hookrail
 	_closeoutRequired: _commitBeforeSummary && !_userOptedOut && hookInput.hook_event_name == "Stop" && _gitIsRepo && _gitDirty && !_closeoutEvidenceExists && !_priorTraceHeadChanged && !_stopActive
 	_stopRecursionGuard: hookInput.hook_event_name == "Stop" && _stopActive
 
+	_sessionStartFrame: *null | #SessionStartFrame | null
+	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.frameText == null && hookInput.hookrail.gitFacts != _|_ {
+		_sessionStartFrame: #SessionStartFrame & {
+			source: hookInput.source
+			cwd:    hookInput.cwd
+			git:    hookInput.hookrail.gitFacts
+			hints:  hookInput.hookrail.repoHints | *{
+				agentsPath:      null
+				codexConfigPath: null
+				packageFiles:    []
+			}
+			if hookInput.hookrail.gitFacts.isRepo {
+				text: "hookrail session frame\nrepo: \(hookInput.hookrail.gitFacts.name) \(hookInput.hookrail.gitFacts.branch) @ \(hookInput.hookrail.gitFacts.head)\nroot: \(hookInput.hookrail.gitFacts.root)\nstate: clean=\(hookInput.hookrail.gitFacts.clean) staged=\(hookInput.hookrail.gitFacts.counts.staged) unstaged=\(hookInput.hookrail.gitFacts.counts.unstaged) untracked=\(hookInput.hookrail.gitFacts.counts.untracked) truncated=\(hookInput.hookrail.gitFacts.truncated)\noperation: \(hookInput.hookrail.gitFacts.operation.state)\nlast commit: \(hookInput.hookrail.gitFacts.lastCommit.subject)"
+			}
+			if !hookInput.hookrail.gitFacts.isRepo {
+				text: "hookrail session frame\ncwd: \(hookInput.cwd)\nrepo: none"
+			}
+		}
+	}
+
 	_agentText: *null | string
 	if _closeoutRequired {
 		_agentText: #GitCloseoutReason
@@ -63,6 +83,9 @@ package hookrail
 	}
 	if hookInput.hook_event_name == "SessionStart" && hookInput.hookrail.frameText != null {
 		_agentText: hookInput.hookrail.frameText
+	}
+	if hookInput.hook_event_name == "SessionStart" && _sessionStartFrame != null {
+		_agentText: _sessionStartFrame.text
 	}
 	if hookInput.hook_event_name == "UserPromptSubmit" && _payloadClass != "small" {
 		_agentText: "hookrail: prompt payload is \(_payloadClass) (\(_payloadChars) chars). Prefer compact handoff/frame before continuing long sessions."
@@ -131,7 +154,7 @@ package hookrail
 	capture: _capture
 
 	_capture: #CaptureDecision & {
-		persist: hookInput.hook_event_name == "UserPromptSubmit" || hookInput.hook_event_name == "Stop" || (hookInput.hook_event_name == "PostToolUse" && _payloadClass != "small") || (hookInput.hook_event_name == "SessionStart" && _agentText != null)
+		persist: (hookInput.hook_event_name == "UserPromptSubmit" && _payloadClass != "small") || (hookInput.hook_event_name == "Stop" && (_closeoutRequired || _stopRecursionGuard)) || (hookInput.hook_event_name == "PostToolUse" && _payloadClass != "small")
 		reason: *"hookrail-projection" | string
 		if hookInput.hook_event_name == "UserPromptSubmit" {
 			reason: "prompt-metadata"

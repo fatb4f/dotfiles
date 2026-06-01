@@ -41,5 +41,50 @@ package hookrail
 		evidenceExists:        *false | bool
 		priorTraceHeadChanged: *false | bool
 	}
+	gitFacts?: #GitFacts
+	repoHints?: #RepoHints
 	...
+}
+
+#GitFacts: {
+	isRepo: bool
+	cwd?:   string
+	if isRepo {
+		root:       string
+		name:       string
+		branch:     string | null
+		head:       string | null
+		upstream:   string | null
+		unsafeRoot: bool
+		clean:      bool
+		counts: {
+			staged:    int & >=0
+			unstaged:  int & >=0
+			untracked: int & >=0
+		}
+		changedSample: [...{
+			path:   string
+			status: string
+		}]
+		sampleLimit: int & >=0
+		truncated:   bool
+		operation: {
+			state: "normal" | "merge" | "rebase" | "cherry-pick" | "revert" | "bisect"
+		}
+		lastCommit: {
+			subject: string | null
+			date:    string | null
+			author:  string | null
+		}
+	}
+	if !isRepo {
+		unsafeRoot?: bool
+		error?:      string
+	}
+}
+
+#RepoHints: {
+	agentsPath:       string | null
+	codexConfigPath:  string | null
+	packageFiles: [...string]
 }

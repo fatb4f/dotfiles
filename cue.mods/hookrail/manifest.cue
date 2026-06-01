@@ -31,3 +31,11 @@ package hookrail
 	reason:   string
 	fileStem: string
 }
+
+#FailureManifest: {
+	schema:    "hookrail.failure_manifest.v1"
+	timestamp: string
+	sessionID: string
+	turnID:    string
+	reason:    string
+}
