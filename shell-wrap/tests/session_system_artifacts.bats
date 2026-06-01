@@ -7,6 +7,7 @@ setup() {
   pam_file="$system_dir/pam/hyprlock.lockout.example"
   sudoers_file="$system_dir/sudoers/session-lockout"
   install_script="$system_dir/install-session-lockout"
+  activation_doc="$system_dir/ACTIVATION.md"
   tomat_dir="$system_dir/tomat"
   tomat_break_start="$tomat_dir/break-start.example"
   tomat_break_end="$tomat_dir/break-end.example"
@@ -76,6 +77,40 @@ setup() {
 
 @test "tomat artifacts do not call user session projection or live-state tools" {
   run grep -REn "/home/|\\.local/bin/session|tomat status|dbus|systemctl --user|hyprctl|notify-send" "$tomat_dir"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "activation runbook documents safe manual lockout activation" {
+  run grep -F "/usr/local/bin/session lockout check" "$activation_doc"
+
+  [ "$status" -eq 0 ]
+
+  run grep -F "visudo -cf" "$activation_doc"
+
+  [ "$status" -eq 0 ]
+
+  run grep -F '+ 15' "$activation_doc"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "activation runbook keeps PAM activation recoverable" {
+  run grep -F "Keep an unlocked root shell open, or keep a TTY available." "$activation_doc"
+
+  [ "$status" -eq 0 ]
+
+  run grep -F "# session-lockout begin" "$activation_doc"
+
+  [ "$status" -eq 0 ]
+
+  run grep -F "# session-lockout end" "$activation_doc"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "activation runbook avoids mutable user projection and live-state tools" {
+  run grep -REn "\\.local/bin/session|tomat status|dbus|systemctl --user|hyprctl|notify-send" "$activation_doc"
 
   [ "$status" -eq 1 ]
 }
