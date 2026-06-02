@@ -64,6 +64,8 @@ package agentnode
 #RootIndex: {
 	schemaVersion: "agentNode.rootIndex.v1"
 
+	schemaSource: #RootSchemaSource
+
 	root: {
 		id:   string
 		path: string
@@ -77,6 +79,81 @@ package agentnode
 	nodeID: string
 	path:   string
 	root:   string
+}
+
+#RootSchemaSource: {
+	package: "github.com/fatb4f/dotfiles/cue/agentnode"
+	path:    "cue/agentnode/schema.cue"
+	role:    "root-cue-ssot"
+}
+
+#ComponentID: "root-cue-schema" | "root-agents-cue" | "workspace-agents-cue" | "workspace-projections-cue" | "workspace-pattern-card" | "go-runtime" | "root-mcp" | "agent-prompt"
+
+#FragmentKind: "root-index" | "agent-node-contract" | "task-pattern-card" | "selection-response" | "authorization-evidence" | "prompt-projection" | "interop-state" | "relation-edge"
+
+#StateKind: "contract-state" | "projection-state" | "evidence-state" | "interop-state"
+
+#PersistenceClass: "ephemeral" | "artifact-backed" | "committed" | "runtime-only" | "not-persisted"
+
+#Operation: "defines" | "produces" | "consumes" | "validates" | "authorizes" | "emits-evidence" | "projects"
+
+#FragmentContract: {
+	name:            string
+	kind:            #FragmentKind
+	schema:          string
+	schemaAuthority: "root-cue-schema"
+	producedBy:      #ComponentID
+	consumedBy?: [...#ComponentID]
+	validatedBy: [...#ComponentID]
+	authorizedBy?:    #ComponentID
+	stateKind:        #StateKind
+	persistenceClass: #PersistenceClass
+}
+
+#InteropState: {
+	name:          string
+	owner:         #ComponentID
+	sourceOfTruth: #ComponentID
+	readBy: [...#ComponentID]
+	writtenBy: [...#ComponentID]
+	validatedBy: [...#ComponentID]
+	persistenceClass: #PersistenceClass
+}
+
+#RelationEdge: {
+	from:      #ComponentID
+	to:        #ComponentID
+	artifact:  string
+	operation: #Operation
+	authority: #ComponentID
+	stateKind: #StateKind
+	allowed:   bool
+	mustVet?: [...string]
+	mustEmitEvidence?: bool
+	rationale:         string
+}
+
+#AdmissibilityClassification: "admissible-fragment" | "architectural-drift" | "schema-gap" | "reject"
+
+#AdmissibilityAssessment: {
+	fragment:       string
+	typeValid:      bool
+	relationValid:  bool
+	classification: #AdmissibilityClassification
+	rationale:      string
+
+	if typeValid == true && relationValid == true {
+		classification: "admissible-fragment"
+	}
+	if typeValid == true && relationValid == false {
+		classification: "architectural-drift"
+	}
+	if typeValid == false && relationValid == true {
+		classification: "schema-gap"
+	}
+	if typeValid == false && relationValid == false {
+		classification: "reject"
+	}
 }
 
 #AuthorizationSource: "root-policy" | "selected-pattern" | "fallback-explicit-index"
@@ -104,6 +181,18 @@ package agentnode
 	deniedLoads?: [...#DeniedLoad]
 	authorizationSource: #AuthorizationSource
 	rationale:           string
+}
+
+#TaskPatternCard: {
+	id: string
+
+	authority: {
+		loadableFiles: [...string]
+	}
+
+	workflow: {
+		stage: "discover" | "plan" | "modify" | "verify" | "closeout"
+	}
 }
 
 #RootSelectionResponse: {
@@ -139,4 +228,12 @@ package agentnode
 #ProjectedPrompt: {
 	schemaVersion: "agentNode.projectedPrompt.v1"
 	text:          string
+}
+
+#RootContractCatalog: {
+	schemaSource: #RootSchemaSource
+	fragments: [...#FragmentContract]
+	interopState: [...#InteropState]
+	relations: [...#RelationEdge]
+	admissibility: [...#AdmissibilityAssessment]
 }

@@ -1,6 +1,8 @@
 package workspace
 
-nvimSmartSplitsPattern: {
+import agentnode "github.com/fatb4f/dotfiles/cue/agentnode"
+
+nvimSmartSplitsPattern: agentnode.#TaskPatternCard & {
 	id: "nvim.smart-splits"
 
 	authority: {

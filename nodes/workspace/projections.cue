@@ -146,6 +146,184 @@ fallbackDiscoveryFixture: agentnode.#RootSelectionResponse & {
 	}
 }
 
+rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
+	schemaSource: agentnode.#RootSchemaSource
+
+	fragments: [
+		{
+			name:            "rootAgentContract"
+			kind:            "root-index"
+			schema:          "agentnode.#RootIndex"
+			schemaAuthority: "root-cue-schema"
+			producedBy:      "root-agents-cue"
+			consumedBy: ["root-mcp", "go-runtime"]
+			validatedBy: ["root-cue-schema"]
+			authorizedBy:     "root-cue-schema"
+			stateKind:        "contract-state"
+			persistenceClass: "committed"
+		},
+		{
+			name:            "workspace.node"
+			kind:            "agent-node-contract"
+			schema:          "agentnode.#AgentNode"
+			schemaAuthority: "root-cue-schema"
+			producedBy:      "workspace-agents-cue"
+			consumedBy: ["root-mcp", "go-runtime"]
+			validatedBy: ["root-cue-schema"]
+			authorizedBy:     "root-cue-schema"
+			stateKind:        "contract-state"
+			persistenceClass: "committed"
+		},
+		{
+			name:            "workspace.rootSelectionResponse"
+			kind:            "selection-response"
+			schema:          "agentnode.#RootSelectionResponse"
+			schemaAuthority: "root-cue-schema"
+			producedBy:      "workspace-projections-cue"
+			consumedBy: ["go-runtime", "agent-prompt"]
+			validatedBy: ["root-cue-schema"]
+			authorizedBy:     "root-mcp"
+			stateKind:        "projection-state"
+			persistenceClass: "artifact-backed"
+		},
+		{
+			name:            "workspace.rootSelectionResponse.evidence"
+			kind:            "authorization-evidence"
+			schema:          "agentnode.#RootAuthorizationEvidence"
+			schemaAuthority: "root-cue-schema"
+			producedBy:      "workspace-projections-cue"
+			consumedBy: ["root-mcp", "go-runtime", "agent-prompt"]
+			validatedBy: ["root-cue-schema"]
+			authorizedBy:     "root-cue-schema"
+			stateKind:        "evidence-state"
+			persistenceClass: "artifact-backed"
+		},
+		{
+			name:            "workspace.projectedPrompt"
+			kind:            "prompt-projection"
+			schema:          "agentnode.#ProjectedPrompt"
+			schemaAuthority: "root-cue-schema"
+			producedBy:      "workspace-projections-cue"
+			consumedBy: ["agent-prompt"]
+			validatedBy: ["root-cue-schema"]
+			authorizedBy:     "root-cue-schema"
+			stateKind:        "projection-state"
+			persistenceClass: "artifact-backed"
+		},
+	]
+
+	interopState: [
+		{
+			name:          "root selection response"
+			owner:         "root-cue-schema"
+			sourceOfTruth: "root-cue-schema"
+			readBy: ["root-mcp", "go-runtime", "agent-prompt"]
+			writtenBy: ["workspace-projections-cue"]
+			validatedBy: ["root-cue-schema"]
+			persistenceClass: "artifact-backed"
+		},
+		{
+			name:          "runtime load observation"
+			owner:         "go-runtime"
+			sourceOfTruth: "root-cue-schema"
+			readBy: ["root-mcp", "agent-prompt"]
+			writtenBy: ["go-runtime"]
+			validatedBy: ["root-cue-schema"]
+			persistenceClass: "runtime-only"
+		},
+	]
+
+	relations: [
+		{
+			from:      "workspace-agents-cue"
+			to:        "go-runtime"
+			artifact:  "workspace.node"
+			operation: "consumes"
+			authority: "root-cue-schema"
+			stateKind: "contract-state"
+			allowed:   true
+			mustVet: [
+				"cue vet ./cue/agentnode/...",
+				"cue vet ./nodes/workspace/...",
+			]
+			rationale: "Go may consume workspace contracts only after they conform to the root AgentNode schema."
+		},
+		{
+			from:             "go-runtime"
+			to:               "workspace-projections-cue"
+			artifact:         "workspace.rootSelectionResponse.evidence"
+			operation:        "emits-evidence"
+			authority:        "root-cue-schema"
+			stateKind:        "evidence-state"
+			allowed:          true
+			mustEmitEvidence: true
+			mustVet: [
+				"cue vet ./cue/agentnode/...",
+				"cue vet ./nodes/workspace/...",
+			]
+			rationale: "Runtime observations may be emitted only as root-shaped authorization evidence."
+		},
+		{
+			from:             "root-mcp"
+			to:               "workspace-projections-cue"
+			artifact:         "workspace.rootSelectionResponse.evidence"
+			operation:        "authorizes"
+			authority:        "root-cue-schema"
+			stateKind:        "evidence-state"
+			allowed:          true
+			mustEmitEvidence: true
+			rationale:        "Root policy may authorize selected loads when evidence is typed by the root schema."
+		},
+		{
+			from:      "workspace-projections-cue"
+			to:        "agent-prompt"
+			artifact:  "workspace.projectedPrompt"
+			operation: "projects"
+			authority: "root-cue-schema"
+			stateKind: "projection-state"
+			allowed:   true
+			rationale: "Agent prompts consume bounded projections derived from root-shaped CUE contracts."
+		},
+		{
+			from:      "go-runtime"
+			to:        "workspace-projections-cue"
+			artifact:  "hidden-go-policy"
+			operation: "authorizes"
+			authority: "go-runtime"
+			stateKind: "contract-state"
+			allowed:   false
+			rationale: "Go-owned policy is architectural drift because policy authority must remain in the root CUE schema."
+		},
+	]
+
+	admissibility: [
+		{
+			fragment:      "workspace.node"
+			typeValid:     true
+			relationValid: true
+			rationale:     "The workspace AGENTS.cue fragment conforms to agentnode.#AgentNode and has an allowed CUE-to-Go consumer relation."
+		},
+		{
+			fragment:      "hidden-go-policy"
+			typeValid:     true
+			relationValid: false
+			rationale:     "A Go-owned policy fragment may be well-shaped but is drift because relation authority is not root CUE."
+		},
+		{
+			fragment:      "untyped-runtime-intention"
+			typeValid:     false
+			relationValid: true
+			rationale:     "A valid runtime intention without a root-owned type contract is a schema gap."
+		},
+		{
+			fragment:      "untyped-go-policy"
+			typeValid:     false
+			relationValid: false
+			rationale:     "An untyped fragment with an invalid Go-owned policy relation is rejected."
+		},
+	]
+}
+
 projectedPrompt: agentnode.#ProjectedPrompt & {
 	schemaVersion: "agentNode.projectedPrompt.v1"
 	text: """

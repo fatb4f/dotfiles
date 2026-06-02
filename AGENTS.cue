@@ -5,6 +5,8 @@ import agentnode "github.com/fatb4f/dotfiles/cue/agentnode"
 rootAgentContract: agentnode.#RootIndex & {
 	schemaVersion: "agentNode.rootIndex.v1"
 
+	schemaSource: agentnode.#RootSchemaSource
+
 	root: {
 		id:   "dotfiles-root"
 		path: "."

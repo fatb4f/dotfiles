@@ -1,6 +1,8 @@
 package workspace
 
-weztermWorkspacePattern: {
+import agentnode "github.com/fatb4f/dotfiles/cue/agentnode"
+
+weztermWorkspacePattern: agentnode.#TaskPatternCard & {
 	id: "wezterm.workspace"
 
 	authority: {

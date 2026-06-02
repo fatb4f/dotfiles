@@ -9,7 +9,7 @@ Scope: AGENTS.cue routing proof of concept only. This review does not propose se
 | Contract | Surface | Observed implementation |
 |---|---|---|
 | Root index | `AGENTS.cue` exports `rootAgentContract` | Declares root id/path, one indexed workspace contract, and bounded AgentNode operations: `searchKeywords`, `selectPatterns`, `readSelectedPatterns`, `projectWorkflow`. |
-| AgentNode schema | `cue/agentnode/schema.cue` | Defines node metadata, keyword mapping, task pattern refs, root index, root selection response, and projected prompt shape. |
+| AgentNode schema | `cue/agentnode/schema.cue` | Defines the root CUE SSOT for node metadata, keyword mapping, task pattern refs/cards, root index, root selection response, authorization evidence, prompt projection, interop state, relation edges, fragment contracts, and admissibility assessment. |
 | Workspace node metadata | `nodes/workspace/AGENTS.cue` | Declares workspace keywords, aliases, negative discovery signals, two task pattern refs, forbidden loads, validation requirements, fixture/projection requirements, and closeout evidence expectations. |
 | Workspace pattern cards | `nodes/workspace/patterns/*.cue` | Declares `wezterm.workspace` and `nvim.smart-splits` ids with single-pattern loadable files and workflow stages. |
 | Domain pattern schema | `cue/patterns/domain/schema.cue` | Defines domain surfaces, scopes, discovery metadata, known good/failure records, invariants, gate requirements, and proof commands/artifacts. |
@@ -17,6 +17,7 @@ Scope: AGENTS.cue routing proof of concept only. This review does not propose se
 | Codex projection | `cue/patterns/projections/codex-slice.cue` | Projects selected domain/workflow cards into Codex-facing slices with known good/failure/invariant/gate proof data. |
 | Root selection response | `nodes/workspace/projections.cue` exports `rootSelectionResponse` | Exports selected pattern ids, matched terms, rationale, loadable files, required validations/projections/skills, forbidden loads, and root-mediated evidence. |
 | Bounded fixture | `nodes/workspace/projections.cue` exports `boundedDiscoveryFixture` | Reuses `rootSelectionResponse`, pins root-mediated mode, index sources, and forbidden loads. |
+| Root schema fixture | `nodes/workspace/projections.cue` exports `rootSchemaDerivedFixture` | Proves downstream fragment conformance, interop state, allowed CUE/Go/MCP/prompt relations, typed evidence relations, and invalid Go-owned policy drift classification. |
 | Projected prompt | `nodes/workspace/projections.cue` exports `projectedPrompt.text` | Instructs agents to treat AGENTS.cue/root selections as authority, avoid broad inspection before selection, use bounded fallback, and record selection evidence. |
 
 ## Intended Boundaries
@@ -35,6 +36,8 @@ Scope: AGENTS.cue routing proof of concept only. This review does not propose se
 |---|---|---|---|---|---|
 | Evidence schema | Evidence records selection mode, selected patterns, loaded files, rationale, and authorization source. | `#RootSelectionResponse.evidence` now uses typed `#RootAuthorizationEvidence`, including `selectedPatternIDs`, `loadedFiles`, `authorizationSource`, `rationale`, and optional `deniedLoads`. | Correction implemented for the root-mediated and bounded fallback fixtures. | Medium | Keep evidence fields first-class when adapters begin emitting runtime load results. |
 | Fallback proof | Fallback mode is bounded and testable. | Prompt text says fallback may use explicitly named AGENTS.cue/index files or user-granted paths; schema allows `fallback-metadata` and `explicit-user-grant`; `fallbackDiscoveryFixture` proves explicit-index fallback. | User-grant fallback remains unimplemented and unproven. | Medium | Keep fallback evidence typed; add user-grant fixture only when that mode is implemented. |
+| Root CUE SSOT | Root schema owns type contracts, fragment contracts, relations, interop state, and evidence. | `cue/agentnode/schema.cue` now exports root-owned fragment, relation, interop, evidence, and admissibility contracts; `AGENTS.cue` declares `schemaSource` as `root-cue-ssot`. | Implemented structurally for AgentNode CUE fixtures; no AgentNode Go runtime exists in this repo to adapt. | Medium | When AgentNode Go appears, require it to consume these root-shaped fragments and emit root-shaped evidence only. |
+| Relation admissibility | A fragment is admissible only when both type and relation are valid. | `rootSchemaDerivedFixture.admissibility` exports all four classifications: admissible fragment, architectural drift, schema gap, and reject. | Implemented as typed fixture classification, not runtime enforcement. | Medium | Keep Go-owned policy classified as drift unless a root CUE relation authorizes it. |
 | Root mediation | Root brokers task-pattern selection and exposes selected context. | `rootAgentContract` indexes only `nodes/workspace/AGENTS.cue`; `rootSelectionResponse` exports selected context. | Root operations include `searchKeywords`, which is acceptable as declared metadata search but could be misread as filesystem search without stronger policy wording. | Low | Clarify in schema/docs that `agentnode.searchKeywords` searches declared node metadata only. |
 | Node metadata authority | Node metadata declares relevance, ownership, support files, forbidden loads, and workflow requirements. | Workspace node declares keywords and task patterns with `owns`; exported response repeats loadable files. | No hard typed relation requires `selected.loadableFiles` to derive from `taskPatterns[].path`/`owns`; current fixture is manually aligned. | Medium | Add CUE constraints or projection helpers that derive selected loadable files from task pattern refs. |
 | Policy placement | Policy remains root-owned, typed, auditable, testable. | Forbidden loads are typed and exported; prompt also carries policy statements. | Prompt policy is useful but partially duplicates policy in prose. | Low | Keep prompt as projection output, but source future policy statements from typed fields where possible. |
@@ -62,6 +65,9 @@ Scope: AGENTS.cue routing proof of concept only. This review does not propose se
 | Fallback mode is bounded. | Proven for explicit-index fallback | `fallbackDiscoveryFixture.evidence` exports `authorizationSource: "fallback-explicit-index"`, loads only `AGENTS.cue` and `nodes/workspace/AGENTS.cue`, and denies pattern-file and broad-discovery requests. |
 | Projected prompt preserves root mediation. | Proven | Exported `projectedPrompt.text` says to use AGENTS.cue/root MCP selections, avoid task-owned files before root mediation, and record fallback mode. |
 | Evidence records selection mode, selected patterns, loaded files, rationale, and authorization source. | Proven for CUE fixtures | `#RootAuthorizationEvidence` requires `selectedPatternIDs`, `loadedFiles`, `authorizationSource`, and `rationale`; root-mediated and fallback exports include denial evidence. |
+| AGENTS.cue is an instance, not schema authority. | Proven for root index | `rootAgentContract.schemaSource` exports `cue/agentnode/schema.cue` with role `root-cue-ssot`. |
+| Relation validity is first-class. | Proven for CUE fixtures | `rootSchemaDerivedFixture.relations` exports allowed CUE contract to Go consumer, Go runtime to CUE-shaped evidence, root MCP to authorization evidence, prompt projection to agent consumer, and disallowed Go-owned hidden policy. |
+| Invalid Go-owned policy is flagged. | Proven for CUE fixtures | `rootSchemaDerivedFixture.admissibility` classifies `hidden-go-policy` as `architectural-drift` because its type is valid but its relation is invalid. |
 
 ## Validation and Export Evidence
 
@@ -71,10 +77,11 @@ Scope: AGENTS.cue routing proof of concept only. This review does not propose se
 | `cue vet ./cue/agentnode/...` | Passed with no output. |
 | `cue vet ./nodes/workspace/...` | Passed with no output. |
 | `cue vet ./cue/patterns/...` | Passed with no output. |
-| `cue export . -e rootAgentContract --out json` | Exported root index with one workspace contract and four bounded AgentNode operations. |
+| `cue export . -e rootAgentContract --out json` | Exported root index with one workspace contract, four bounded AgentNode operations, and `schemaSource` pointing at `cue/agentnode/schema.cue` with role `root-cue-ssot`. |
 | `cue export ./nodes/workspace -e rootSelectionResponse --out json` | Exported two selected patterns, explicit loadable files, forbidden loads, and root-mediated evidence. |
 | `cue export ./nodes/workspace -e boundedDiscoveryFixture --out json` | Exported the same bounded root-mediated selection fixture with typed loaded-file, authorization-source, rationale, selected-pattern, and denial evidence. |
 | `cue export ./nodes/workspace -e fallbackDiscoveryFixture --out json` | Exported bounded fallback evidence with `authorizationSource: "fallback-explicit-index"`, explicit index loaded files, no selected pattern IDs, and denial records. |
+| `cue export ./nodes/workspace -e rootSchemaDerivedFixture --out json` | Exported downstream fragment contracts, interop state, allowed relation edges, and admissibility classifications including Go-owned policy drift. |
 | `cue export ./nodes/workspace -e projectedPrompt.text --out text` | Exported prompt text preserving root mediation and bounded fallback. |
 
 ## Correction Plan Before Further Feature Work
@@ -86,3 +93,5 @@ Scope: AGENTS.cue routing proof of concept only. This review does not propose se
 5. Add one bounded fallback fixture that proves `fallback-metadata` without adding runtime behavior or new planning. Implemented for explicit-index fallback.
 6. Clarify that `agentnode.searchKeywords` means declared metadata keyword matching only, not filesystem search or semantic search.
 7. Keep prompt text as a projection of root-owned policy; avoid adding independent prose policy outside typed CUE fields.
+8. Keep `cue/agentnode/schema.cue` as the root CUE SSOT; AGENTS.cue and node-local AGENTS.cue files remain contract instances against that schema.
+9. Treat valid type plus invalid relation as architectural drift; the current fixture flags Go-owned hidden policy this way.
