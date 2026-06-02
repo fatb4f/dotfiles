@@ -9,7 +9,7 @@ package registry
 		transport: "stdio"
 	}
 
-	request_id: string
+	request_id?: string
 	server_cmd: [...string]
 	tool_name:  string
 	tool_args:  [string]: _
@@ -21,11 +21,28 @@ package registry
 #ProjectedSelection: {
 	selection: #RegistrySelection
 	projected: #ProjectedMCPToolRequest & {
-		request_id: selection.plan.request.request_id
 		server_cmd: selection.plan.request.server_cmd
 		tool_name:  selection.plan.request.tool_name
 		tool_args:  selection.plan.request.tool_args
 		cwd:        selection.plan.request.cwd
 		timeout_ms: selection.plan.request.timeout_ms
+		started_at: "2026-06-02T00:00:00Z"
 	}
 }
+
+weztermExample: #ProjectedSelection & {
+	selection: {
+		registry: exampleRegistry
+		query: {
+			path:           "chezmoi/private_dot_config/wezterm/wezterm.lua"
+			objective:      "inspect_config"
+			allowGenerated: false
+			allowLegacy:    false
+		}
+	}
+	projected: {
+		started_at: "2026-06-02T00:00:00Z"
+	}
+}
+
+exampleRegistry: registry

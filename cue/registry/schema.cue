@@ -62,7 +62,6 @@ import "list"
 	node: #AuthorityNode
 	route: #RetrievalRoute
 	request: {
-		request_id: string
 		server_cmd: [...string]
 		tool_name: string
 		tool_args: [string]: _
@@ -85,7 +84,6 @@ import "list"
 			node:     registry.nodes.cuePolicy
 			route:    registry.routes.inspectCuePolicy
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.cuePolicy.id)"
 				server_cmd: registry.routes.inspectCuePolicy.server_cmd
 				tool_name:  registry.routes.inspectCuePolicy.tool_name
 				tool_args:  registry.routes.inspectCuePolicy.tool_args
@@ -103,7 +101,6 @@ import "list"
 			node:     registry.nodes.dotctlAdapter
 			route:    registry.routes.inspectDotctlAdapter
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.dotctlAdapter.id)"
 				server_cmd: registry.routes.inspectDotctlAdapter.server_cmd
 				tool_name:  registry.routes.inspectDotctlAdapter.tool_name
 				tool_args:  registry.routes.inspectDotctlAdapter.tool_args
@@ -121,7 +118,6 @@ import "list"
 			node:     registry.nodes.bootstrap
 			route:    registry.routes.inspectBootstrap
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.bootstrap.id)"
 				server_cmd: registry.routes.inspectBootstrap.server_cmd
 				tool_name:  registry.routes.inspectBootstrap.tool_name
 				tool_args:  registry.routes.inspectBootstrap.tool_args
@@ -139,7 +135,6 @@ import "list"
 			node:     registry.nodes.hyprlandConfig
 			route:    registry.routes.inspectHyprlandConfig
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.hyprlandConfig.id)"
 				server_cmd: registry.routes.inspectHyprlandConfig.server_cmd
 				tool_name:  registry.routes.inspectHyprlandConfig.tool_name
 				tool_args:  registry.routes.inspectHyprlandConfig.tool_args
@@ -157,7 +152,6 @@ import "list"
 			node:     registry.nodes.weztermConfig
 			route:    registry.routes.inspectWeztermConfig
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.weztermConfig.id)"
 				server_cmd: registry.routes.inspectWeztermConfig.server_cmd
 				tool_name:  registry.routes.inspectWeztermConfig.tool_name
 				tool_args:  registry.routes.inspectWeztermConfig.tool_args
@@ -175,7 +169,6 @@ import "list"
 			node:     registry.nodes.zshConfig
 			route:    registry.routes.inspectZshConfig
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.zshConfig.id)"
 				server_cmd: registry.routes.inspectZshConfig.server_cmd
 				tool_name:  registry.routes.inspectZshConfig.tool_name
 				tool_args:  registry.routes.inspectZshConfig.tool_args
@@ -193,7 +186,6 @@ import "list"
 			node:     registry.nodes.nvimConfig
 			route:    registry.routes.inspectNvimConfig
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.nvimConfig.id)"
 				server_cmd: registry.routes.inspectNvimConfig.server_cmd
 				tool_name:  registry.routes.inspectNvimConfig.tool_name
 				tool_args:  registry.routes.inspectNvimConfig.tool_args
@@ -211,7 +203,6 @@ import "list"
 			node:     registry.nodes.generatedProjections
 			route:    registry.routes.inspectGeneratedProjections
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.generatedProjections.id)"
 				server_cmd: registry.routes.inspectGeneratedProjections.server_cmd
 				tool_name:  registry.routes.inspectGeneratedProjections.tool_name
 				tool_args:  registry.routes.inspectGeneratedProjections.tool_args
@@ -229,7 +220,6 @@ import "list"
 			node:     registry.nodes.yaziConfig
 			route:    registry.routes.inspectYaziConfig
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.yaziConfig.id)"
 				server_cmd: registry.routes.inspectYaziConfig.server_cmd
 				tool_name:  registry.routes.inspectYaziConfig.tool_name
 				tool_args:  registry.routes.inspectYaziConfig.tool_args
@@ -247,7 +237,6 @@ import "list"
 			node:     registry.nodes.legacySessionSurfaces
 			route:    registry.routes.inspectLegacySessionSurfaces
 			request: {
-				request_id: "\(query.objective)-\(registry.nodes.legacySessionSurfaces.id)"
 				server_cmd: registry.routes.inspectLegacySessionSurfaces.server_cmd
 				tool_name:  registry.routes.inspectLegacySessionSurfaces.tool_name
 				tool_args:  registry.routes.inspectLegacySessionSurfaces.tool_args
