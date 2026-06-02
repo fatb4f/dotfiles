@@ -63,7 +63,7 @@ legacyBlockedResolution: #RegistryResolution & {
 noMatchResolution: #RegistryResolution & {
 	registry: exampleRegistry
 	query: {
-		path:           "chezmoi/private_dot_config/wezterm/does-not-exist.lua"
+		path:           "unrelated/path/file.txt"
 		objective:      "inspect_config"
 		allowGenerated: false
 		allowLegacy:    false
