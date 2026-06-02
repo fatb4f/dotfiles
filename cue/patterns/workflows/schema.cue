@@ -33,6 +33,7 @@ import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 	id:             string
 	requiredBefore: #WorkflowLifecycleLandmark
 	proof:          string
+	factRefs:       domain.#FactRefList
 }
 
 #DomainNodePattern:  domain.#DomainNodePattern

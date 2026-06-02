@@ -1,5 +1,159 @@
 package domain
 
+#SourceFactKind: "upstream-source" | "root-schema" | "fixture" | "local-review"
+
+#SourceFactID:
+	"flow.low_level_workflow_manager_based_on_cue_instance" |
+	"flow.task_corresponds_to_struct_in_cue_instance" |
+	"flow.package_does_not_define_task_shape" |
+	"flow.user_supplies_taskfunc_for_cue_values_deemed_tasks" |
+	"flow.new_controller_accepts_cue_instance_or_value_and_taskfunc" |
+	"flow.dependencies_derive_from_references_between_task_fields" |
+	"flow.cyclic_dependencies_not_allowed" |
+	"flow.config_root_limits_task_search_within_cue_path" |
+	"flow.infer_tasks_searches_arbitrary_data_and_may_be_spurious" |
+	"flow.task_fill_fills_output_values_after_runner_execution" |
+	"root.relations_are_admitted_only_when_backed_by_facts" |
+	"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks" |
+	"fixture.fact_rooted_cue_flow_relation_slice_exports"
+
+#SourceFact: {
+	id:          #SourceFactID
+	kind:        #SourceFactKind
+	source:      string
+	claim:       string
+	observedIn?: string
+	consequence: string
+}
+
+#FactRefList: [#SourceFactID, ...#SourceFactID]
+
+#RelationEdge: {
+	id:        string
+	from:      string
+	to:        string
+	artifact:  string
+	operation: string
+	authority: string
+	stateKind: string
+	allowed:   bool
+
+	classification?: string
+	constraint?:     string
+	factRefs:        #FactRefList
+}
+
+#SliceRequirement: {
+	id:          string
+	description: string
+	requires: [...string]
+	factRefs: #FactRefList
+}
+
+sourceFacts: {
+	"flow.low_level_workflow_manager_based_on_cue_instance": {
+		id:          "flow.low_level_workflow_manager_based_on_cue_instance"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "flow is a low-level workflow manager based on a CUE Instance."
+		observedIn:  "cuelang.org/go/tools/flow package overview"
+		consequence: "Adapter relations target CUE instance/value workflow evaluation, not a generic runtime."
+	}
+	"flow.task_corresponds_to_struct_in_cue_instance": {
+		id:          "flow.task_corresponds_to_struct_in_cue_instance"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "A Task corresponds to a struct in a CUE instance."
+		observedIn:  "cuelang.org/go/tools/flow Task documentation"
+		consequence: "Task shape originates in CUE data/schema."
+	}
+	"flow.package_does_not_define_task_shape": {
+		id:          "flow.package_does_not_define_task_shape"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "The flow package does not define what a Task looks like."
+		observedIn:  "cuelang.org/go/tools/flow package overview"
+		consequence: "Go may recognize declared CUE task values but must not become the schema authority."
+	}
+	"flow.user_supplies_taskfunc_for_cue_values_deemed_tasks": {
+		id:          "flow.user_supplies_taskfunc_for_cue_values_deemed_tasks"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "The user supplies a TaskFunc that creates a Runner for cue.Values considered tasks."
+		observedIn:  "cuelang.org/go/tools/flow TaskFunc documentation"
+		consequence: "Go supplies adaptation behavior for task values already admitted by CUE."
+	}
+	"flow.new_controller_accepts_cue_instance_or_value_and_taskfunc": {
+		id:          "flow.new_controller_accepts_cue_instance_or_value_and_taskfunc"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "New accepts a cue.InstanceOrValue plus a TaskFunc."
+		observedIn:  "cuelang.org/go/tools/flow New documentation"
+		consequence: "The adapter boundary is CUE value evaluation plus user-supplied task recognition."
+	}
+	"flow.dependencies_derive_from_references_between_task_fields": {
+		id:          "flow.dependencies_derive_from_references_between_task_fields"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "Task dependencies are derived from references between task fields."
+		observedIn:  "cuelang.org/go/tools/flow package overview"
+		consequence: "Dependency edges are modeled as CUE-reference-derived facts."
+	}
+	"flow.cyclic_dependencies_not_allowed": {
+		id:          "flow.cyclic_dependencies_not_allowed"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "Cyclic task dependencies are not allowed."
+		observedIn:  "cuelang.org/go/tools/flow package overview"
+		consequence: "The slice must reject cyclic dependency interpretation."
+	}
+	"flow.config_root_limits_task_search_within_cue_path": {
+		id:          "flow.config_root_limits_task_search_within_cue_path"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "Config.Root limits task search within a CUE path."
+		observedIn:  "cuelang.org/go/tools/flow Config.Root documentation"
+		consequence: "Root is a factual containment primitive for task discovery boundaries."
+	}
+	"flow.infer_tasks_searches_arbitrary_data_and_may_be_spurious": {
+		id:          "flow.infer_tasks_searches_arbitrary_data_and_may_be_spurious"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "InferTasks can look for task structs in arbitrary data and may produce spurious matches."
+		observedIn:  "cuelang.org/go/tools/flow Config.InferTasks documentation"
+		consequence: "Default stance is InferTasks false unless explicitly modeled as risky and bounded."
+	}
+	"flow.task_fill_fills_output_values_after_runner_execution": {
+		id:          "flow.task_fill_fills_output_values_after_runner_execution"
+		kind:        "upstream-source"
+		source:      "https://pkg.go.dev/cuelang.org/go/tools/flow"
+		claim:       "Task.Fill fills task output values after runner execution."
+		observedIn:  "cuelang.org/go/tools/flow Task.Fill documentation"
+		consequence: "Evidence and output emission are runner-produced fills, not policy authorship."
+	}
+	"root.relations_are_admitted_only_when_backed_by_facts": {
+		id:          "root.relations_are_admitted_only_when_backed_by_facts"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Relations are admitted only when backed by facts."
+		consequence: "Relation edges and slice requirements require known fact references."
+	}
+	"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks": {
+		id:          "root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Go may supply TaskFunc and Runner behavior for root-schema-declared CUE task values."
+		consequence: "Go may not define task shape or broaden InferTasks unless the root schema admits that risk."
+	}
+	"fixture.fact_rooted_cue_flow_relation_slice_exports": {
+		id:          "fixture.fact_rooted_cue_flow_relation_slice_exports"
+		kind:        "fixture"
+		source:      "cue/patterns/projections/cue-flow-fact-slice.cue"
+		claim:       "The fact-rooted CUE flow relation fixture exports."
+		consequence: "Fixture/export proof covers the relation contract shape."
+	}
+}
+
 #DomainSurface: {
 	summary: string
 	paths: [...string]
@@ -45,10 +199,10 @@ package domain
 
 	discovery: {
 		authorityPaths: [...string]
-		entrypoints:    [...string]
-		requiredLoads:  [...string]
+		entrypoints: [...string]
+		requiredLoads: [...string]
 		forbiddenLoads: [...string]
-		staleSignals:   [...string]
+		staleSignals: [...string]
 	}
 
 	knownGoodPatterns: [...#PatternGoodPattern]
@@ -58,7 +212,7 @@ package domain
 	gatePromotionRequirements: [...#PatternGateRequirement]
 
 	proofs: {
-		commands:  [...string]
+		commands: [...string]
 		artifacts: [...string]
 	}
 }

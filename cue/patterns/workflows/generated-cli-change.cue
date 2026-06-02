@@ -74,6 +74,9 @@ generatedCliChange: #WorkflowPattern & {
 			id:             "workflow-export"
 			requiredBefore: "review"
 			proof:          "The generated CLI change workflow exports successfully."
+			factRefs: [
+				"fixture.fact_rooted_cue_flow_relation_slice_exports",
+			]
 		},
 	]
 }
