@@ -1,10 +1,10 @@
-# Hookrail lifecycle hook wiring for Codex config.toml.
+# Frame lifecycle hook wiring for Codex config.toml.
 #
-# Hookrail is superseded by Frame. Keep this fragment only for rollback or
-# compatibility installs.
-#
-# Active runtime:
+# Install Frame to:
 #   $CODEX_HOME/tools/frame
+#
+# This keeps the same hook scope as the old Hookrail wiring, but the active
+# runtime is Frame.
 [features]
 hooks = true
 
