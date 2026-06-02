@@ -1375,7 +1375,7 @@ hookrail_registry_export() {
   overlay_file="${1:?overlay file required}"
   expression="${2:?CUE expression required}"
 
-  (cd "$(hookrail_repo_root)" && cue export ./cue/registry "$overlay_file" -e "$expression" --out json)
+  (cd "$(hookrail_repo_root)" && cue export "$overlay_file" -e "$expression" --out json)
 }
 
 hookrail_registry_resolve_overlay() {
@@ -1402,6 +1402,34 @@ resolution: reg.#RegistryResolution & {
     objective: $objective_json
     allowGenerated: $allow_generated
     allowLegacy: $allow_legacy
+  }
+}
+
+response: reg.#RegistryResponse & {
+  status: resolution.status
+  query:  resolution.query
+
+  if status == "selected" {
+    nodeID:  resolution.plan.node.id
+    routeID: resolution.plan.route.id
+    request: reg.#ProjectedMCPToolRequestTemplate & {
+      server_cmd: resolution.plan.request.server_cmd
+      tool_name:  resolution.plan.request.tool_name
+      tool_args:  resolution.plan.request.tool_args
+      cwd:        resolution.plan.request.cwd
+      timeout_ms: resolution.plan.request.timeout_ms
+    }
+    gates: resolution.plan.gates
+  }
+
+  if status != "selected" {
+    errors: resolution.errors
+
+    if status == "blocked" {
+      blockedCandidateIDs: [for _, candidate in resolution.blockedCandidates {
+        candidate.node.id
+      }]
+    }
   }
 }
 EOF
@@ -1437,35 +1465,7 @@ hookrail_run_registry_resolve() {
     "$allow_generated" \
     "$allow_legacy"
 
-  if hookrail_registry_export "$overlay_file" 'resolution' | jq '
-    {
-      status: .status,
-      query: .query
-    }
-    + (
-      if .status == "selected" then
-        {
-          nodeID: .plan.node.id,
-          routeID: .plan.route.id,
-          request: .plan.request,
-          gates: .plan.gates
-        }
-      else
-        {
-          errors: .errors
-        }
-        + (
-          if .status == "blocked" then
-            {
-              blockedCandidateIDs: [.blockedCandidates[].node.id]
-            }
-          else
-            {}
-          end
-        )
-      end
-    )
-  ' ; then
+  if hookrail_registry_export "$overlay_file" 'response'; then
     export_status=0
   else
     export_status=$?
