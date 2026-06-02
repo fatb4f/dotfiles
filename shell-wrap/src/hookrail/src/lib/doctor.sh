@@ -3,6 +3,7 @@
 hookrail_run_doctor() {
   local cue_dir hookrail_bin fixture tmp_root output_json manifest persisted_count
   local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file trace_row context_artifact closeout_packet clean_head clean_head_short
+  local registry_selected_response registry_blocked_response registry_no_match_response registry_ambiguous_response registry_execute_output registry_adapter_stub
 
   cue_dir="$(hookrail_cue_dir)"
   hookrail_bin="${HOOKRAIL_BIN:-$(hookrail_script_dir)/hookrail}"
@@ -127,6 +128,119 @@ hookrail_run_doctor() {
   hookrail_doctor_check "adapter stdout JSON" -- jq -e 'type == "object" and .continue == true' "$output_json"
   hookrail_doctor_check "adapter stdout vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#HookOutput"' bash "$cue_dir" "$output_json"
 
+  registry_selected_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-selected.XXXXXX.json")"
+  registry_blocked_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-blocked.XXXXXX.json")"
+  registry_no_match_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-no-match.XXXXXX.json")"
+  registry_ambiguous_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-ambiguous.XXXXXX.json")"
+  registry_transport_failure_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-transport-failure.XXXXXX.json")"
+  registry_execute_output="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-execute.XXXXXX.json")"
+  registry_adapter_stub="$tmp_root/bin/mcp-adapter"
+  mkdir -p "$(dirname "$registry_adapter_stub")"
+  cat >"$registry_adapter_stub" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+mode="${MCP_ADAPTER_MODE:-executed}"
+input_file="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-adapter-input.XXXXXX.json")"
+trap 'rm -f "$input_file"' EXIT
+
+cat >"$input_file"
+
+if [[ "$mode" == "exit_nonzero" ]]; then
+  printf 'adapter failure requested by test\n' >&2
+  exit 5
+fi
+
+if [[ "$mode" == "tool_failure" ]]; then
+  jq -n \
+    --argjson response "$(cat "$input_file")" \
+    --argjson request "$(jq '.request' "$input_file")" \
+    --arg adapterBinary "$(jq -r '.request.adapter.binary' "$input_file")" \
+    --arg adapterTransport "$(jq -r '.request.adapter.transport' "$input_file")" \
+    --arg reason "tool failed" \
+    '{
+      schemaVersion: "cuerail.mcpExecutionEvidence.v1",
+      response: $response,
+      request: $request,
+      executionStatus: "tool_failure",
+      adapter: {
+        binary: $adapterBinary,
+        transport: $adapterTransport
+      },
+      reason: $reason
+    }'
+else
+  jq -n \
+    --argjson response "$(cat "$input_file")" \
+    --argjson request "$(jq '.request' "$input_file")" \
+    --arg adapterBinary "$(jq -r '.request.adapter.binary' "$input_file")" \
+    --arg adapterTransport "$(jq -r '.request.adapter.transport' "$input_file")" \
+    '{
+      schemaVersion: "cuerail.mcpExecutionEvidence.v1",
+      response: $response,
+      request: $request,
+      executionStatus: "executed",
+      adapter: {
+        binary: $adapterBinary,
+        transport: $adapterTransport
+      }
+    }'
+fi
+EOF
+  chmod +x "$registry_adapter_stub"
+
+  hookrail_doctor_check "registry selected response emits" -- bash -c 'cd "$1" && cue export . -e weztermResponse --out json >"$2"' bash "$(hookrail_repo_root)/cue/registry" "$registry_selected_response"
+  hookrail_doctor_check "selected response vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryResponse"' bash "$(hookrail_repo_root)/cue/registry" "$registry_selected_response"
+  hookrail_doctor_check "blocked response emits" -- bash -c 'cd "$1" && cue export . -e generatedBlockedResponse --out json >"$2"' bash "$(hookrail_repo_root)/cue/registry" "$registry_blocked_response"
+  hookrail_doctor_check "no-match response emits" -- bash -c 'cd "$1" && cue export . -e noMatchResponse --out json >"$2"' bash "$(hookrail_repo_root)/cue/registry" "$registry_no_match_response"
+  hookrail_doctor_check "ambiguous response emits" -- bash -c 'cd "$1" && cue export . -e ambiguousResponse --out json >"$2"' bash "$(hookrail_repo_root)/cue/registry" "$registry_ambiguous_response"
+
+  if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=executed "$hookrail_bin" registry execute --response "$registry_selected_response" >"$registry_execute_output"; then
+    :
+  else
+    printf 'FAIL registry execute selected response should succeed\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute selected response" -- jq -e '.executionStatus == "executed" and .response.status == "selected" and .request.tool_name == "search" and .adapter.binary == "mcp-adapter"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute selected response vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
+  if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=tool_failure "$hookrail_bin" registry execute --response "$registry_selected_response" >"$registry_execute_output"; then
+    :
+  else
+    printf 'FAIL registry execute tool failure response should emit evidence\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute tool failure status" -- jq -e '.executionStatus == "tool_failure" and .response.status == "selected" and .reason == "tool failed"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute tool failure vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
+  if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=executed "$hookrail_bin" registry execute --response "$registry_blocked_response" >"$registry_execute_output" 2>/dev/null; then
+    printf 'FAIL registry execute blocked response should fail closed\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute blocked response status" -- jq -e '.executionStatus == "forbidden" and .response.status == "blocked" and .reason == "registry response is not selected"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute blocked response vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
+  if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=executed "$hookrail_bin" registry execute --response "$registry_no_match_response" >"$registry_execute_output" 2>/dev/null; then
+    printf 'FAIL registry execute no-match response should fail closed\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute no-match response status" -- jq -e '.executionStatus == "forbidden" and .response.status == "none"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute no-match response vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
+  if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=executed "$hookrail_bin" registry execute --response "$registry_ambiguous_response" >"$registry_execute_output" 2>/dev/null; then
+    printf 'FAIL registry execute ambiguous response should fail closed\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute ambiguous response status" -- jq -e '.executionStatus == "forbidden" and .response.status == "ambiguous"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute ambiguous response vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
+  if "$hookrail_bin" registry execute --response "$registry_selected_response" >"$registry_execute_output" 2>/dev/null; then
+    printf 'FAIL registry execute transport failure should fail closed\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute transport failure status" -- jq -e '.executionStatus == "transport_failure" and .response.status == "selected" and .request.tool_name == "search"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute transport failure vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
   persisted_count="$(find "$tmp_root" -type f -name '*.json' | wc -l | tr -d ' ')"
   [[ "$persisted_count" == "0" ]] || {
     printf 'FAIL small prompt persisted manifest count: got %s expected 0\n' "$persisted_count" >&2
@@ -229,6 +343,7 @@ hookrail_run_doctor() {
     return 1
   fi
 
+  rm -f "$registry_selected_response" "$registry_blocked_response" "$registry_no_match_response" "$registry_ambiguous_response" "$registry_execute_output"
   rm -rf "$tmp_root"
   rm -f "$output_json"
 

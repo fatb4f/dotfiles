@@ -38,3 +38,14 @@ commands:
             help: Allow legacy paths
         examples:
           - hookrail registry resolve --path chezmoi/private_dot_config/wezterm/wezterm.lua --objective inspect_config
+
+      - name: execute
+        help: Execute a selected registry response through the MCP adapter
+        filename: commands/registry_execute.sh
+        flags:
+          - long: --response
+            help: Selected registry response JSON
+            arg: response
+            required: true
+        examples:
+          - hookrail registry execute --response response.json
