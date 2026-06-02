@@ -1,0 +1,253 @@
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+model_reasoning_summary = "auto"
+
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+web_search = "disabled"
+project_doc_max_bytes = 24576
+allow_login_shell = false
+
+log_dir = "/home/_404/.local/state/codex/log" 
+sqlite_home = "/home/_404/.local/state/codex/sqlite"
+
+[features]
+hooks = true
+shell_tool = true
+shell_snapshot = false
+
+[history]
+persistence = "none"
+
+[shell_environment_policy]
+inherit = "core"
+include_only = [
+  "HOME",
+  "PATH",
+  "SHELL",
+  "TERM",
+  "USER",
+  "LOGNAME",
+  "PWD",
+  "LANG",
+  "LC_*",
+
+  "XDG_CONFIG_HOME",
+  "XDG_DATA_HOME",
+  "XDG_STATE_HOME",
+  "XDG_CACHE_HOME",
+
+  "CODEX_HOME",
+  "CODEX_STATE",
+  "CODEX_CACHE",
+  "CODEX_BIN",
+  "CODEX_SQLITE_HOME",
+
+  "HOOKRAIL_SESSION_START_FEED_SENTINEL",
+  "HOOKRAIL_USER_PROMPT_FEED_SENTINEL",
+  "HOOKRAIL_POST_TOOL_FEED_SENTINEL",
+  "HOOKRAIL_FEED_SENTINEL",
+]
+exclude = [
+  "*TOKEN*",
+  "*SECRET*",
+  "*KEY*",
+  "*PASSWORD*",
+]
+
+PATH = "/home/_404/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin"
+
+[tui]
+status_line = [
+  "model-with-reasoning",
+  "current-dir",
+  "model",
+  "context-used",
+  "five-hour-limit",
+  "weekly-limit",
+  "context-window-size",
+  "used-tokens",
+  "total-input-tokens",
+  "total-output-tokens",
+]
+
+[tui.model_availability_nux]
+"gpt-5.5" = 4
+
+[projects."/home/_404/src"]
+trust_level = "trusted"
+
+[projects."/home/_404/src/fatb4f"]
+trust_level = "trusted"
+
+[projects."/home/_404/src/fatb4f/frame"]
+trust_level = "trusted"
+
+[projects."/home/_404/src/fatb4f/bashly.sh"]
+trust_level = "trusted"
+
+[projects."/home/_404/.local/share/chezmoi"]
+trust_level = "trusted"
+
+[projects."/home/_404/.local/share/codex"]
+trust_level = "trusted"
+
+[projects."/home/_404/.local/share/chezmoi/dot_local/share/codex/skills/neovim-config"]
+trust_level = "trusted"
+
+[projects."/home/_404/src/patchplan-probe"]
+trust_level = "trusted"
+
+[projects."/home/_404/src/dotfiles"]
+trust_level = "trusted"
+
+[projects."/home/_404/src/frame"]
+trust_level = "trusted"
+
+[mcp_servers.git]
+command = "/home/_404/.local/bin/git-mcp-go" 
+args = [
+  "serve",
+  "-r", "/home/_404/.local/share/chezmoi",
+  "--mode", "shell"
+]
+enabled = true
+required = false
+startup_timeout_sec = 10
+tool_timeout_sec = 60
+
+enabled_tools = [
+  "git_list_repositories",
+  "git_status",
+  "git_diff_unstaged",
+  "git_diff_staged",
+  "git_diff",
+  "git_log",
+  "git_show",
+  "git_add",
+  "git_reset",
+  "git_commit"
+]
+
+default_tools_approval_mode = "approve"
+
+[mcp_servers.git-mcp-server]
+command = "/home/_404/.local/bin/git-mcp-go"
+args = ["serve", "--mode", "shell", "-r=/home/_404/src/dotfiles,/home/_404/src/main-track,/home/_404/src/frame"]
+env_vars = ["PATH", "CODEX_HOME", "CODEX_STATE"]
+
+[mcp_servers.git-mcp-server.tools.git_status]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_commit]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_add]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_diff_staged]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_diff]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_diff_unstaged]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_list_repositories]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_reset]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_log]
+approval_mode = "approve"
+
+[mcp_servers.git-mcp-server.tools.git_show]
+approval_mode = "approve"
+
+[plugins."github@openai-curated"]
+enabled = true
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_get_label]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_list_issues]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_add_issue_comment]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_issue_write]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_issue_read]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_push_files]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_list_commits]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_get_commit]
+approval_mode = "approve"
+
+[apps.connector_6977da51d0188191859f0037971156d9.tools.github-mcp_get_file_contents]
+approval_mode = "approve"
+
+[apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_create_issue]
+approval_mode = "approve"
+
+[apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_update_issue]
+approval_mode = "approve"
+
+[apps.connector_76869538009648d5b282a4bb21c3d157.tools.github_update_issue_comment]
+approval_mode = "approve"
+
+
+
+# frame begin
+# Frame lifecycle hook wiring for Codex config.toml.
+#
+# Install Frame to:
+#   $CODEX_HOME/tools/frame
+#
+# This keeps the same hook scope as the old Hookrail wiring, but the active
+# runtime is Frame.
+
+[[hooks.SessionStart]]
+matcher = "startup|resume|clear|compact"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; exec \"$CODEX_HOME/tools/frame/bin/frame\" hook run'"
+timeout = 10
+statusMessage = "Frame: loading session frame"
+
+[[hooks.UserPromptSubmit]]
+
+[[hooks.UserPromptSubmit.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; exec \"$CODEX_HOME/tools/frame/bin/frame\" hook run'"
+timeout = 10
+statusMessage = "Frame: checking prompt pressure"
+
+[[hooks.PostToolUse]]
+matcher = "*"
+
+[[hooks.PostToolUse.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; exec \"$CODEX_HOME/tools/frame/bin/frame\" hook run'"
+timeout = 30
+statusMessage = "Frame: capturing tool evidence"
+
+[[hooks.Stop]]
+
+[[hooks.Stop.hooks]]
+type = "command"
+command = "sh -lc 'CODEX_HOME=\"${CODEX_HOME:-$HOME/.codex}\"; exec \"$CODEX_HOME/tools/frame/bin/frame\" hook run'"
+timeout = 30
+statusMessage = "Frame: writing closeout frame"
+# frame end
