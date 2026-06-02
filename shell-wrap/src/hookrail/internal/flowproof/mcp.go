@@ -14,7 +14,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func taskFunc(ctx context.Context, repoRoot string) flow.TaskFunc {
+func taskFunc(ctx context.Context, repoRoot string, responses projectionResponses) flow.TaskFunc {
 	return func(v cue.Value) (flow.Runner, error) {
 		kind, err := v.LookupPath(cue.ParsePath("kind")).String()
 		if err != nil {
@@ -24,12 +24,12 @@ func taskFunc(ctx context.Context, repoRoot string) flow.TaskFunc {
 			return nil, nil
 		}
 		return flow.RunnerFunc(func(t *flow.Task) error {
-			return runGoplsTask(ctx, repoRoot, t)
+			return runGoplsTask(ctx, repoRoot, t, responses)
 		}), nil
 	}
 }
 
-func runGoplsTask(ctx context.Context, repoRoot string, task *flow.Task) error {
+func runGoplsTask(ctx context.Context, repoRoot string, task *flow.Task, responses projectionResponses) error {
 	if repoRoot == "" {
 		return fmt.Errorf("repo root required")
 	}
@@ -71,6 +71,7 @@ func runGoplsTask(ctx context.Context, repoRoot string, task *flow.Task) error {
 		"checkedFiles":     relPaths(moduleDir, files),
 		"workspaceSummary": workspaceSummary,
 		"diagnostics":      diagnostics,
+		"runtimeTrace":     buildRuntimeTrace(repoRoot, responses),
 	}
 
 	return task.Fill(map[string]any{
@@ -78,6 +79,110 @@ func runGoplsTask(ctx context.Context, repoRoot string, task *flow.Task) error {
 		"diagnostics":      diagnostics,
 		"evidence":         evidence,
 	})
+}
+
+func buildRuntimeTrace(repoRoot string, responses projectionResponses) map[string]any {
+	broadPaths := []string{
+		"cue/patterns/domain/schema.cue",
+		"cue/patterns/projections/codex-slice.cue",
+		"cue/patterns/projections/cue-flow-fact-slice.cue",
+		"cue/patterns/projections/authorization-evidence-slice.cue",
+		"cue/patterns/projections/promotion-by-unification-slice.cue",
+		"cue/patterns/projections/promoted-projection-binding-slice.cue",
+		"shell-wrap/src/hookrail/cmd/hookrail-flow/main.go",
+		"shell-wrap/src/hookrail/internal/flowproof/flow.go",
+		"shell-wrap/src/hookrail/internal/flowproof/mcp.go",
+		"shell-wrap/src/hookrail/internal/flowproof/flow_test.go",
+	}
+	goodProjected := loadedFilePaths(responses.Good.Promotion.ExposedFiles)
+
+	return map[string]any{
+		"schemaVersion": "cuerail.runtimeTraceBundle.v1",
+		"method":        "rough byte/line/file estimate; not tokenizer exact",
+		"good": map[string]any{
+			"runID":                       "fixture.good.selected-pattern",
+			"selectedPatternIDs":          responses.Good.Promotion.SelectedPatterns,
+			"promotionOutcome":            responses.Good.Promotion.PromotionOutcome,
+			"exposedFiles":                responses.Good.Promotion.ExposedFiles,
+			"deniedLoads":                 []deniedLoadEvidence{},
+			"relationRefs":                relationRefs(responses.Good.Promotion.ExposedFiles),
+			"factRefs":                    factRefs(responses.Good.Promotion.ExposedFiles),
+			"adapterActionClassification": "adapter-emits-root-shaped-evidence",
+			"broadInputSurface":           estimatePaths(repoRoot, broadPaths),
+			"projectedContextSurface":     estimatePaths(repoRoot, goodProjected),
+		},
+		"rejected": map[string]any{
+			"runID":                       "fixture.bad.keyword-relevance",
+			"promotionOutcome":            responses.Rejected.Promotion.PromotionOutcome,
+			"exposedFiles":                []loadedFileEvidence{},
+			"deniedLoads":                 responses.Rejected.Promotion.Diagnostics.DeniedLoads,
+			"relationRefs":                responses.Rejected.Promotion.Diagnostics.RelationRefs,
+			"factRefs":                    responses.Rejected.Promotion.Diagnostics.FactRefs,
+			"adapterActionClassification": "diagnostics-only-no-context-exposure",
+			"broadInputSurface":           estimatePaths(repoRoot, broadPaths),
+			"projectedContextSurface":     estimatePaths(repoRoot, nil),
+		},
+	}
+}
+
+func loadedFilePaths(files []loadedFileEvidence) []string {
+	paths := make([]string, 0, len(files))
+	for _, file := range files {
+		paths = append(paths, file.Path)
+	}
+	return paths
+}
+
+func relationRefs(files []loadedFileEvidence) []string {
+	seen := map[string]bool{}
+	var refs []string
+	for _, file := range files {
+		if file.RelationRef == "" || seen[file.RelationRef] {
+			continue
+		}
+		seen[file.RelationRef] = true
+		refs = append(refs, file.RelationRef)
+	}
+	return refs
+}
+
+func factRefs(files []loadedFileEvidence) []string {
+	seen := map[string]bool{}
+	var refs []string
+	for _, file := range files {
+		for _, ref := range file.FactRefs {
+			if ref == "" || seen[ref] {
+				continue
+			}
+			seen[ref] = true
+			refs = append(refs, ref)
+		}
+	}
+	return refs
+}
+
+func estimatePaths(repoRoot string, relPaths []string) map[string]any {
+	var bytesTotal, linesTotal int
+	var filesTotal int
+	for _, rel := range relPaths {
+		path := filepath.Join(repoRoot, filepath.FromSlash(rel))
+		data, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		filesTotal++
+		bytesTotal += len(data)
+		linesTotal += bytes.Count(data, []byte("\n"))
+		if len(data) > 0 && data[len(data)-1] != '\n' {
+			linesTotal++
+		}
+	}
+	return map[string]any{
+		"method": "rough bytes and newline-counted lines from repo files",
+		"bytes":  bytesTotal,
+		"lines":  linesTotal,
+		"files":  filesTotal,
+	}
 }
 
 func collectGoplsFacts(ctx context.Context, moduleDir string, files []string) (string, string, error) {

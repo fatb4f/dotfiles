@@ -43,6 +43,28 @@ func TestRunProducesReport(t *testing.T) {
 	if got := evidence["diagnostics"].(string); !strings.Contains(got, "No diagnostics.") {
 		t.Fatalf("diagnostics = %q", got)
 	}
+
+	trace, ok := evidence["runtimeTrace"].(map[string]any)
+	if !ok {
+		t.Fatalf("runtimeTrace has type %T", evidence["runtimeTrace"])
+	}
+	good := trace["good"].(map[string]any)
+	broad := good["broadInputSurface"].(map[string]any)
+	projected := good["projectedContextSurface"].(map[string]any)
+	if projected["bytes"].(float64) >= broad["bytes"].(float64) {
+		t.Fatalf("projected bytes = %v, broad bytes = %v", projected["bytes"], broad["bytes"])
+	}
+	if len(good["exposedFiles"].([]any)) == 0 {
+		t.Fatalf("accepted trace exposed no files")
+	}
+
+	rejected := trace["rejected"].(map[string]any)
+	if got := len(rejected["exposedFiles"].([]any)); got != 0 {
+		t.Fatalf("rejected trace exposed %d files", got)
+	}
+	if rejected["projectedContextSurface"].(map[string]any)["bytes"].(float64) != 0 {
+		t.Fatalf("rejected projected bytes = %v", rejected["projectedContextSurface"])
+	}
 }
 
 func TestFindRepoRoot(t *testing.T) {

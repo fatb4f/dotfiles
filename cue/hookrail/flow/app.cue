@@ -1,5 +1,7 @@
 package flow
 
+import projections "github.com/fatb4f/dotfiles/cue/patterns/projections"
+
 #FlowTask: {
 	kind: "gopls"
 
@@ -22,6 +24,8 @@ flow: #FlowTask & {
 }
 
 report: #FlowReport & {
-	task:     flow
-	evidence: flow.evidence
+	task:               flow
+	evidence:           flow.evidence
+	normalizedResponse: projections.cueFlowPromotedProjectionBindingSlice.fixtures.good.normalizedResponse
+	diagnosticResponse: projections.cueFlowPromotedProjectionBindingSlice.fixtures.bad.keywordRelevance.normalizedResponse
 }

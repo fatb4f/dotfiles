@@ -239,6 +239,53 @@ package domain
 	rationale: string
 }
 
+#PromotedProjection:
+	{
+		promotionOutcome: #PromotionGateOutcome & {
+			accepted: true
+		}
+		selectedPatternIDs: [...string]
+		exposedFiles:        [...#LoadedFileEvidence]
+		projectedPrompt:     string
+		contextProjection: {
+			authorizationSource: #AuthorizationSource
+			rationale:           string
+			relationRefs:        #RelationRefList
+			factRefs:            #FactRefList
+		}
+		evidenceRefs: #FactRefList
+	} |
+	{
+		promotionOutcome: #PromotionGateOutcome & {
+			accepted: false
+		}
+		diagnostics: {
+			status:              #PromotionGateStatus
+			classification?:     string
+			violations:         [...string]
+			missingRequirements: [...string]
+			rationale:          string
+			deniedLoads:        [...#DeniedLoadEvidence]
+			relationRefs:       #RelationRefList
+			factRefs:           #FactRefList
+		}
+		evidenceRefs: #FactRefList
+		selectedPatternIDs?: _|_
+		exposedFiles?:        _|_
+		projectedPrompt?:     _|_
+		contextProjection?:   _|_
+	}
+
+#NormalizedRootResponse: {
+	schemaVersion: "cuerail.normalizedRootResponse.v1"
+	requestID:     string
+	promotion:    #PromotedProjection
+	consumable: {
+		accepted: promotion.promotionOutcome.accepted
+		status:   promotion.promotionOutcome.status
+	}
+}
+
 sourceFacts: {
 	"flow.low_level_workflow_manager_based_on_cue_instance": {
 		id:          "flow.low_level_workflow_manager_based_on_cue_instance"
