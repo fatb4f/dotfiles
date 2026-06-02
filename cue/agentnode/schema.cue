@@ -87,7 +87,7 @@ package agentnode
 	role:    "root-cue-ssot"
 }
 
-#ComponentID: "root-cue-schema" | "root-agents-cue" | "workspace-agents-cue" | "workspace-projections-cue" | "workspace-pattern-card" | "go-runtime" | "root-mcp" | "agent-prompt"
+#ComponentID: "root-cue-schema" | "root-agents-cue" | "workspace-agents-cue" | "workspace-projections-cue" | "workspace-pattern-card" | "go-cue-flow-adapter" | "cue-flow-engine" | "root-mcp" | "agent-prompt"
 
 #FragmentKind: "root-index" | "agent-node-contract" | "task-pattern-card" | "selection-response" | "authorization-evidence" | "prompt-projection" | "interop-state" | "relation-edge"
 
@@ -95,7 +95,7 @@ package agentnode
 
 #PersistenceClass: "ephemeral" | "artifact-backed" | "committed" | "runtime-only" | "not-persisted"
 
-#Operation: "defines" | "produces" | "consumes" | "validates" | "authorizes" | "emits-evidence" | "projects"
+#Operation: "defines" | "produces" | "consumes" | "validates" | "authorizes" | "emits-evidence" | "projects" | "adapts"
 
 #FragmentContract: {
 	name:            string

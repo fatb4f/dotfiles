@@ -156,7 +156,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#RootIndex"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "root-agents-cue"
-			consumedBy: ["root-mcp", "go-runtime"]
+			consumedBy: ["root-mcp", "go-cue-flow-adapter"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-cue-schema"
 			stateKind:        "contract-state"
@@ -168,7 +168,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#AgentNode"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "workspace-agents-cue"
-			consumedBy: ["root-mcp", "go-runtime"]
+			consumedBy: ["root-mcp", "go-cue-flow-adapter"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-cue-schema"
 			stateKind:        "contract-state"
@@ -180,7 +180,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#RootSelectionResponse"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "workspace-projections-cue"
-			consumedBy: ["go-runtime", "agent-prompt"]
+			consumedBy: ["go-cue-flow-adapter", "agent-prompt"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-mcp"
 			stateKind:        "projection-state"
@@ -192,7 +192,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#RootAuthorizationEvidence"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "workspace-projections-cue"
-			consumedBy: ["root-mcp", "go-runtime", "agent-prompt"]
+			consumedBy: ["root-mcp", "go-cue-flow-adapter", "agent-prompt"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-cue-schema"
 			stateKind:        "evidence-state"
@@ -217,17 +217,26 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			name:          "root selection response"
 			owner:         "root-cue-schema"
 			sourceOfTruth: "root-cue-schema"
-			readBy: ["root-mcp", "go-runtime", "agent-prompt"]
+			readBy: ["root-mcp", "go-cue-flow-adapter", "agent-prompt"]
 			writtenBy: ["workspace-projections-cue"]
 			validatedBy: ["root-cue-schema"]
 			persistenceClass: "artifact-backed"
 		},
 		{
-			name:          "runtime load observation"
-			owner:         "go-runtime"
+			name:          "cue flow adapter load observation"
+			owner:         "go-cue-flow-adapter"
 			sourceOfTruth: "root-cue-schema"
 			readBy: ["root-mcp", "agent-prompt"]
-			writtenBy: ["go-runtime"]
+			writtenBy: ["go-cue-flow-adapter"]
+			validatedBy: ["root-cue-schema"]
+			persistenceClass: "runtime-only"
+		},
+		{
+			name:          "cue flow execution state"
+			owner:         "cue-flow-engine"
+			sourceOfTruth: "root-cue-schema"
+			readBy: ["go-cue-flow-adapter"]
+			writtenBy: ["cue-flow-engine"]
 			validatedBy: ["root-cue-schema"]
 			persistenceClass: "runtime-only"
 		},
@@ -236,7 +245,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 	relations: [
 		{
 			from:      "workspace-agents-cue"
-			to:        "go-runtime"
+			to:        "go-cue-flow-adapter"
 			artifact:  "workspace.node"
 			operation: "consumes"
 			authority: "root-cue-schema"
@@ -246,10 +255,10 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 				"cue vet ./cue/agentnode/...",
 				"cue vet ./nodes/workspace/...",
 			]
-			rationale: "Go may consume workspace contracts only after they conform to the root AgentNode schema."
+			rationale: "The Go CUE flow adapter may consume workspace contracts only after they conform to the root AgentNode schema."
 		},
 		{
-			from:             "go-runtime"
+			from:             "go-cue-flow-adapter"
 			to:               "workspace-projections-cue"
 			artifact:         "workspace.rootSelectionResponse.evidence"
 			operation:        "emits-evidence"
@@ -261,7 +270,21 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 				"cue vet ./cue/agentnode/...",
 				"cue vet ./nodes/workspace/...",
 			]
-			rationale: "Runtime observations may be emitted only as root-shaped authorization evidence."
+			rationale: "The Go CUE flow adapter may emit runtime observations only as root-shaped authorization evidence."
+		},
+		{
+			from:      "go-cue-flow-adapter"
+			to:        "cue-flow-engine"
+			artifact:  "cuelang.org/go/tools/flow"
+			operation: "adapts"
+			authority: "root-cue-schema"
+			stateKind: "interop-state"
+			allowed:   true
+			mustVet: [
+				"cue vet ./cue/agentnode/...",
+				"cue vet ./nodes/workspace/...",
+			]
+			rationale: "The planned Go API layer adapts the CUE flow engine and must execute root-declared transitions rather than invent policy."
 		},
 		{
 			from:             "root-mcp"
@@ -285,14 +308,14 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			rationale: "Agent prompts consume bounded projections derived from root-shaped CUE contracts."
 		},
 		{
-			from:      "go-runtime"
+			from:      "go-cue-flow-adapter"
 			to:        "workspace-projections-cue"
 			artifact:  "hidden-go-policy"
 			operation: "authorizes"
-			authority: "go-runtime"
+			authority: "go-cue-flow-adapter"
 			stateKind: "contract-state"
 			allowed:   false
-			rationale: "Go-owned policy is architectural drift because policy authority must remain in the root CUE schema."
+			rationale: "Go adapter-owned policy is architectural drift because policy authority must remain in the root CUE schema."
 		},
 	]
 
@@ -301,13 +324,13 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			fragment:      "workspace.node"
 			typeValid:     true
 			relationValid: true
-			rationale:     "The workspace AGENTS.cue fragment conforms to agentnode.#AgentNode and has an allowed CUE-to-Go consumer relation."
+			rationale:     "The workspace AGENTS.cue fragment conforms to agentnode.#AgentNode and has an allowed CUE-to-Go-flow-adapter consumer relation."
 		},
 		{
 			fragment:      "hidden-go-policy"
 			typeValid:     true
 			relationValid: false
-			rationale:     "A Go-owned policy fragment may be well-shaped but is drift because relation authority is not root CUE."
+			rationale:     "A Go adapter-owned policy fragment may be well-shaped but is drift because relation authority is not root CUE."
 		},
 		{
 			fragment:      "untyped-runtime-intention"
@@ -319,7 +342,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			fragment:      "untyped-go-policy"
 			typeValid:     false
 			relationValid: false
-			rationale:     "An untyped fragment with an invalid Go-owned policy relation is rejected."
+			rationale:     "An untyped fragment with an invalid Go adapter-owned policy relation is rejected."
 		},
 	]
 }
