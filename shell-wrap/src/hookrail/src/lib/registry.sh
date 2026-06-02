@@ -9,6 +9,39 @@ hookrail_registry_export() {
   (cd "$(hookrail_repo_root)" && cue export "$overlay_file" -e "$expression" --out json)
 }
 
+hookrail_registry_validate_response() {
+  local response_file
+
+  response_file="${1:?response file required}"
+
+  (cd "$(hookrail_repo_root)/cue/registry" && cue vet -c=false . "$response_file" -d "#RegistryResponse" >/dev/null)
+}
+
+hookrail_registry_validate_execution_evidence() {
+  local evidence_file
+
+  evidence_file="${1:?evidence file required}"
+
+  (cd "$(hookrail_repo_root)/cue/registry" && cue vet -c=false . "$evidence_file" -d "#RegistryExecutionEvidence" >/dev/null)
+}
+
+hookrail_registry_emit_execution_evidence() {
+  local evidence_file evidence_status
+
+  evidence_file="$(mktemp "${TMPDIR:-/tmp}/hookrail-registry-execution-evidence.XXXXXX.json")"
+  cat >"$evidence_file"
+
+  if hookrail_registry_validate_execution_evidence "$evidence_file"; then
+    cat "$evidence_file"
+    evidence_status=$?
+  else
+    evidence_status=1
+  fi
+
+  rm -f "$evidence_file"
+  return "$evidence_status"
+}
+
 hookrail_registry_resolve_overlay() {
   local overlay_file path objective allow_generated allow_legacy path_json objective_json
 
@@ -75,6 +108,10 @@ hookrail_run_registry_execute() {
   hookrail_need jq || return $?
 
   response_file="${args['--response']:-${args[response]:-}}"
+  if ! hookrail_registry_validate_response "$response_file"; then
+    return 1
+  fi
+
   response_json="$(cat "$response_file")"
   response_status="$(jq -r '.status' "$response_file")"
   adapter_binary="$(jq -r '.request?.adapter?.binary // "mcp-adapter"' "$response_file")"
@@ -96,7 +133,7 @@ hookrail_run_registry_execute() {
           transport: $adapterTransport
         },
         reason: $reason
-      }'
+      }' | hookrail_registry_emit_execution_evidence
     return 1
   fi
 
@@ -117,7 +154,7 @@ hookrail_run_registry_execute() {
           transport: $adapterTransport
         },
         reason: $reason
-      }'
+      }' | hookrail_registry_emit_execution_evidence
     return 127
   fi
 
@@ -126,7 +163,7 @@ hookrail_run_registry_execute() {
 
   if (
     cd "$cwd" &&
-    "$adapter_binary" <"$response_file" >"$adapter_stdout" 2>"$adapter_stderr"
+      "$adapter_binary" <"$response_file" >"$adapter_stdout" 2>"$adapter_stderr"
   ); then
     :
   else
@@ -153,12 +190,12 @@ hookrail_run_registry_execute() {
         stdout: $stdout,
         stderr: $stderr,
         reason: $reason
-      }'
+      }' | hookrail_registry_emit_execution_evidence
     rm -f "$adapter_stdout" "$adapter_stderr"
     return "$adapter_exit_status"
   fi
 
-  if ! (cd "$(hookrail_repo_root)/cue/registry" && cue vet -c=false . "$adapter_stdout" -d "#RegistryExecutionEvidence" >/dev/null 2>&1); then
+  if ! hookrail_registry_validate_execution_evidence "$adapter_stdout"; then
     jq -n \
       --argjson response "$response_json" \
       --argjson request "$(jq '.request' "$response_file")" \
@@ -181,12 +218,12 @@ hookrail_run_registry_execute() {
         stdout: $stdout,
         stderr: $stderr,
         reason: $reason
-      }'
+      }' | hookrail_registry_emit_execution_evidence
     rm -f "$adapter_stdout" "$adapter_stderr"
     return 1
   fi
 
-  cat "$adapter_stdout"
+  hookrail_registry_emit_execution_evidence <"$adapter_stdout"
   export_status=$?
   rm -f "$adapter_stdout" "$adapter_stderr"
   return "$export_status"

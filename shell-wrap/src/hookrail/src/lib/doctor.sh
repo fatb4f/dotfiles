@@ -2,7 +2,7 @@
 
 hookrail_run_doctor() {
   local cue_dir hookrail_bin fixture tmp_root output_json manifest persisted_count
-  local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file trace_row context_artifact closeout_packet clean_head clean_head_short
+  local clean_repo dirty_repo staged_repo untracked_repo non_git_repo large_prompt trace_file trace_row context_artifact closeout_packet clean_head_short
   local registry_selected_response registry_blocked_response registry_no_match_response registry_ambiguous_response registry_execute_output registry_adapter_stub
 
   cue_dir="$(hookrail_cue_dir)"
@@ -132,7 +132,6 @@ hookrail_run_doctor() {
   registry_blocked_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-blocked.XXXXXX.json")"
   registry_no_match_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-no-match.XXXXXX.json")"
   registry_ambiguous_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-ambiguous.XXXXXX.json")"
-  registry_transport_failure_response="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-transport-failure.XXXXXX.json")"
   registry_execute_output="$(mktemp "${TMPDIR:-/tmp}/hookrail-doctor-registry-execute.XXXXXX.json")"
   registry_adapter_stub="$tmp_root/bin/mcp-adapter"
   mkdir -p "$(dirname "$registry_adapter_stub")"
@@ -169,6 +168,8 @@ if [[ "$mode" == "tool_failure" ]]; then
       },
       reason: $reason
     }'
+elif [[ "$mode" == "invalid_output" ]]; then
+  printf '{"not":"evidence"}\n'
 else
   jq -n \
     --argjson response "$(cat "$input_file")" \
@@ -212,6 +213,15 @@ EOF
   fi
   hookrail_doctor_check "registry execute tool failure status" -- jq -e '.executionStatus == "tool_failure" and .response.status == "selected" and .reason == "tool failed"' "$registry_execute_output"
   hookrail_doctor_check "registry execute tool failure vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
+
+  if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=invalid_output "$hookrail_bin" registry execute --response "$registry_selected_response" >"$registry_execute_output"; then
+    :
+  else
+    printf 'FAIL registry execute invalid output response should emit evidence\n' >&2
+    return 1
+  fi
+  hookrail_doctor_check "registry execute invalid output status" -- jq -e '.executionStatus == "adapter_failure" and .response.status == "selected" and .reason == "MCP adapter output did not validate"' "$registry_execute_output"
+  hookrail_doctor_check "registry execute invalid output vets" -- bash -c 'cd "$1" && cue vet -c=false . "$2" -d "#RegistryExecutionEvidence"' bash "$(hookrail_repo_root)/cue/registry" "$registry_execute_output"
 
   if PATH="$(dirname "$registry_adapter_stub"):$PATH" MCP_ADAPTER_MODE=executed "$hookrail_bin" registry execute --response "$registry_blocked_response" >"$registry_execute_output" 2>/dev/null; then
     printf 'FAIL registry execute blocked response should fail closed\n' >&2
@@ -272,7 +282,6 @@ EOF
   hookrail_doctor_init_git_fixture "$staged_repo"
   hookrail_doctor_init_git_fixture "$untracked_repo"
   mkdir -p "$non_git_repo"
-  clean_head="$(git -C "$clean_repo" rev-parse HEAD)"
   clean_head_short="$(git -C "$clean_repo" rev-parse --short HEAD)"
 
   printf 'dirty\n' >"$dirty_repo/tracked.txt"
