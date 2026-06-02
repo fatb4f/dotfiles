@@ -86,9 +86,9 @@ generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
 				summary: "The pattern graph validated."
 			},
 			{
-				cmd:    "cue export ./cue/patterns/projections -e generatedCliChangeCarryOver --out json"
+				cmd:    "cue export ./cue/patterns/projections -e generatedCliChangeCarryOverLifecycleProof --out json"
 				status: "pass"
-				summary: "The carry-over contract exported."
+				summary: "The lifecycle proof exported."
 			},
 			{
 				cmd:    "cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json"
@@ -102,7 +102,18 @@ generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
 		status: "committed"
 	}
 
+	tokenUsage: {
+		available: false
+		status:    "unavailable"
+		degraded:  true
+
+		notes: [
+			"no token usage artifact was captured for this run",
+		]
+	}
+
 	notes: [
 		"No detours recorded.",
+		"Future token evidence capture: cuerail-token-usage --from-file <session-or-run-log> --run-id <id> --commit <sha> --source-kind codex-session-artifact --output <path>",
 	]
 }
