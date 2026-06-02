@@ -18,7 +18,7 @@ package agentnode
 	authority: {
 		taskPatterns: [...#TaskPatternRef]
 
-		ownedFiles?:   [...string]
+		ownedFiles?: [...string]
 		supportFiles?: [...string]
 
 		forbiddenLoads: [...string]
@@ -26,9 +26,9 @@ package agentnode
 
 	workflow: {
 		requires?: {
-			skills?:      [...string]
+			skills?: [...string]
 			validations?: [...string]
-			fixtures?:    [...string]
+			fixtures?: [...string]
 			projections?: [...string]
 		}
 
@@ -37,9 +37,9 @@ package agentnode
 }
 
 #Keyword: {
-	term:           string
-	kind:           "primary" | "alias" | "tool" | "artifact" | "failure" | "domain"
-	weight:         int & >=1 & <=10
+	term:   string
+	kind:   "primary" | "alias" | "tool" | "artifact" | "failure" | "domain"
+	weight: int & >=1 & <=10
 	mapsToPatterns: [...string]
 }
 
@@ -50,13 +50,13 @@ package agentnode
 
 	rationale?: string
 
-	owns?:     [...string]
+	owns?: [...string]
 	supports?: [...string]
 
 	requires?: {
-		skills?:      [...string]
+		skills?: [...string]
 		validations?: [...string]
-		fixtures?:    [...string]
+		fixtures?: [...string]
 		projections?: [...string]
 	}
 }
@@ -79,16 +79,43 @@ package agentnode
 	root:   string
 }
 
+#AuthorizationSource: "root-policy" | "selected-pattern" | "fallback-explicit-index"
+
+#AuthorizedLoadedFile: {
+	path:             string
+	authorizedBy:     #AuthorizationSource
+	sourcePatternID?: string
+	reason:           string
+}
+
+#DeniedLoad: {
+	path:         string
+	reason:       string
+	requestedBy?: string
+}
+
+#RootAuthorizationEvidence: {
+	rootMCPAvailable: bool
+	selectionMode:    "root-mediated" | "fallback-metadata" | "explicit-user-grant"
+	indexSources: [...string]
+
+	selectedPatternIDs: [...string]
+	loadedFiles: [...#AuthorizedLoadedFile]
+	deniedLoads?: [...#DeniedLoad]
+	authorizationSource: #AuthorizationSource
+	rationale:           string
+}
+
 #RootSelectionResponse: {
 	schemaVersion: "root.selectionResponse.v1"
 
 	objective: string
 
 	selected: [...{
-		nodeID:       string
-		patternID:    string
-		stage:        "discover" | "plan" | "modify" | "verify" | "closeout"
-		rationale:    string
+		nodeID:    string
+		patternID: string
+		stage:     "discover" | "plan" | "modify" | "verify" | "closeout"
+		rationale: string
 		matchedTerms: [...string]
 
 		rejectedTerms?: [...string]
@@ -97,20 +124,16 @@ package agentnode
 		supportFiles?: [...string]
 
 		requires?: {
-			skills?:      [...string]
+			skills?: [...string]
 			validations?: [...string]
-			fixtures?:    [...string]
+			fixtures?: [...string]
 			projections?: [...string]
 		}
 	}]
 
 	forbiddenLoads: [...string]
 
-	evidence: {
-		rootMCPAvailable: bool
-		selectionMode:    "root-mediated" | "fallback-metadata" | "explicit-user-grant"
-		indexSources:     [...string]
-	}
+	evidence: #RootAuthorizationEvidence
 }
 
 #ProjectedPrompt: {
