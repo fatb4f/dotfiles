@@ -15,7 +15,12 @@ package domain
 	"flow.task_fill_fills_output_values_after_runner_execution" |
 	"root.relations_are_admitted_only_when_backed_by_facts" |
 	"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks" |
-	"fixture.fact_rooted_cue_flow_relation_slice_exports"
+	"root.authorization_evidence_is_root_owned" |
+	"root.file_loads_require_authorization_relation" |
+	"root.bounded_fallback_limits_loads_to_declared_surfaces" |
+	"review.freeze_gate_rejects_relevance_only_loads" |
+	"fixture.fact_rooted_cue_flow_relation_slice_exports" |
+	"fixture.typed_authorization_evidence_slice_exports"
 
 #SourceFact: {
 	id:          #SourceFactID
@@ -48,6 +53,73 @@ package domain
 	description: string
 	requires: [...string]
 	factRefs: #FactRefList
+}
+
+#RelationRefID:
+	"rel.go-adapts-cue-flow" |
+	"rel.root-schema-declares-task-shape" |
+	"rel.go-supplies-taskfunc" |
+	"rel.cue-task-fragment-derives-dependency-edge" |
+	"rel.config-root-limits-task-search" |
+	"rel.go-declares-task-shape" |
+	"rel.go-enables-arbitrary-task-inference" |
+	"rel.runner-fills-typed-output-evidence" |
+	"rel.root-schema-declares-authorization-evidence" |
+	"rel.root-policy-authorizes-loaded-file" |
+	"rel.selected-pattern-authorizes-loaded-file" |
+	"rel.bounded-fallback-authorizes-root-declared-surface" |
+	"rel.go-emits-authorization-evidence" |
+	"rel.go-owns-load-authorization" |
+	"rel.keyword-relevance-authorizes-load"
+
+#RelationRefList: [#RelationRefID, ...#RelationRefID]
+
+#AuthorizationSource:
+	"root-policy" |
+	"selected-pattern" |
+	"bounded-fallback" |
+	"derived-from-root-schema" |
+	"fixture" |
+	"rejected-drift"
+
+#AuthorizationRelationRefID:
+	"rel.root-policy-authorizes-loaded-file" |
+	"rel.selected-pattern-authorizes-loaded-file" |
+	"rel.bounded-fallback-authorizes-root-declared-surface"
+
+#RejectedAuthorizationRelationRefID:
+	"rel.go-owns-load-authorization" |
+	"rel.keyword-relevance-authorizes-load" |
+	"rel.go-enables-arbitrary-task-inference"
+
+#LoadedFileEvidence: {
+	path:             string
+	authorizedBy:     #AuthorizationSource
+	sourcePatternID?: string
+	relationRef:      #AuthorizationRelationRefID
+	factRefs:         #FactRefList
+	reason:           string
+}
+
+#DeniedLoadEvidence: {
+	path:                 string
+	deniedBy:             #AuthorizationSource
+	relationRef?:         #AuthorizationRelationRefID
+	rejectedRelationRef?: #RejectedAuthorizationRelationRefID
+	factRefs:             #FactRefList
+	reason:               string
+	requestedBy?:         string
+	classification?:      string
+}
+
+#AuthorizationEvidence: {
+	selectedPatternIDs: [...string]
+	loadedFiles:        [...#LoadedFileEvidence]
+	deniedLoads:        [...#DeniedLoadEvidence]
+	authorizationSource: #AuthorizationSource
+	rationale:           string
+	relationRefs:        #RelationRefList
+	factRefs:            #FactRefList
 }
 
 sourceFacts: {
@@ -145,12 +217,47 @@ sourceFacts: {
 		claim:       "Go may supply TaskFunc and Runner behavior for root-schema-declared CUE task values."
 		consequence: "Go may not define task shape or broaden InferTasks unless the root schema admits that risk."
 	}
+	"root.authorization_evidence_is_root_owned": {
+		id:          "root.authorization_evidence_is_root_owned"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Authorization evidence is declared by the root schema."
+		consequence: "Adapters may emit evidence values but must not own authorization policy."
+	}
+	"root.file_loads_require_authorization_relation": {
+		id:          "root.file_loads_require_authorization_relation"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "A loaded file evidence record requires an authorization relation and known facts."
+		consequence: "Relevance alone is insufficient to authorize file loading."
+	}
+	"root.bounded_fallback_limits_loads_to_declared_surfaces": {
+		id:          "root.bounded_fallback_limits_loads_to_declared_surfaces"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Bounded fallback loads are limited to explicit AGENTS.cue, index, or root-declared surfaces."
+		consequence: "Fallback mode remains an explicit root-owned authorization source."
+	}
+	"review.freeze_gate_rejects_relevance_only_loads": {
+		id:          "review.freeze_gate_rejects_relevance_only_loads"
+		kind:        "local-review"
+		source:      "freeze review"
+		claim:       "A file load is authorized only when a valid relation edge and supporting facts admit it."
+		consequence: "Keyword relevance and hidden adapter-owned policy are classified as architectural drift."
+	}
 	"fixture.fact_rooted_cue_flow_relation_slice_exports": {
 		id:          "fixture.fact_rooted_cue_flow_relation_slice_exports"
 		kind:        "fixture"
 		source:      "cue/patterns/projections/cue-flow-fact-slice.cue"
 		claim:       "The fact-rooted CUE flow relation fixture exports."
 		consequence: "Fixture/export proof covers the relation contract shape."
+	}
+	"fixture.typed_authorization_evidence_slice_exports": {
+		id:          "fixture.typed_authorization_evidence_slice_exports"
+		kind:        "fixture"
+		source:      "cue/patterns/projections/authorization-evidence-slice.cue"
+		claim:       "The typed authorization evidence fixture exports."
+		consequence: "Fixture/export proof covers authorization evidence shape and admissibility fields."
 	}
 }
 

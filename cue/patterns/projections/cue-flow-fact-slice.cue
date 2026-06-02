@@ -130,6 +130,107 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 				"flow.task_fill_fills_output_values_after_runner_execution",
 			]
 		},
+		{
+			id:        "rel.root-schema-declares-authorization-evidence"
+			from:      "root-cue-schema"
+			to:        "authorization-evidence"
+			artifact:  "domain.#AuthorizationEvidence"
+			operation: "declares"
+			authority: "root-cue-schema"
+			stateKind: "contract-state"
+			allowed:   true
+			factRefs: [
+				"root.authorization_evidence_is_root_owned",
+				"root.relations_are_admitted_only_when_backed_by_facts",
+			]
+		},
+		{
+			id:        "rel.root-policy-authorizes-loaded-file"
+			from:      "root-policy"
+			to:        "loaded-file-evidence"
+			artifact:  "domain.#LoadedFileEvidence"
+			operation: "authorizes"
+			authority: "root-policy"
+			stateKind: "authorization-state"
+			allowed:   true
+			factRefs: [
+				"root.file_loads_require_authorization_relation",
+				"review.freeze_gate_rejects_relevance_only_loads",
+			]
+		},
+		{
+			id:        "rel.selected-pattern-authorizes-loaded-file"
+			from:      "selected-pattern-contract"
+			to:        "loaded-file-evidence"
+			artifact:  "domain.#LoadedFileEvidence"
+			operation: "authorizes"
+			authority: "derived-from-root-schema"
+			stateKind: "authorization-state"
+			allowed:   true
+			factRefs: [
+				"root.authorization_evidence_is_root_owned",
+				"root.file_loads_require_authorization_relation",
+			]
+		},
+		{
+			id:        "rel.bounded-fallback-authorizes-root-declared-surface"
+			from:      "bounded-fallback"
+			to:        "loaded-file-evidence"
+			artifact:  "domain.#LoadedFileEvidence"
+			operation: "authorizes"
+			authority: "root-policy"
+			stateKind: "authorization-state"
+			allowed:   true
+			constraint: "Fallback loads are limited to explicit AGENTS.cue, index, or root-declared surfaces."
+			factRefs: [
+				"root.bounded_fallback_limits_loads_to_declared_surfaces",
+				"root.file_loads_require_authorization_relation",
+			]
+		},
+		{
+			id:        "rel.go-emits-authorization-evidence"
+			from:      "go-cue-flow-adapter"
+			to:        "authorization-evidence"
+			artifact:  "domain.#AuthorizationEvidence"
+			operation: "emits"
+			authority: "derived-from-root-schema"
+			stateKind: "evidence-state"
+			allowed:   true
+			factRefs: [
+				"flow.task_fill_fills_output_values_after_runner_execution",
+				"root.authorization_evidence_is_root_owned",
+			]
+		},
+		{
+			id:             "rel.go-owns-load-authorization"
+			from:           "go-cue-flow-adapter"
+			to:             "load-authorization"
+			artifact:       "domain.#AuthorizationEvidence"
+			operation:      "owns"
+			authority:      "go-adapter"
+			stateKind:      "authorization-state"
+			allowed:        false
+			classification: "architectural-drift"
+			factRefs: [
+				"root.authorization_evidence_is_root_owned",
+				"review.freeze_gate_rejects_relevance_only_loads",
+			]
+		},
+		{
+			id:             "rel.keyword-relevance-authorizes-load"
+			from:           "keyword-relevance"
+			to:             "load-authorization"
+			artifact:       "file-load-request"
+			operation:      "authorizes"
+			authority:      "keyword-relevance"
+			stateKind:      "authorization-state"
+			allowed:        false
+			classification: "architectural-drift"
+			factRefs: [
+				"root.file_loads_require_authorization_relation",
+				"review.freeze_gate_rejects_relevance_only_loads",
+			]
+		},
 	]
 
 	sliceRequirements: [
@@ -158,6 +259,23 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 				"flow.user_supplies_taskfunc_for_cue_values_deemed_tasks",
 				"flow.infer_tasks_searches_arbitrary_data_and_may_be_spurious",
 				"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks",
+			]
+		},
+		{
+			id:          "req.typed-authorization-evidence"
+			description: "Authorization evidence must be root-owned, typed, and backed by valid authorization relations with known fact references."
+			requires: [
+				"domain.#AuthorizationEvidence",
+				"loadedFiles.relationRef",
+				"loadedFiles.factRefs",
+				"deniedLoads.rejectedRelationRef",
+				"relationEdges.factRefs",
+			]
+			factRefs: [
+				"root.authorization_evidence_is_root_owned",
+				"root.file_loads_require_authorization_relation",
+				"review.freeze_gate_rejects_relevance_only_loads",
+				"fixture.typed_authorization_evidence_slice_exports",
 			]
 		},
 	]
