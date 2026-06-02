@@ -2,6 +2,16 @@
 
 Root router only.
 
+## First-Contact Discovery Guard
+
+When a task concerns cards, projections, or rediscovery-replacement records:
+
+1. Start from `cue/patterns/domain/schema.cue` and `cue/patterns/projections/codex-slice.cue`.
+2. Treat `cue/patterns/domain/*.cue` and `cue/patterns/projections/*.cue` as the authority for card and projection shape.
+3. Load only the selected card(s) and the selected projection(s) needed for the task.
+4. Treat nested `AGENTS.md` files as fallback landmarks, not mandatory discovery targets.
+5. Do not recurse through `AGENTS.md` files or search nearby legacy modules for authority unless the selected card explicitly points there.
+
 ## Repo map
 
 ```text
@@ -23,6 +33,7 @@ Pick one row. Load one starting authority. Do not recurse.
 
 | Task pattern                                  | Start here             | Skill task                                                                                                                   |
 | --------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| cards / projections / rediscovery records     | `cue/patterns/domain/schema.cue` and `cue/patterns/projections/codex-slice.cue` | domain-local                                                                                                                 |
 | chezmoi dotfile lifecycle                     | `chezmoi/AGENTS.md`    | `chezmoi-workflow`                                                                                                           |
 | Hookrail contracts / feeds / projections      | `cue.mods/AGENTS.md`   | domain-local                                                                                                                 |
 | Bashly / shell wrappers / executable adapters | `shell-wrap/AGENTS.md` | domain-local                                                                                                                 |
