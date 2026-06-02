@@ -78,6 +78,17 @@
 
      It should not try to fully own Neovim plugin config unless the workspace primitive truly drives that config.
 
+     Current Neovim/WezTerm evidence:
+      - `chezmoi/private_dot_config/nvim/lua/plugins/smart-splits.lua` configures `smart-splits.nvim` with `multiplexer_integration = "wezterm"` and emits the WezTerm pane user var `IS_NVIM`.
+      - `chezmoi/private_dot_config/wezterm/modules/smart_splits.lua` reads `IS_NVIM` and routes `Ctrl+h/j/k/l` movement and `Alt+h/j/k/l` resizing across Neovim splits or WezTerm panes.
+      - `chezmoi/private_dot_config/nvim/lua/config/wezterm-pane.lua` is separate Neovim-owned runtime glue that calls `wezterm cli` for `split-pane`, `activate-pane`, `send-text`, and `kill-pane`.
+      - `chezmoi/private_dot_config/nvim/lua/config/keymaps.lua` exposes that pane lifecycle through `<leader>ot` and `<leader>ok`.
+      - `chezmoi/private_dot_config/wezterm/modules/scrollback.lua` provides a WezTerm-side `Ctrl+Shift+E` action that opens scrollback in `$EDITOR` or `nvim`.
+
+     Projection implication:
+      - workspace CUE may describe terminal pane defaults, cwd inheritance, and workspace-aware editor commands.
+      - Neovim plugin setup, `IS_NVIM` signaling, and `wezterm cli` pane lifecycle should stay Lua/runtime implementation glue unless workspace data directly drives a field.
+
   8. Add validation fixtures early
      Add small fixture exports for:
       - one managed workspace
