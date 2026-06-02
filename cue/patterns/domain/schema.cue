@@ -20,7 +20,12 @@ package domain
 	"root.bounded_fallback_limits_loads_to_declared_surfaces" |
 	"review.freeze_gate_rejects_relevance_only_loads" |
 	"fixture.fact_rooted_cue_flow_relation_slice_exports" |
-	"fixture.typed_authorization_evidence_slice_exports"
+	"fixture.typed_authorization_evidence_slice_exports" |
+	"root.promotion_gate_contract_is_root_owned" |
+	"root.promotion_gate_outcome_is_derived" |
+	"root.task_patterns_provide_promotion_fragments" |
+	"root.rejected_relations_do_not_satisfy_promotion" |
+	"fixture.promotion_by_unification_slice_exports"
 
 #SourceFact: {
 	id:          #SourceFactID
@@ -114,12 +119,124 @@ package domain
 
 #AuthorizationEvidence: {
 	selectedPatternIDs: [...string]
-	loadedFiles:        [...#LoadedFileEvidence]
-	deniedLoads:        [...#DeniedLoadEvidence]
+	loadedFiles: [...#LoadedFileEvidence]
+	deniedLoads: [...#DeniedLoadEvidence]
 	authorizationSource: #AuthorizationSource
 	rationale:           string
 	relationRefs:        #RelationRefList
 	factRefs:            #FactRefList
+}
+
+#GateInvariantID:
+	"keyword-relevance-is-not-load-authorization" |
+	"go-adapter-does-not-own-policy" |
+	"selected-pattern-files-require-authorization-evidence" |
+	"bounded-fallback-limits-loads-to-root-declared-surfaces" |
+	"promotion-relations-require-known-factrefs" |
+	"promotion-requirements-require-known-factrefs" |
+	"accepted-is-derived-not-fixture-authored"
+
+#GateInvariant: {
+	id:       #GateInvariantID
+	mustHold: string
+	factRefs: #FactRefList
+}
+
+#PromotionGateCaseID:
+	"normal-promotion" |
+	"bounded-fallback-promotion" |
+	"rejected-drift" |
+	"incomplete-evidence" |
+	"invalid-relation" |
+	"invalid-fact-ref" |
+	"invalid-authorization-source"
+
+#PromotionGateStatus: "accepted" | "rejected" | "drift" | "incomplete"
+
+#PromotionGateCase: {
+	id:                  #PromotionGateCaseID
+	status:              #PromotionGateStatus
+	authorizationSource: #AuthorizationSource
+	allowedRelationRefs: [...#AuthorizationRelationRefID]
+	requiredInvariantRefs: [...#GateInvariantID]
+	requiredFactRefs: #FactRefList
+	rationale:        string
+}
+
+#PromotionGateOutcome:
+	{
+		status:          "accepted"
+		accepted:        true
+		classification?: string
+		violations: []
+		missingRequirements: []
+		rationale: string
+	} |
+	{
+		status:          "rejected"
+		accepted:        false
+		classification?: string
+		violations: [...string]
+		missingRequirements: [...string]
+		rationale: string
+	} |
+	{
+		status:         "drift"
+		accepted:       false
+		classification: string
+		violations: [...string]
+		missingRequirements: [...string]
+		rationale: string
+	} |
+	{
+		status:          "incomplete"
+		accepted:        false
+		classification?: string
+		violations: [...string]
+		missingRequirements: [...string]
+		rationale: string
+	}
+
+#AllowedPromotionRelation: #RelationEdge & {
+	allowed:   true
+	operation: "authorizes"
+	factRefs:  #FactRefList
+}
+
+#PatternPromotionFragment: {
+	id:        string
+	patternID: string
+	requires: [...#SliceRequirement]
+	invariantRefs: [...#GateInvariantID]
+	allowedRelationRefs: [...#AuthorizationRelationRefID]
+	evidenceExpectations: [...string]
+	factRefs:  #FactRefList
+	rationale: string
+}
+
+#PromotionGate: {
+	id:        string
+	patternID: string
+	case:      #PromotionGateCase
+
+	fragment: #PatternPromotionFragment
+	requires: [...#SliceRequirement]
+	invariants: [...#GateInvariant]
+	evidence: #AuthorizationEvidence & {
+		authorizationSource: case.authorizationSource
+	}
+	relations: [...#AllowedPromotionRelation]
+	factRefs: #FactRefList
+	rejectedRelations?: [...#RelationEdge]
+	attemptedOutcome?: {
+		status:   #PromotionGateStatus
+		accepted: bool
+	}
+
+	outcome: #PromotionGateOutcome & {
+		status: case.status
+	}
+	rationale: string
 }
 
 sourceFacts: {
@@ -258,6 +375,41 @@ sourceFacts: {
 		source:      "cue/patterns/projections/authorization-evidence-slice.cue"
 		claim:       "The typed authorization evidence fixture exports."
 		consequence: "Fixture/export proof covers authorization evidence shape and admissibility fields."
+	}
+	"root.promotion_gate_contract_is_root_owned": {
+		id:          "root.promotion_gate_contract_is_root_owned"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "The root schema owns the generic promotion gate interface."
+		consequence: "Task patterns may provide fragments, but may not redefine promotion gate shape."
+	}
+	"root.promotion_gate_outcome_is_derived": {
+		id:          "root.promotion_gate_outcome_is_derived"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Promotion accepted state is projected from the unified gate outcome, not authored as fixture input."
+		consequence: "A bad fixture cannot self-declare accepted without unifying with an accepted gate case."
+	}
+	"root.task_patterns_provide_promotion_fragments": {
+		id:          "root.task_patterns_provide_promotion_fragments"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Task patterns bundle thin promotion fragments containing requirements, invariant refs, and relation expectations."
+		consequence: "Promotion policy remains root-mediated while patterns declare their local constraints."
+	}
+	"root.rejected_relations_do_not_satisfy_promotion": {
+		id:          "root.rejected_relations_do_not_satisfy_promotion"
+		kind:        "root-schema"
+		source:      "cue/patterns/domain/schema.cue"
+		claim:       "Rejected relation edges may be exported as drift evidence but cannot satisfy allowed promotion relation requirements."
+		consequence: "Promotion evidence relations must be allowed and backed by known facts."
+	}
+	"fixture.promotion_by_unification_slice_exports": {
+		id:          "fixture.promotion_by_unification_slice_exports"
+		kind:        "fixture"
+		source:      "cue/patterns/projections/promotion-by-unification-slice.cue"
+		claim:       "The promotion-by-unification projection exports."
+		consequence: "Promotion status is visible as a replayable CUE proof expression normal form."
 	}
 }
 
