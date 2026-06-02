@@ -14,11 +14,11 @@
 ```text
 README.md
 config/frame.config.toml
-bin/symlink_frame.tmpl
 scripts/executable_install-to-codex-home
 ```
 
 ## Notes
 
-The install helper copies the Frame repository into the runtime root and can
-append the hook fragment to `$CODEX_HOME/config.toml`.
+The install helper is the authority for materializing the runtime tree under
+`$CODEX_HOME/tools/frame` and can append the hook fragment to
+`$CODEX_HOME/config.toml`.

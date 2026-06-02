@@ -22,8 +22,9 @@ Hookrail only as compatibility / rollback lineage.
 
 ## Hooks
 
-Use `config/frame.config.toml` for Codex hook wiring. It keeps the same hook
-scope as the old Hookrail tree:
+Use `config/frame.config.toml` for Codex hook wiring. The install helper writes
+this fragment into `$CODEX_HOME/config.toml` and removes stale Frame and
+Hookrail managed blocks before appending the new one.
 
 - `SessionStart`
 - `UserPromptSubmit`
