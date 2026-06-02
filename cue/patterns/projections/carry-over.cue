@@ -1,5 +1,7 @@
 package projections
 
+import "list"
+
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
@@ -35,35 +37,36 @@ generatedCliChangeCarryOver: #CarryOverContract & {
 		git:        domain.git.id
 	}
 
-	requiredLoads: [
-		"cue/patterns/domain/schema.cue",
-		"cue/patterns/domain/source-code.cue",
-		"cue/patterns/projections/workflow-slice.cue",
-		"shell-wrap/AGENTS.md",
-		"shell-wrap/src/hookrail/src/bashly.yml",
-		"cue/patterns/domain/shell-wrap.cue",
-		"cue/patterns/projections/codex-slice.cue",
-		"cue/patterns/domain/cue.cue",
-		"cue/patterns/workflows/schema.cue",
-		"cue/patterns/domain/git.cue",
-		"cue/patterns/workflows/generated-cli-change.cue",
-	]
+	_selectedDomainCards: {
+		sourceCode: domain.sourceCode
+		shellWrap:  domain.shellWrap
+		cue:        domain.cue
+		git:        domain.git
+	}
 
-	forbiddenLoads: [
-		"workflow execution",
-		"eval generation",
-		"materialized state",
-		"cue registry",
-		"evidence policy",
-		"workflow DAG execution",
-		"dotfile materialization",
-	]
+	requiredLoads: list.Concat([
+		_selectedDomainCards.sourceCode.discovery.requiredLoads,
+		_selectedDomainCards.shellWrap.discovery.requiredLoads,
+		_selectedDomainCards.cue.discovery.requiredLoads,
+		_selectedDomainCards.git.discovery.requiredLoads,
+	])
 
-	proofCommands: [
-		"cue vet ./cue/patterns/...",
-		"cue export ./cue/patterns/projections -e generatedCliChangeCarryOver --out json",
-		"cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json",
-	]
+	forbiddenLoads: list.Concat([
+		_selectedDomainCards.sourceCode.discovery.forbiddenLoads,
+		_selectedDomainCards.shellWrap.discovery.forbiddenLoads,
+		_selectedDomainCards.cue.discovery.forbiddenLoads,
+		_selectedDomainCards.git.discovery.forbiddenLoads,
+	])
+
+	proofCommands: list.Concat([
+		_selectedDomainCards.sourceCode.proofs.commands,
+		_selectedDomainCards.shellWrap.proofs.commands,
+		_selectedDomainCards.cue.proofs.commands,
+		_selectedDomainCards.git.proofs.commands,
+		[
+			"cue export ./cue/patterns/projections -e generatedCliChangeCarryOver --out json",
+		],
+	])
 
 	resumeInstruction: "Load the selected workflow, projection, and card handles; use required loads for context, avoid forbidden loads, and resume from CUE authorities instead of transcript history."
 }
