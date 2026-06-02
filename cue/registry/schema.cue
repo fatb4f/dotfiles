@@ -81,19 +81,110 @@ import "strings"
 }
 
 #SelectionGate: {
-	node:           #AuthorityNode
-	route:          #RetrievalRoute
-	query:          #RegistryQuery
-	pathMatches:    bool
-	intentMatches:  bool
+	node:            #AuthorityNode
+	route:           #RetrievalRoute
+	query:           #RegistryQuery
+	pathMatches:     bool
+	intentMatches:   bool
 	overrideAllowed: bool
-	selected:       bool
+	selected:        bool
 }
 
 #CandidateSelection: #SelectionGate & {
 	node:  #AuthorityNode
 	route: #RetrievalRoute
 	query: #RegistryQuery
+}
+
+#RegistryResolutionError: {
+	kind:    "no_match" | "ambiguous" | "blocked"
+	message: string
+}
+
+#RegistryResolution: {
+	registry: #DotfilesRegistry
+	query:    #RegistryQuery
+
+	_registry: registry
+	_query:    query
+
+	candidates: [...#CandidateSelection] & [
+		for _, candidateNode in _registry.nodes {
+			_route: _registry.routes[candidateNode.routeID]
+
+			_pathMatches: (#PathMatch & {
+				node: candidateNode
+				path: _query.path
+			}).matches
+
+			_intentMatches: _query.objective == candidateNode.intent && _query.objective == _route.intent
+
+			_overrideAllowed: (candidateNode.role != "generated" && candidateNode.role != "legacy") || (candidateNode.role == "generated" && _query.allowGenerated && _route.allowGenerated) || (candidateNode.role == "legacy" && _query.allowLegacy && _route.allowLegacy)
+
+			{
+				node:  candidateNode
+				route: _route
+				query: _query
+
+				pathMatches:     _pathMatches
+				intentMatches:   _intentMatches
+				overrideAllowed: _overrideAllowed
+				selected:        _pathMatches && _intentMatches && _overrideAllowed
+			}
+		},
+	]
+
+	selected: [...#CandidateSelection] & [
+		for _, candidate in candidates if candidate.selected {
+			candidate
+		},
+	]
+
+	blockedCandidates: [...#CandidateSelection] & [
+		for _, candidate in candidates if candidate.pathMatches && candidate.intentMatches && !candidate.overrideAllowed {
+			candidate
+		},
+	]
+
+	status: *"none" | "selected" | "ambiguous" | "blocked"
+	if len(selected) == 1 {
+		status: "selected"
+	}
+	if len(selected) > 1 {
+		status: "ambiguous"
+	}
+	if len(selected) == 0 && len(blockedCandidates) > 0 {
+		status: "blocked"
+	}
+	if len(selected) == 0 && len(blockedCandidates) == 0 {
+		status: "none"
+	}
+
+	errors: [...#RegistryResolutionError]
+	if len(selected) == 0 && len(blockedCandidates) > 0 {
+		errors: [{
+			kind:    "blocked"
+			message: "matching registry candidate was blocked by override gates"
+		}]
+	}
+	if len(selected) == 0 && len(blockedCandidates) == 0 {
+		errors: [{
+			kind:    "no_match"
+			message: "no registry node matched path and objective"
+		}]
+	}
+	if len(selected) > 1 {
+		errors: [{
+			kind:    "ambiguous"
+			message: "multiple registry nodes matched path and objective"
+		}]
+	}
+
+	if len(selected) == 1 {
+		plan: #SelectedPlan & {
+			_candidate: selected[0]
+		}
+	}
 }
 
 #SelectedPlan: #RetrievalPlan & {
@@ -117,29 +208,12 @@ import "strings"
 	registry: #DotfilesRegistry
 	query:    #RegistryQuery
 
-	_registry: registry
-	_query:    query
+	resolution: #RegistryResolution & {
+		registry: registry
+		query:    query
+	}
 
-	plan: #SelectedPlan & {
-		for _, candidateNode in _registry.nodes if (#PathMatch & { node: candidateNode, path: _query.path }).matches && _query.objective == candidateNode.intent && _query.objective == _registry.routes[candidateNode.routeID].intent && ((candidateNode.role != "generated" && candidateNode.role != "legacy") || (candidateNode.role == "generated" && _query.allowGenerated && _registry.routes[candidateNode.routeID].allowGenerated) || (candidateNode.role == "legacy" && _query.allowLegacy && _registry.routes[candidateNode.routeID].allowLegacy)) {
-			_candidate: #CandidateSelection & {
-				node:  candidateNode
-				route: _registry.routes[candidateNode.routeID]
-				query: _query
-				pathMatches: (#PathMatch & {
-					node: candidateNode
-					path: _query.path
-				}).matches
-				intentMatches: _query.objective == candidateNode.intent && _query.objective == _registry.routes[candidateNode.routeID].intent
-				overrideAllowed: true
-				if candidateNode.role == "generated" {
-					overrideAllowed: _query.allowGenerated && _registry.routes[candidateNode.routeID].allowGenerated
-				}
-				if candidateNode.role == "legacy" {
-					overrideAllowed: _query.allowLegacy && _registry.routes[candidateNode.routeID].allowLegacy
-				}
-				selected: pathMatches && intentMatches && overrideAllowed
-			}
-		}
+	if resolution.status == "selected" {
+		plan: resolution.plan
 	}
 }

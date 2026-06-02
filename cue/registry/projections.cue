@@ -27,13 +27,16 @@ package registry
 }
 
 #ProjectedSelection: {
-	selection: #RegistrySelection
-	projected: #ProjectedMCPToolRequestTemplate & {
-		server_cmd: selection.plan.request.server_cmd
-		tool_name:  selection.plan.request.tool_name
-		tool_args:  selection.plan.request.tool_args
-		cwd:        selection.plan.request.cwd
-		timeout_ms: selection.plan.request.timeout_ms
+	selection:  #RegistrySelection
+	projected?: #ProjectedMCPToolRequestTemplate
+	if selection.resolution.status == "selected" {
+		projected: #ProjectedMCPToolRequestTemplate & {
+			server_cmd: selection.plan.request.server_cmd
+			tool_name:  selection.plan.request.tool_name
+			tool_args:  selection.plan.request.tool_args
+			cwd:        selection.plan.request.cwd
+			timeout_ms: selection.plan.request.timeout_ms
+		}
 	}
 }
 
