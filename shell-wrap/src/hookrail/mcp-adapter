@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+# shellcheck shell=bash
+
+mcp_adapter_script_dir() {
+  local source
+
+  source="${BASH_SOURCE[0]}"
+  while [[ -L "$source" ]]; do
+    local dir target
+    dir="$(cd -P -- "$(dirname -- "$source")" >/dev/null 2>&1 && pwd)"
+    target="$(readlink "$source")"
+    [[ "$target" == /* ]] || source="$dir/$target"
+    [[ "$target" == /* ]] && source="$target"
+  done
+
+  cd -P -- "$(dirname -- "$source")" >/dev/null 2>&1 && pwd
+}
+
+# shellcheck disable=SC1091
+. "$(mcp_adapter_script_dir)/src/lib/io.sh"
+# shellcheck disable=SC1091
+. "$(mcp_adapter_script_dir)/src/lib/paths.sh"
+# shellcheck disable=SC1091
+. "$(mcp_adapter_script_dir)/src/lib/registry.sh"
+
+mcp_adapter_validate_selected_response() {
+  local response_file
+
+  response_file="${1:?response file required}"
+
+  jq -e '
+    type == "object" and
+    .status == "selected" and
+    (.request | type == "object") and
+    (.request.server_cmd | type == "array") and
+    (.request.server_cmd | length > 0) and
+    (.request.tool_name | type == "string") and
+    (.request.tool_args | type == "object") and
+    (.request.cwd | type == "string") and
+    (.request.timeout_ms | type == "number") and
+    (.request.adapter.transport == "stdio")
+  ' "$response_file" >/dev/null 2>&1
+}
+
+mcp_adapter_emit_execution_evidence() {
+  local response_file execution_status reason exit_code stdout_file stderr_file
+  local response_json request_json adapter_binary adapter_transport
+  local stdout stderr jq_exit_status
+
+  response_file="${1:?response file required}"
+  execution_status="${2:?execution status required}"
+  reason="${3:-}"
+  exit_code="${4:-}"
+  stdout_file="${5:?stdout file required}"
+  stderr_file="${6:?stderr file required}"
+
+  response_json="$(cat "$response_file")"
+  request_json="$(jq '.request' "$response_file")"
+  adapter_binary="${MCP_ADAPTER_BINARY:-$(basename -- "$0")}"
+  adapter_transport="stdio"
+  stdout="$(cat "$stdout_file")"
+  stderr="$(cat "$stderr_file")"
+
+  if jq -n \
+    --argjson response "$response_json" \
+    --argjson request "$request_json" \
+    --arg executionStatus "$execution_status" \
+    --arg adapterBinary "$adapter_binary" \
+    --arg adapterTransport "$adapter_transport" \
+    --arg reasonValue "$reason" \
+    --arg exitCodeValue "$exit_code" \
+    --arg stdoutValue "$stdout" \
+    --arg stderrValue "$stderr" \
+    '{
+      schemaVersion: "cuerail.mcpExecutionEvidence.v1",
+      response: $response,
+      request: $request,
+      executionStatus: $executionStatus,
+      adapter: {
+        binary: $adapterBinary,
+        transport: $adapterTransport
+      },
+      stdout: $stdoutValue,
+      stderr: $stderrValue
+    }
+    + (if $reasonValue != "" then {reason: $reasonValue} else {} end)
+    + (if $exitCodeValue != "" then {exitCode: ($exitCodeValue | tonumber)} else {} end)' \
+    | hookrail_registry_emit_execution_evidence; then
+    jq_exit_status=0
+  else
+    jq_exit_status=$?
+  fi
+
+  return "$jq_exit_status"
+}
+
+# shellcheck disable=SC2154
+mcp_adapter_run() {
+  local response_file server_stdout server_stderr cwd timeout_ms timeout_seconds
+  local server_exit_status
+  local server_cmd
+  local -a server_cmd_argv
+
+  hookrail_need cue || return $?
+  hookrail_need jq || return $?
+  hookrail_need mktemp || return $?
+
+  response_file="$(mktemp "${TMPDIR:-/tmp}/hookrail-mcp-adapter-response.XXXXXX.json")"
+  server_stdout="$(mktemp "${TMPDIR:-/tmp}/hookrail-mcp-adapter-stdout.XXXXXX.log")"
+  server_stderr="$(mktemp "${TMPDIR:-/tmp}/hookrail-mcp-adapter-stderr.XXXXXX.log")"
+
+  trap 'rm -f "$response_file" "$server_stdout" "$server_stderr"' RETURN
+  cat >"$response_file"
+
+  if ! mcp_adapter_validate_selected_response "$response_file"; then
+    printf 'mcp-adapter: invalid selected registry response\n' >&2
+    return 1
+  fi
+
+  cwd="$(jq -r '.request.cwd' "$response_file")"
+  timeout_ms="$(jq -r '.request.timeout_ms' "$response_file")"
+  mapfile -t server_cmd_argv < <(jq -r '.request.server_cmd[]' "$response_file")
+  server_cmd="${server_cmd_argv[0]}"
+
+  if ! command -v "$server_cmd" >/dev/null 2>&1; then
+    mcp_adapter_emit_execution_evidence \
+      "$response_file" \
+      "transport_failure" \
+      "missing MCP server binary" \
+      "127" \
+      "$server_stdout" \
+      "$server_stderr"
+    return 0
+  fi
+
+  if ! (cd "$cwd" >/dev/null 2>&1); then
+    mcp_adapter_emit_execution_evidence \
+      "$response_file" \
+      "transport_failure" \
+      "requested working directory is unavailable" \
+      "1" \
+      "$server_stdout" \
+      "$server_stderr"
+    return 0
+  fi
+
+  if command -v timeout >/dev/null 2>&1 && [[ "$timeout_ms" -gt 0 ]]; then
+    timeout_seconds="$(awk -v ms="$timeout_ms" 'BEGIN { printf "%.3f", ms / 1000 }')"
+    if (
+      cd "$cwd" &&
+        timeout --preserve-status --signal=TERM --kill-after=5s "$timeout_seconds" \
+          "${server_cmd_argv[@]}" <"$response_file" >"$server_stdout" 2>"$server_stderr"
+    ); then
+      server_exit_status=0
+    else
+      server_exit_status=$?
+    fi
+  else
+    if (
+      cd "$cwd" &&
+        "${server_cmd_argv[@]}" <"$response_file" >"$server_stdout" 2>"$server_stderr"
+    ); then
+      server_exit_status=0
+    else
+      server_exit_status=$?
+    fi
+  fi
+
+  if [[ "$server_exit_status" -eq 0 ]]; then
+    mcp_adapter_emit_execution_evidence \
+      "$response_file" \
+      "executed" \
+      "" \
+      "" \
+      "$server_stdout" \
+      "$server_stderr"
+    return 0
+  fi
+
+  if [[ "$server_exit_status" -eq 124 || "$server_exit_status" -eq 137 ]]; then
+    mcp_adapter_emit_execution_evidence \
+      "$response_file" \
+      "transport_failure" \
+      "MCP server timed out" \
+      "$server_exit_status" \
+      "$server_stdout" \
+      "$server_stderr"
+    return 0
+  fi
+
+  if [[ "$server_exit_status" -eq 126 || "$server_exit_status" -eq 127 ]]; then
+    mcp_adapter_emit_execution_evidence \
+      "$response_file" \
+      "transport_failure" \
+      "MCP server could not be executed" \
+      "$server_exit_status" \
+      "$server_stdout" \
+      "$server_stderr"
+    return 0
+  fi
+
+  mcp_adapter_emit_execution_evidence \
+    "$response_file" \
+    "tool_failure" \
+    "MCP server exited non-zero" \
+    "$server_exit_status" \
+    "$server_stdout" \
+    "$server_stderr"
+}
+
+mcp_adapter_run "$@"
