@@ -13,9 +13,9 @@ registry: #DotfilesRegistry & {
 				"cue.mods/hookrail/output.cue",
 				"cue.mods/hookrail/projection.cue",
 			]
-			role:  "policy"
-			owner: "frame"
-			intent: "inspect_policy"
+			role:    "policy"
+			owner:   "frame"
+			intent:  "inspect_policy"
 			routeID: "inspectCuePolicy"
 			allowedRoutes: ["inspectCuePolicy"]
 			forbiddenRoutes: []
@@ -33,7 +33,7 @@ registry: #DotfilesRegistry & {
 					path:   "cue.mods/hookrail"
 				},
 			]
-			maxResults: 60
+			maxResults:  60
 			tokenBudget: 8000
 		}
 
@@ -46,9 +46,9 @@ registry: #DotfilesRegistry & {
 				"shell-wrap/src/hookrail/src/commands/hook.sh",
 				"shell-wrap/src/hookrail/src/lib/cue.sh",
 			]
-			role:  "adapter"
-			owner: "shell-wrap"
-			intent: "inspect_adapter"
+			role:    "adapter"
+			owner:   "shell-wrap"
+			intent:  "inspect_adapter"
 			routeID: "inspectDotctlAdapter"
 			allowedRoutes: ["inspectDotctlAdapter"]
 			forbiddenRoutes: []
@@ -60,7 +60,7 @@ registry: #DotfilesRegistry & {
 					path:   "shell-wrap/src/hookrail"
 				},
 			]
-			maxResults: 80
+			maxResults:  80
 			tokenBudget: 6000
 		}
 
@@ -73,9 +73,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/dot_local/share/codex/tools/hookrail/bin/executable_hookrail-doctor",
 				"chezmoi/dot_local/share/codex/tools/hookrail/scripts/executable_install-to-codex-home",
 			]
-			role:  "bootstrap"
-			owner: "chezmoi"
-			intent: "inspect_bootstrap"
+			role:    "bootstrap"
+			owner:   "chezmoi"
+			intent:  "inspect_bootstrap"
 			routeID: "inspectBootstrap"
 			allowedRoutes: ["inspectBootstrap"]
 			forbiddenRoutes: []
@@ -87,7 +87,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/dot_local/share/codex/tools/hookrail"
 				},
 			]
-			maxResults: 40
+			maxResults:  40
 			tokenBudget: 5000
 		}
 
@@ -102,9 +102,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/hypr/modules/binds.lua",
 				"chezmoi/private_dot_config/hypr/modules/layouts.lua",
 			]
-			role:  "config"
-			owner: "dotfiles"
-			intent: "inspect_config"
+			role:    "config"
+			owner:   "dotfiles"
+			intent:  "inspect_config"
 			routeID: "inspectHyprlandConfig"
 			allowedRoutes: ["inspectHyprlandConfig"]
 			forbiddenRoutes: []
@@ -116,7 +116,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/hypr"
 				},
 			]
-			maxResults: 40
+			maxResults:  40
 			tokenBudget: 6000
 		}
 
@@ -130,9 +130,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/wezterm/modules/status.lua",
 				"chezmoi/private_dot_config/wezterm/modules/workspaces.lua",
 			]
-			role:  "config"
-			owner: "dotfiles"
-			intent: "inspect_config"
+			role:    "config"
+			owner:   "dotfiles"
+			intent:  "inspect_config"
 			routeID: "inspectWeztermConfig"
 			allowedRoutes: ["inspectWeztermConfig"]
 			forbiddenRoutes: []
@@ -144,7 +144,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/wezterm"
 				},
 			]
-			maxResults: 40
+			maxResults:  40
 			tokenBudget: 6000
 		}
 
@@ -159,9 +159,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/zsh/fn/named_dirs_load",
 				"chezmoi/private_dot_config/zsh/fn/up",
 			]
-			role:  "config"
-			owner: "dotfiles"
-			intent: "inspect_config"
+			role:    "config"
+			owner:   "dotfiles"
+			intent:  "inspect_config"
 			routeID: "inspectZshConfig"
 			allowedRoutes: ["inspectZshConfig"]
 			forbiddenRoutes: []
@@ -173,7 +173,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/zsh"
 				},
 			]
-			maxResults: 60
+			maxResults:  60
 			tokenBudget: 7000
 		}
 
@@ -188,9 +188,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/nvim/lua/plugins/smart-splits.lua",
 				"chezmoi/private_dot_config/nvim/stylua.toml",
 			]
-			role:  "config"
-			owner: "dotfiles"
-			intent: "inspect_config"
+			role:    "config"
+			owner:   "dotfiles"
+			intent:  "inspect_config"
 			routeID: "inspectNvimConfig"
 			allowedRoutes: ["inspectNvimConfig"]
 			forbiddenRoutes: []
@@ -202,7 +202,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/nvim"
 				},
 			]
-			maxResults: 80
+			maxResults:  80
 			tokenBudget: 8000
 		}
 
@@ -213,9 +213,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/systemd/user/user.manifest/generated-wants.md",
 				"chezmoi/private_dot_config/systemd/user/user.manifest/README.md",
 			]
-			role:  "generated"
-			owner: "chezmoi"
-			intent: "inspect_generated"
+			role:    "generated"
+			owner:   "chezmoi"
+			intent:  "inspect_generated"
 			routeID: "inspectGeneratedProjections"
 			allowedRoutes: ["inspectGeneratedProjections"]
 			forbiddenRoutes: []
@@ -227,7 +227,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/systemd/user/user.manifest/generated-wants.md"
 				},
 			]
-			maxResults: 30
+			maxResults:  30
 			tokenBudget: 3000
 		}
 
@@ -241,9 +241,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/yazi/theme.toml",
 				"chezmoi/private_dot_config/yazi/yazi.toml",
 			]
-			role:  "config"
-			owner: "dotfiles"
-			intent: "inspect_config"
+			role:    "config"
+			owner:   "dotfiles"
+			intent:  "inspect_config"
 			routeID: "inspectYaziConfig"
 			allowedRoutes: ["inspectYaziConfig"]
 			forbiddenRoutes: []
@@ -255,7 +255,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/yazi"
 				},
 			]
-			maxResults: 50
+			maxResults:  50
 			tokenBudget: 5000
 		}
 
@@ -266,9 +266,9 @@ registry: #DotfilesRegistry & {
 				"chezmoi/private_dot_config/systemd/user/user.manifest/session-companions.md",
 				"chezmoi/private_dot_config/systemd/user/user.manifest/generated-wants.md",
 			]
-			role:  "legacy"
-			owner: "chezmoi"
-			intent: "inspect_legacy"
+			role:    "legacy"
+			owner:   "chezmoi"
+			intent:  "inspect_legacy"
 			routeID: "inspectLegacySessionSurfaces"
 			allowedRoutes: ["inspectLegacySessionSurfaces"]
 			forbiddenRoutes: []
@@ -280,7 +280,7 @@ registry: #DotfilesRegistry & {
 					path:   "chezmoi/private_dot_config/systemd/user/user.manifest/session-companions.md"
 				},
 			]
-			maxResults: 20
+			maxResults:  20
 			tokenBudget: 2000
 		}
 	}

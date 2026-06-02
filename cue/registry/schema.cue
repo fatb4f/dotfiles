@@ -2,6 +2,8 @@ package registry
 
 import "list"
 
+import "strings"
+
 #PathRole: "policy" | "adapter" | "bootstrap" | "config" | "generated" | "legacy"
 
 #AuthorityOwner: "dotfiles" | "frame" | "chezmoi" | "shell-wrap"
@@ -9,63 +11,70 @@ import "list"
 #RetrievalIntent: "inspect_policy" | "inspect_adapter" | "inspect_bootstrap" | "inspect_config" | "inspect_generated" | "inspect_legacy"
 
 #ValidationGate: {
-	id: string
-	kind: "path_scope" | "route_scope" | "budget" | "override"
+	id:     string
+	kind:   "path_scope" | "route_scope" | "budget" | "override"
 	detail: string
-	path?: string
+	path?:  string
 }
 
 #AuthorityNode: {
-	id: string
+	id:          string
 	primaryPath: string
 	paths: [...string]
-	role: #PathRole
-	owner: #AuthorityOwner
-	intent: #RetrievalIntent
+	role:    #PathRole
+	owner:   #AuthorityOwner
+	intent:  #RetrievalIntent
 	routeID: string
 	allowedRoutes: [...string]
 	forbiddenRoutes: [...string]
 	validationGates: [...#ValidationGate]
-	maxResults: int & >=0
+	maxResults:  int & >=0
 	tokenBudget: int & >=0
 }
 
 #RetrievalRoute: {
-	id: string
+	id:     string
 	intent: #RetrievalIntent
 	appliesTo: [...string]
 	server_cmd: [...string]
 	tool_name: string
 	tool_args: [string]: _
-	cwd: string
-	timeout_ms: int & >=0
-	maxTokens: int & >=0
+	cwd:            string
+	timeout_ms:     int & >=0
+	maxTokens:      int & >=0
 	allowGenerated: *false | bool
-	allowLegacy: *false | bool
+	allowLegacy:    *false | bool
+}
+
+#PathMatch: {
+	node: #AuthorityNode
+	path: string
+
+	matches: bool & (path == node.primaryPath || strings.HasPrefix(path, node.primaryPath+"/") || list.Contains(node.paths, path))
 }
 
 #DotfilesRegistry: {
-	nodes: [string]: #AuthorityNode
+	nodes: [string]:  #AuthorityNode
 	routes: [string]: #RetrievalRoute
 }
 
 #RegistryQuery: {
-	path: string
-	objective: #RetrievalIntent
+	path:           string
+	objective:      #RetrievalIntent
 	allowGenerated: *false | bool
-	allowLegacy: *false | bool
+	allowLegacy:    *false | bool
 }
 
 #RetrievalPlan: {
-	id: string
+	id:        string
 	objective: #RetrievalIntent
-	node: #AuthorityNode
-	route: #RetrievalRoute
+	node:      #AuthorityNode
+	route:     #RetrievalRoute
 	request: {
 		server_cmd: [...string]
 		tool_name: string
 		tool_args: [string]: _
-		cwd: string
+		cwd:        string
 		timeout_ms: int & >=0
 	}
 	gates: [...#ValidationGate]
@@ -73,16 +82,19 @@ import "list"
 
 #RegistrySelection: {
 	registry: #DotfilesRegistry
-	query: #RegistryQuery
+	query:    #RegistryQuery
 
 	plan: #RetrievalPlan & {}
 
-	if query.objective == registry.nodes.cuePolicy.intent && list.Contains(registry.nodes.cuePolicy.paths, query.path) {
+	if query.objective == registry.nodes.cuePolicy.intent && (#PathMatch & {
+		node: registry.nodes.cuePolicy
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.cuePolicy.id
+			id:        registry.nodes.cuePolicy.id
 			objective: query.objective
-			node:     registry.nodes.cuePolicy
-			route:    registry.routes.inspectCuePolicy
+			node:      registry.nodes.cuePolicy
+			route:     registry.routes.inspectCuePolicy
 			request: {
 				server_cmd: registry.routes.inspectCuePolicy.server_cmd
 				tool_name:  registry.routes.inspectCuePolicy.tool_name
@@ -94,12 +106,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.dotctlAdapter.intent && list.Contains(registry.nodes.dotctlAdapter.paths, query.path) {
+	if query.objective == registry.nodes.dotctlAdapter.intent && (#PathMatch & {
+		node: registry.nodes.dotctlAdapter
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.dotctlAdapter.id
+			id:        registry.nodes.dotctlAdapter.id
 			objective: query.objective
-			node:     registry.nodes.dotctlAdapter
-			route:    registry.routes.inspectDotctlAdapter
+			node:      registry.nodes.dotctlAdapter
+			route:     registry.routes.inspectDotctlAdapter
 			request: {
 				server_cmd: registry.routes.inspectDotctlAdapter.server_cmd
 				tool_name:  registry.routes.inspectDotctlAdapter.tool_name
@@ -111,12 +126,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.bootstrap.intent && list.Contains(registry.nodes.bootstrap.paths, query.path) {
+	if query.objective == registry.nodes.bootstrap.intent && (#PathMatch & {
+		node: registry.nodes.bootstrap
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.bootstrap.id
+			id:        registry.nodes.bootstrap.id
 			objective: query.objective
-			node:     registry.nodes.bootstrap
-			route:    registry.routes.inspectBootstrap
+			node:      registry.nodes.bootstrap
+			route:     registry.routes.inspectBootstrap
 			request: {
 				server_cmd: registry.routes.inspectBootstrap.server_cmd
 				tool_name:  registry.routes.inspectBootstrap.tool_name
@@ -128,12 +146,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.hyprlandConfig.intent && list.Contains(registry.nodes.hyprlandConfig.paths, query.path) {
+	if query.objective == registry.nodes.hyprlandConfig.intent && (#PathMatch & {
+		node: registry.nodes.hyprlandConfig
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.hyprlandConfig.id
+			id:        registry.nodes.hyprlandConfig.id
 			objective: query.objective
-			node:     registry.nodes.hyprlandConfig
-			route:    registry.routes.inspectHyprlandConfig
+			node:      registry.nodes.hyprlandConfig
+			route:     registry.routes.inspectHyprlandConfig
 			request: {
 				server_cmd: registry.routes.inspectHyprlandConfig.server_cmd
 				tool_name:  registry.routes.inspectHyprlandConfig.tool_name
@@ -145,12 +166,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.weztermConfig.intent && list.Contains(registry.nodes.weztermConfig.paths, query.path) {
+	if query.objective == registry.nodes.weztermConfig.intent && (#PathMatch & {
+		node: registry.nodes.weztermConfig
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.weztermConfig.id
+			id:        registry.nodes.weztermConfig.id
 			objective: query.objective
-			node:     registry.nodes.weztermConfig
-			route:    registry.routes.inspectWeztermConfig
+			node:      registry.nodes.weztermConfig
+			route:     registry.routes.inspectWeztermConfig
 			request: {
 				server_cmd: registry.routes.inspectWeztermConfig.server_cmd
 				tool_name:  registry.routes.inspectWeztermConfig.tool_name
@@ -162,12 +186,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.zshConfig.intent && list.Contains(registry.nodes.zshConfig.paths, query.path) {
+	if query.objective == registry.nodes.zshConfig.intent && (#PathMatch & {
+		node: registry.nodes.zshConfig
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.zshConfig.id
+			id:        registry.nodes.zshConfig.id
 			objective: query.objective
-			node:     registry.nodes.zshConfig
-			route:    registry.routes.inspectZshConfig
+			node:      registry.nodes.zshConfig
+			route:     registry.routes.inspectZshConfig
 			request: {
 				server_cmd: registry.routes.inspectZshConfig.server_cmd
 				tool_name:  registry.routes.inspectZshConfig.tool_name
@@ -179,12 +206,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.nvimConfig.intent && list.Contains(registry.nodes.nvimConfig.paths, query.path) {
+	if query.objective == registry.nodes.nvimConfig.intent && (#PathMatch & {
+		node: registry.nodes.nvimConfig
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.nvimConfig.id
+			id:        registry.nodes.nvimConfig.id
 			objective: query.objective
-			node:     registry.nodes.nvimConfig
-			route:    registry.routes.inspectNvimConfig
+			node:      registry.nodes.nvimConfig
+			route:     registry.routes.inspectNvimConfig
 			request: {
 				server_cmd: registry.routes.inspectNvimConfig.server_cmd
 				tool_name:  registry.routes.inspectNvimConfig.tool_name
@@ -196,12 +226,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.generatedProjections.intent && list.Contains(registry.nodes.generatedProjections.paths, query.path) && query.allowGenerated {
+	if query.objective == registry.nodes.generatedProjections.intent && (#PathMatch & {
+		node: registry.nodes.generatedProjections
+		path: query.path
+	}).matches && query.allowGenerated && registry.routes.inspectGeneratedProjections.allowGenerated {
 		plan: {
-			id:       registry.nodes.generatedProjections.id
+			id:        registry.nodes.generatedProjections.id
 			objective: query.objective
-			node:     registry.nodes.generatedProjections
-			route:    registry.routes.inspectGeneratedProjections
+			node:      registry.nodes.generatedProjections
+			route:     registry.routes.inspectGeneratedProjections
 			request: {
 				server_cmd: registry.routes.inspectGeneratedProjections.server_cmd
 				tool_name:  registry.routes.inspectGeneratedProjections.tool_name
@@ -213,12 +246,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.yaziConfig.intent && list.Contains(registry.nodes.yaziConfig.paths, query.path) {
+	if query.objective == registry.nodes.yaziConfig.intent && (#PathMatch & {
+		node: registry.nodes.yaziConfig
+		path: query.path
+	}).matches {
 		plan: {
-			id:       registry.nodes.yaziConfig.id
+			id:        registry.nodes.yaziConfig.id
 			objective: query.objective
-			node:     registry.nodes.yaziConfig
-			route:    registry.routes.inspectYaziConfig
+			node:      registry.nodes.yaziConfig
+			route:     registry.routes.inspectYaziConfig
 			request: {
 				server_cmd: registry.routes.inspectYaziConfig.server_cmd
 				tool_name:  registry.routes.inspectYaziConfig.tool_name
@@ -230,12 +266,15 @@ import "list"
 		}
 	}
 
-	if query.objective == registry.nodes.legacySessionSurfaces.intent && list.Contains(registry.nodes.legacySessionSurfaces.paths, query.path) && query.allowLegacy {
+	if query.objective == registry.nodes.legacySessionSurfaces.intent && (#PathMatch & {
+		node: registry.nodes.legacySessionSurfaces
+		path: query.path
+	}).matches && query.allowLegacy && registry.routes.inspectLegacySessionSurfaces.allowLegacy {
 		plan: {
-			id:       registry.nodes.legacySessionSurfaces.id
+			id:        registry.nodes.legacySessionSurfaces.id
 			objective: query.objective
-			node:     registry.nodes.legacySessionSurfaces
-			route:    registry.routes.inspectLegacySessionSurfaces
+			node:      registry.nodes.legacySessionSurfaces
+			route:     registry.routes.inspectLegacySessionSurfaces
 			request: {
 				server_cmd: registry.routes.inspectLegacySessionSurfaces.server_cmd
 				tool_name:  registry.routes.inspectLegacySessionSurfaces.tool_name

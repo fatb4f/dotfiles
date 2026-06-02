@@ -2,12 +2,12 @@ package fixtures
 
 import reg "github.com/fatb4f/dotfiles/cue/registry"
 
-good: reg.#ProjectedSelection & {
+badLegacy: reg.#ProjectedSelection & {
 	selection: {
 		registry: reg.registry
 		query: {
-			path:           "chezmoi/private_dot_config/wezterm/wezterm.lua"
-			objective:      "inspect_config"
+			path:           "chezmoi/private_dot_config/systemd/user/user.manifest/session-companions.md"
+			objective:      "inspect_legacy"
 			allowGenerated: false
 			allowLegacy:    false
 		}
