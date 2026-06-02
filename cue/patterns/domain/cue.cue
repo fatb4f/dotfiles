@@ -32,6 +32,32 @@ cue: #DomainNodePattern & {
 		]
 	}
 
+	discovery: {
+		authorityPaths: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/domain/cue.cue",
+			"cue/patterns/projections/codex-slice.cue",
+		]
+		entrypoints: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/projections/codex-slice.cue",
+		]
+		requiredLoads: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/domain/cue.cue",
+			"cue/patterns/workflows/schema.cue",
+		]
+		forbiddenLoads: [
+			"workflow execution",
+			"eval generation",
+			"shell adapter implementation",
+		]
+		staleSignals: [
+			"CUE work starts carrying runtime routing",
+			"projection is being edited without the schema card",
+		]
+	}
+
 	knownGoodPatterns: [
 		{
 			id:      "cue-owns-schema-contracts"
@@ -61,4 +87,16 @@ cue: #DomainNodePattern & {
 			proof:          "The cue domain card exports successfully."
 		},
 	]
+
+	proofs: {
+		commands: [
+			"cue vet ./cue/patterns/...",
+			"cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json",
+		]
+		artifacts: [
+			"cue/patterns/domain/cue.cue",
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/projections/codex-slice.cue",
+		]
+	}
 }

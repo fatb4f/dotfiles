@@ -28,6 +28,32 @@ sourceCode: #DomainNodePattern & {
 		]
 	}
 
+	discovery: {
+		authorityPaths: [
+			"cue/",
+			"shell-wrap/",
+			"cue/patterns/domain/source-code.cue",
+		]
+		entrypoints: [
+			"cue/",
+			"shell-wrap/",
+		]
+		requiredLoads: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/domain/source-code.cue",
+			"cue/patterns/projections/workflow-slice.cue",
+		]
+		forbiddenLoads: [
+			"workflow execution",
+			"eval generation",
+			"materialized state",
+		]
+		staleSignals: [
+			"source changes are being explained as runtime behavior",
+			"git policy is being pulled into source edits",
+		]
+	}
+
 	knownGoodPatterns: [
 		{
 			id:      "source-code-is-diffable"
@@ -57,4 +83,15 @@ sourceCode: #DomainNodePattern & {
 			proof:          "The source-code domain card exports successfully."
 		},
 	]
+
+	proofs: {
+		commands: [
+			"git diff -- cue/ shell-wrap/",
+			"cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json",
+		]
+		artifacts: [
+			"cue/patterns/domain/source-code.cue",
+			"cue/patterns/projections/workflow-slice.cue",
+		]
+	}
 }

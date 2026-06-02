@@ -25,6 +25,32 @@ shellWrap: #DomainNodePattern & {
 		]
 	}
 
+	discovery: {
+		authorityPaths: [
+			"shell-wrap/AGENTS.md",
+			"shell-wrap/src/hookrail/src/bashly.yml",
+			"cue/patterns/domain/shell-wrap.cue",
+		]
+		entrypoints: [
+			"shell-wrap/src/hookrail/src/bashly.yml",
+			"shell-wrap/src/hookrail/src/cmd",
+		]
+		requiredLoads: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/projections/codex-slice.cue",
+			"shell-wrap/AGENTS.md",
+		]
+		forbiddenLoads: [
+			"cue.mods/hookrail/*",
+			"workflow execution",
+			"eval generation",
+		]
+		staleSignals: [
+			"shell-wrap work is being rediscovered from history instead of the card",
+			"adapter changes are being inferred from runtime traces",
+		]
+	}
+
 	knownGoodPatterns: [
 		{
 			id:      "cue-owns-schema-and-projection-authority"
@@ -92,7 +118,19 @@ shellWrap: #DomainNodePattern & {
 		{
 			id:             "projection-coverage"
 			requiredBefore: "commit"
-			proof:          "The projection includes surface, scopes, known good patterns, known failures, invariants, and gate promotion requirements."
+			proof:          "The projection includes surface, scopes, discovery, proofs, known good patterns, known failures, invariants, and gate promotion requirements."
 		},
 	]
+
+	proofs: {
+		commands: [
+			"cue vet ./cue/patterns/...",
+			"cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json",
+		]
+		artifacts: [
+			"shell-wrap/AGENTS.md",
+			"cue/patterns/domain/shell-wrap.cue",
+			"cue/patterns/projections/codex-slice.cue",
+		]
+	}
 }

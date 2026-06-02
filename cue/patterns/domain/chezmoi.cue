@@ -32,6 +32,32 @@ chezmoi: #DomainNodePattern & {
 		]
 	}
 
+	discovery: {
+		authorityPaths: [
+			"chezmoi/AGENTS.md",
+			"chezmoi/",
+			"cue/patterns/domain/chezmoi.cue",
+		]
+		entrypoints: [
+			"chezmoi status",
+			"chezmoi diff",
+			"chezmoi apply",
+		]
+		requiredLoads: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/domain/chezmoi.cue",
+		]
+		forbiddenLoads: [
+			"workflow execution",
+			"eval generation",
+			"shell adapter implementation",
+		]
+		staleSignals: [
+			"dotfile materialization is being inferred from git history",
+			"chezmoi work is being driven from runtime traces",
+		]
+	}
+
 	knownGoodPatterns: [
 		{
 			id:      "chezmoi-separates-source-from-rendered-state"
@@ -61,4 +87,17 @@ chezmoi: #DomainNodePattern & {
 			proof:          "The chezmoi domain card exports successfully."
 		},
 	]
+
+	proofs: {
+		commands: [
+			"chezmoi status",
+			"chezmoi diff",
+			"chezmoi apply",
+		]
+		artifacts: [
+			"chezmoi status output",
+			"chezmoi diff output",
+			"rendered dotfiles",
+		]
+	}
 }

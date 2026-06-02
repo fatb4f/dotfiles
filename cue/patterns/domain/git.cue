@@ -33,6 +33,33 @@ git: #DomainNodePattern & {
 		]
 	}
 
+	discovery: {
+		authorityPaths: [
+			".git/",
+			"cue/patterns/domain/git.cue",
+			"cue/patterns/workflows/generated-cli-change.cue",
+		]
+		entrypoints: [
+			"git status",
+			"git diff",
+			"git commit",
+		]
+		requiredLoads: [
+			"cue/patterns/domain/schema.cue",
+			"cue/patterns/domain/git.cue",
+			"cue/patterns/workflows/generated-cli-change.cue",
+		]
+		forbiddenLoads: [
+			"workflow execution",
+			"eval generation",
+			"dotfile materialization",
+		]
+		staleSignals: [
+			"closeout is asking about workflow behavior instead of repo state",
+			"repo state is being inferred from history instead of git output",
+		]
+	}
+
 	knownGoodPatterns: [
 		{
 			id:      "git-state-is-observable"
@@ -62,4 +89,17 @@ git: #DomainNodePattern & {
 			proof:          "The git domain card exports successfully."
 		},
 	]
+
+	proofs: {
+		commands: [
+			"git status --short",
+			"git diff --staged",
+			"git diff",
+		]
+		artifacts: [
+			"git status output",
+			"staged diff",
+			"commit SHA",
+		]
+	}
 }

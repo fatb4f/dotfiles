@@ -70,21 +70,53 @@ shellWrapSlice: #CodexSlice & {
 				id:      _involvedDomainCards.sourceCode.id
 				domain:  _involvedDomainCards.sourceCode.domain
 				summary: _involvedDomainCards.sourceCode.surface.summary
+				discovery: {
+					authorityPaths: _involvedDomainCards.sourceCode.discovery.authorityPaths
+					entrypoints:    _involvedDomainCards.sourceCode.discovery.entrypoints
+				}
+				proofs: {
+					commands:  _involvedDomainCards.sourceCode.proofs.commands
+					artifacts: _involvedDomainCards.sourceCode.proofs.artifacts
+				}
 			}
 			shellWrap: {
 				id:      _involvedDomainCards.shellWrap.id
 				domain:  _involvedDomainCards.shellWrap.domain
 				summary: _involvedDomainCards.shellWrap.surface.summary
+				discovery: {
+					authorityPaths: _involvedDomainCards.shellWrap.discovery.authorityPaths
+					entrypoints:    _involvedDomainCards.shellWrap.discovery.entrypoints
+				}
+				proofs: {
+					commands:  _involvedDomainCards.shellWrap.proofs.commands
+					artifacts: _involvedDomainCards.shellWrap.proofs.artifacts
+				}
 			}
 			cue: {
 				id:      _involvedDomainCards.cue.id
 				domain:  _involvedDomainCards.cue.domain
 				summary: _involvedDomainCards.cue.surface.summary
+				discovery: {
+					authorityPaths: _involvedDomainCards.cue.discovery.authorityPaths
+					entrypoints:    _involvedDomainCards.cue.discovery.entrypoints
+				}
+				proofs: {
+					commands:  _involvedDomainCards.cue.proofs.commands
+					artifacts: _involvedDomainCards.cue.proofs.artifacts
+				}
 			}
 			git: {
 				id:      _involvedDomainCards.git.id
 				domain:  _involvedDomainCards.git.domain
 				summary: _involvedDomainCards.git.surface.summary
+				discovery: {
+					authorityPaths: _involvedDomainCards.git.discovery.authorityPaths
+					entrypoints:    _involvedDomainCards.git.discovery.entrypoints
+				}
+				proofs: {
+					commands:  _involvedDomainCards.git.proofs.commands
+					artifacts: _involvedDomainCards.git.proofs.artifacts
+				}
 			}
 		}
 	}

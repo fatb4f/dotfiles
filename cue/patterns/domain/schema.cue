@@ -43,9 +43,22 @@ package domain
 	surface: #DomainSurface
 	scopes:  #DomainScopes
 
+	discovery: {
+		authorityPaths: [...string]
+		entrypoints:    [...string]
+		requiredLoads:  [...string]
+		forbiddenLoads: [...string]
+		staleSignals:   [...string]
+	}
+
 	knownGoodPatterns: [...#PatternGoodPattern]
 	knownFailures: [...#PatternFailure]
 	invariants: [...#PatternInvariant]
 
 	gatePromotionRequirements: [...#PatternGateRequirement]
+
+	proofs: {
+		commands:  [...string]
+		artifacts: [...string]
+	}
 }
