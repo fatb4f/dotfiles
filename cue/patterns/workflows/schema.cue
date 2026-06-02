@@ -1,5 +1,7 @@
 package workflows
 
+import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
+
 #WorkflowLifecycleLandmark: "start" | "review" | "gate" | "eval"
 
 #WorkflowNodeID: "source-code" | "shell-wrap" | "cue" | "git"
@@ -33,56 +35,29 @@ package workflows
 	proof:          string
 }
 
-#WorkflowCardGateRequirement: {
-	id:             string
-	requiredBefore: "review" | "gate" | "eval" | "commit"
-	proof:          string
-}
-
-#WorkflowCardSurface: {
-	summary: string
-	paths: [...string]
-	commands?: [...string]
-	authorities?: [...string]
-}
-
-#WorkflowCardScopes: {
-	owned: [...string]
-	adjacent: [...string]
-	forbidden: [...string]
-}
-
-#WorkflowCardPattern: {
-	id:     string
-	domain: string
-
-	surface: #WorkflowCardSurface
-	scopes:  #WorkflowCardScopes
-
-	knownGoodPatterns: [...#WorkflowGoodPattern]
-	knownFailures: [...#WorkflowFailure]
-	invariants: [...#WorkflowInvariant]
-	gatePromotionRequirements: [...#WorkflowCardGateRequirement]
-}
+#DomainNodePattern:  domain.#DomainNodePattern
+#PatternGoodPattern: domain.#PatternGoodPattern
+#PatternFailure:     domain.#PatternFailure
+#PatternInvariant:   domain.#PatternInvariant
 
 #WorkflowPattern: {
 	id:      string
-	domain:  string
+	domain:  "workflow"
 	summary: string
 
 	lifecycle: [...#WorkflowLifecycleLandmark]
 
 	cards: {
-		sourceCode: #WorkflowCardPattern
-		shellWrap:  #WorkflowCardPattern
-		cue:        #WorkflowCardPattern
-		git:        #WorkflowCardPattern
+		sourceCode: #DomainNodePattern
+		shellWrap:  #DomainNodePattern
+		cue:        #DomainNodePattern
+		git:        #DomainNodePattern
 	}
 
 	edges: [...#WorkflowEdge]
 
-	knownGoodPatterns: [...#WorkflowGoodPattern]
-	knownFailures: [...#WorkflowFailure]
-	invariants: [...#WorkflowInvariant]
+	knownGoodPatterns: [...#PatternGoodPattern]
+	knownFailures: [...#PatternFailure]
+	invariants: [...#PatternInvariant]
 	gatePromotionRequirements: [...#WorkflowGateRequirement]
 }
