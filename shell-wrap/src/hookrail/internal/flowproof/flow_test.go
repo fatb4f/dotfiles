@@ -49,6 +49,9 @@ func TestRunProducesReport(t *testing.T) {
 		t.Fatalf("runtimeTrace has type %T", evidence["runtimeTrace"])
 	}
 	good := trace["good"].(map[string]any)
+	if good["consumable"].(map[string]any)["accepted"] != true {
+		t.Fatalf("good consumable = %v", good["consumable"])
+	}
 	broad := good["broadInputSurface"].(map[string]any)
 	projected := good["projectedContextSurface"].(map[string]any)
 	if projected["bytes"].(float64) >= broad["bytes"].(float64) {
@@ -59,6 +62,9 @@ func TestRunProducesReport(t *testing.T) {
 	}
 
 	rejected := trace["rejected"].(map[string]any)
+	if rejected["consumable"].(map[string]any)["accepted"] != false {
+		t.Fatalf("rejected consumable = %v", rejected["consumable"])
+	}
 	if got := len(rejected["exposedFiles"].([]any)); got != 0 {
 		t.Fatalf("rejected trace exposed %d files", got)
 	}

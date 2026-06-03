@@ -24,6 +24,9 @@ func taskFunc(ctx context.Context, repoRoot string, responses projectionResponse
 			return nil, nil
 		}
 		return flow.RunnerFunc(func(t *flow.Task) error {
+			if got := t.Path().String(); got != "flow" {
+				return fmt.Errorf("unexpected task path %q", got)
+			}
 			return runGoplsTask(ctx, repoRoot, t, responses)
 		}), nil
 	}
@@ -82,6 +85,14 @@ func runGoplsTask(ctx context.Context, repoRoot string, task *flow.Task, respons
 }
 
 func buildRuntimeTrace(repoRoot string, responses projectionResponses) map[string]any {
+	good, err := responses.Good.acceptedAgentContext()
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
+	rejected, err := responses.Rejected.diagnosticsOnly()
+	if err != nil {
+		return map[string]any{"error": err.Error()}
+	}
 	broadPaths := []string{
 		"cue/patterns/domain/schema.cue",
 		"cue/patterns/projections/codex-slice.cue",
@@ -94,30 +105,30 @@ func buildRuntimeTrace(repoRoot string, responses projectionResponses) map[strin
 		"shell-wrap/src/hookrail/internal/flowproof/mcp.go",
 		"shell-wrap/src/hookrail/internal/flowproof/flow_test.go",
 	}
-	goodProjected := loadedFilePaths(responses.Good.Promotion.ExposedFiles)
+	goodProjected := loadedFilePaths(good.ExposedFiles)
 
 	return map[string]any{
 		"schemaVersion": "cuerail.runtimeTraceBundle.v1",
 		"method":        "rough byte/line/file estimate; not tokenizer exact",
 		"good": map[string]any{
-			"runID":                       "fixture.good.selected-pattern",
-			"selectedPatternIDs":          responses.Good.Promotion.SelectedPatterns,
-			"promotionOutcome":            responses.Good.Promotion.PromotionOutcome,
-			"exposedFiles":                responses.Good.Promotion.ExposedFiles,
+			"runID":                       responses.Good.RequestID,
+			"selectedPatternIDs":          good.SelectedPatterns,
+			"consumable":                  responses.Good.Consumable,
+			"exposedFiles":                good.ExposedFiles,
 			"deniedLoads":                 []deniedLoadEvidence{},
-			"relationRefs":                relationRefs(responses.Good.Promotion.ExposedFiles),
-			"factRefs":                    factRefs(responses.Good.Promotion.ExposedFiles),
+			"relationRefs":                good.RelationRefs,
+			"factRefs":                    good.FactRefs,
 			"adapterActionClassification": "adapter-emits-root-shaped-evidence",
 			"broadInputSurface":           estimatePaths(repoRoot, broadPaths),
 			"projectedContextSurface":     estimatePaths(repoRoot, goodProjected),
 		},
 		"rejected": map[string]any{
-			"runID":                       "fixture.bad.keyword-relevance",
-			"promotionOutcome":            responses.Rejected.Promotion.PromotionOutcome,
+			"runID":                       responses.Rejected.RequestID,
+			"consumable":                  responses.Rejected.Consumable,
 			"exposedFiles":                []loadedFileEvidence{},
-			"deniedLoads":                 responses.Rejected.Promotion.Diagnostics.DeniedLoads,
-			"relationRefs":                responses.Rejected.Promotion.Diagnostics.RelationRefs,
-			"factRefs":                    responses.Rejected.Promotion.Diagnostics.FactRefs,
+			"deniedLoads":                 rejected.DeniedLoads,
+			"relationRefs":                rejected.RelationRefs,
+			"factRefs":                    rejected.FactRefs,
 			"adapterActionClassification": "diagnostics-only-no-context-exposure",
 			"broadInputSurface":           estimatePaths(repoRoot, broadPaths),
 			"projectedContextSurface":     estimatePaths(repoRoot, nil),
@@ -131,34 +142,6 @@ func loadedFilePaths(files []loadedFileEvidence) []string {
 		paths = append(paths, file.Path)
 	}
 	return paths
-}
-
-func relationRefs(files []loadedFileEvidence) []string {
-	seen := map[string]bool{}
-	var refs []string
-	for _, file := range files {
-		if file.RelationRef == "" || seen[file.RelationRef] {
-			continue
-		}
-		seen[file.RelationRef] = true
-		refs = append(refs, file.RelationRef)
-	}
-	return refs
-}
-
-func factRefs(files []loadedFileEvidence) []string {
-	seen := map[string]bool{}
-	var refs []string
-	for _, file := range files {
-		for _, ref := range file.FactRefs {
-			if ref == "" || seen[ref] {
-				continue
-			}
-			seen[ref] = true
-			refs = append(refs, ref)
-		}
-	}
-	return refs
 }
 
 func estimatePaths(repoRoot string, relPaths []string) map[string]any {

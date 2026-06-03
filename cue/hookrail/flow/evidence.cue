@@ -25,7 +25,10 @@ import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 #RuntimeTrace: {
 	runID:                       string
 	selectedPatternIDs?:          [...string]
-	promotionOutcome:            domain.#PromotionGateOutcome
+	consumable: {
+		accepted: bool
+		status:   domain.#PromotionGateStatus
+	}
 	exposedFiles:                 [...domain.#LoadedFileEvidence]
 	deniedLoads:                 [...domain.#DeniedLoadEvidence]
 	relationRefs:                domain.#RelationRefList

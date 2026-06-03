@@ -62,14 +62,35 @@ type projectionResponses struct {
 }
 
 type normalizedResponse struct {
-	Promotion promotionProjection `json:"promotion"`
+	RequestID    string                  `json:"requestID"`
+	Consumable   consumableState         `json:"consumable"`
+	AgentContext *agentConsumableContext `json:"agentContext,omitempty"`
+	Diagnostics  *diagnosticsOnly        `json:"diagnostics,omitempty"`
 }
 
-type promotionProjection struct {
-	PromotionOutcome map[string]any       `json:"promotionOutcome"`
+type consumableState struct {
+	Accepted bool   `json:"accepted"`
+	Status   string `json:"status"`
+}
+
+type agentConsumableContext struct {
 	SelectedPatterns []string             `json:"selectedPatternIDs"`
 	ExposedFiles     []loadedFileEvidence `json:"exposedFiles"`
-	Diagnostics      diagnosticsOnly      `json:"diagnostics"`
+	ProjectedPrompt  string               `json:"projectedPrompt"`
+	PromptProjection string               `json:"promptProjection"`
+	EvidenceSummary  evidenceSummary      `json:"evidenceSummary"`
+	RelationRefs     []string             `json:"relationRefs"`
+	FactRefs         []string             `json:"factRefs"`
+	Rationale        string               `json:"rationale"`
+}
+
+type evidenceSummary struct {
+	SelectedPatterns    []string             `json:"selectedPatternIDs"`
+	ExposedFiles        []loadedFileEvidence `json:"exposedFiles"`
+	AuthorizationSource string               `json:"authorizationSource"`
+	RelationRefs        []string             `json:"relationRefs"`
+	FactRefs            []string             `json:"factRefs"`
+	Rationale           string               `json:"rationale"`
 }
 
 type loadedFileEvidence struct {
@@ -82,9 +103,14 @@ type loadedFileEvidence struct {
 }
 
 type diagnosticsOnly struct {
-	DeniedLoads  []deniedLoadEvidence `json:"deniedLoads"`
-	RelationRefs []string             `json:"relationRefs"`
-	FactRefs     []string             `json:"factRefs"`
+	Status              string               `json:"status"`
+	Classification      string               `json:"classification,omitempty"`
+	Violations          []string             `json:"violations"`
+	MissingRequirements []string             `json:"missingRequirements"`
+	Rationale           string               `json:"rationale"`
+	DeniedLoads         []deniedLoadEvidence `json:"deniedLoads"`
+	RelationRefs        []string             `json:"relationRefs"`
+	FactRefs            []string             `json:"factRefs"`
 }
 
 type deniedLoadEvidence struct {
@@ -121,7 +147,39 @@ func loadProjectionResponses(repoRoot string) (projectionResponses, error) {
 	if err := decodeValue(rejected, &responses.Rejected); err != nil {
 		return projectionResponses{}, fmt.Errorf("decode rejected normalized response: %w", err)
 	}
+	if _, err := responses.Good.acceptedAgentContext(); err != nil {
+		return projectionResponses{}, fmt.Errorf("accepted normalized response: %w", err)
+	}
+	if _, err := responses.Rejected.diagnosticsOnly(); err != nil {
+		return projectionResponses{}, fmt.Errorf("rejected normalized response: %w", err)
+	}
 	return responses, nil
+}
+
+func (r normalizedResponse) acceptedAgentContext() (*agentConsumableContext, error) {
+	if !r.Consumable.Accepted {
+		return nil, fmt.Errorf("response %q is not accepted", r.RequestID)
+	}
+	if r.AgentContext == nil {
+		return nil, fmt.Errorf("response %q has no agentContext", r.RequestID)
+	}
+	if r.Diagnostics != nil {
+		return nil, fmt.Errorf("response %q exposes diagnostics on accepted response", r.RequestID)
+	}
+	return r.AgentContext, nil
+}
+
+func (r normalizedResponse) diagnosticsOnly() (*diagnosticsOnly, error) {
+	if r.Consumable.Accepted {
+		return nil, fmt.Errorf("response %q is accepted", r.RequestID)
+	}
+	if r.Diagnostics == nil {
+		return nil, fmt.Errorf("response %q has no diagnostics", r.RequestID)
+	}
+	if r.AgentContext != nil {
+		return nil, fmt.Errorf("response %q exposes agentContext on non-accepted response", r.RequestID)
+	}
+	return r.Diagnostics, nil
 }
 
 func decodeValue(v cue.Value, target any) error {
