@@ -72,6 +72,7 @@ package agentnode
 	}
 
 	contracts: [...#IndexedContract]
+	workspaceGraph?: #WorkspaceGraph
 	operations: [..."agentnode.searchKeywords" | "agentnode.selectPatterns" | "agentnode.readSelectedPatterns" | "agentnode.projectWorkflow"]
 }
 
@@ -79,6 +80,44 @@ package agentnode
 	nodeID: string
 	path:   string
 	root:   string
+}
+
+#WorkspaceNodeKind: "repo" | "config-dir"
+
+#WorkspaceNode: {
+	id:   string
+	kind: #WorkspaceNodeKind
+	path: string
+
+	contract?:         string
+	selectedByDefault: *false | bool
+}
+
+#WorkspaceSelectionCase: {
+	id:        string
+	objective: string
+	selected:  string
+	loadable: [...string]
+	requires?: {
+		mcp?: [...string]
+		validations?: [...string]
+	}
+	evidence: #RootAuthorizationEvidence
+}
+
+#WorkspaceDeniedCase: {
+	id:        string
+	objective: string
+	denied:    string
+	reason:    string
+	evidence:  #RootAuthorizationEvidence
+}
+
+#WorkspaceGraph: {
+	root: string
+	nodes: [...#WorkspaceNode]
+	selectionCases: [...#WorkspaceSelectionCase]
+	deniedCases: [...#WorkspaceDeniedCase]
 }
 
 #RootSchemaSource: {
