@@ -341,6 +341,156 @@ package domain
 	agentContext?: _|_
 })
 
+#ObservedFactID:
+	"review.green_light_review_exists" |
+	"runtime.flow_trace_exists" |
+	"review.accepted_exposed_file_count" |
+	"review.rejected_exposed_file_count" |
+	"review.rejected_denied_load_count" |
+	"review.broad_surface_bytes" |
+	"review.broad_surface_lines" |
+	"review.broad_surface_files" |
+	"review.projected_surface_bytes" |
+	"review.projected_surface_lines" |
+	"review.projected_surface_files" |
+	"review.reduction_bytes_percent" |
+	"review.reduction_lines_percent" |
+	"review.reduction_files_percent" |
+	"root.schema_owns_validation_contract_shape" |
+	"scheme.fragments_conform_to_root_contracts" |
+	"task_patterns_provide_fragments_not_authority_roots" |
+	"promotion.outcome_derived_by_cue_unification" |
+	"normalized_response_is_adapter_boundary" |
+	"adapter.does_not_bypass_promotion_root_authority" |
+	"promotion.good_selected_pattern_accepted" |
+	"promotion.bounded_fallback_accepted" |
+	"promotion.keyword_relevance_not_authorized" |
+	"promotion.missing_relation_ref_not_accepted" |
+	"promotion.rejected_relation_not_allowed" |
+	"promotion.bad_cases_not_accepted" |
+	"accepted_response_exposes_agent_context" |
+	"nonaccepted_response_exposes_diagnostics_only" |
+	"nonaccepted_response_rejects_agent_context" |
+	"adapter.branches_on_consumable" |
+	"adapter.consumes_normalized_response_fields" |
+	"adapter.does_not_consume_promotion_internals" |
+	"adapter.action_classification" |
+	"adapter.not_policy_source" |
+	"estimator.method_is_rough_not_tokenizer_exact"
+
+#ObservedFact: {
+	id:          #ObservedFactID
+	source:      string
+	claim:       string
+	value:       _
+	observedIn?: string
+	rationale:   string
+}
+
+#ObservedFactSet: {
+	facts: [#ObservedFactID]: #ObservedFact
+	factIDs: [...#ObservedFactID]
+	rationale: string
+}
+
+#ValidationGateID:
+	"authority-binding" |
+	"promotion-behavior" |
+	"exposure-binding" |
+	"thin-adapter-boundary" |
+	"runtime-reduction-observation"
+
+#ValidationStatus: "passed" | "failed" | "drift" | "incomplete"
+
+#ValidationRequirement: {
+	id:          string
+	description: string
+	observedFactRefs: [...#ObservedFactID]
+	expected: [...string]
+}
+
+#ValidationGateOutcome:
+	{
+		status:   "passed"
+		accepted: true
+		violations: []
+		missingFacts: []
+		rationale: string
+		gateResults?: [string]: #ValidationGateOutcome
+		observedFactsUsed?: [...#ObservedFactID]
+	} |
+	{
+		status:   "failed"
+		accepted: false
+		violations: [...string]
+		missingFacts: [...#ObservedFactID]
+		rationale: string
+		gateResults?: [string]: #ValidationGateOutcome
+		observedFactsUsed?: [...#ObservedFactID]
+	} |
+	{
+		status:   "drift"
+		accepted: false
+		violations: [...string]
+		missingFacts: [...#ObservedFactID]
+		rationale: string
+		gateResults?: [string]: #ValidationGateOutcome
+		observedFactsUsed?: [...#ObservedFactID]
+	} |
+	{
+		status:   "incomplete"
+		accepted: false
+		violations: [...string]
+		missingFacts: [...#ObservedFactID]
+		rationale: string
+		gateResults?: [string]: #ValidationGateOutcome
+		observedFactsUsed?: [...#ObservedFactID]
+	}
+
+#ValidationGate: {
+	id:          #ValidationGateID
+	description: string
+	requirements: [...#ValidationRequirement]
+	observedFactsUsed: [...#ObservedFactID]
+	outcome:   #ValidationGateOutcome
+	rationale: string
+}
+
+#RootValidationContract: {
+	schemaVersion: "cuerail.rootValidationContract.v1"
+	source:        "cue/patterns/domain/schema.cue"
+	model: {
+		gateEvaluation: "pure-cue-unification"
+		observedFacts:  "inputs"
+		outcome:        "derived"
+	}
+	gateIDs: [
+		"authority-binding",
+		"promotion-behavior",
+		"exposure-binding",
+		"thin-adapter-boundary",
+		"runtime-reduction-observation",
+	]
+	invariant: "Validation gates are pure CUE unification over observed facts."
+}
+
+#ValidationAssessment: {
+	schemaVersion: "cuerail.validationAssessmentSlice.v1"
+	contract:      #RootValidationContract
+	observedFacts: #ObservedFactSet
+	validationGates: {
+		authorityBinding: #ValidationGate & {id: "authority-binding"}
+		promotionBehavior: #ValidationGate & {id: "promotion-behavior"}
+		exposureBinding: #ValidationGate & {id: "exposure-binding"}
+		thinAdapterBoundary: #ValidationGate & {id: "thin-adapter-boundary"}
+		runtimeReductionObservation: #ValidationGate & {id: "runtime-reduction-observation"}
+	}
+	outcome: #ValidationGateOutcome & {
+		status: "passed"
+	}
+	roughEdges?: [...string]
+}
+
 sourceFacts: {
 	"flow.low_level_workflow_manager_based_on_cue_instance": {
 		id:          "flow.low_level_workflow_manager_based_on_cue_instance"
