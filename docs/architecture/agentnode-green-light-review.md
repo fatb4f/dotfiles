@@ -45,6 +45,8 @@ Validation commands reported for the current slice:
 | `cue export ./cue/patterns/projections -e cueFlowAuthorizationEvidenceSlice --out json` | Passed. |
 | `cue export ./cue/patterns/projections -e cueFlowPromotionByUnificationSlice --out json` | Passed. |
 | `cue export ./cue/patterns/projections -e cueFlowPromotedProjectionBindingSlice --out json` | Passed. |
+| `cue export ./cue/patterns/projections -e cueFlowValidationAssessmentSlice --out json` | Passed. |
+| `cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json` | Passed. |
 | `go test ./...` from `shell-wrap/src/hookrail` | Passed. |
 | Repo-root `go test ./...` | Not applicable; the repository root is not a Go module root. |
 
@@ -64,6 +66,18 @@ Stable trace artifact:
 
 ```text
 var/run/hookrail/flow-trace.latest.json
+```
+
+Stable validation report artifact:
+
+```text
+var/run/hookrail/validation-report.latest.json
+```
+
+Materialization command:
+
+```sh
+cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json > var/run/hookrail/validation-report.latest.json
 ```
 
 Adapter result: passed with `schemaVersion: "cuerail.hookrailFlowReport.v1"`, `taskKind: "gopls"`, evidence `status: "ok"`, and `diagnostics: "No diagnostics."`.

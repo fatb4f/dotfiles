@@ -491,6 +491,64 @@ package domain
 	roughEdges?: [...string]
 }
 
+#ValidationReportManifest: {
+	schemaVersion: "cuerail.validationReportManifest.v1"
+	reportID:      string
+	generatedFrom: {
+		projection: string
+		command:    string
+	}
+	validationAssessmentRef: string
+	validationContractRef:   string
+	observedFacts:           #ObservedFactSet
+	gateResults: {
+		authorityBinding:            #ValidationGateOutcome
+		promotionBehavior:           #ValidationGateOutcome
+		exposureBinding:             #ValidationGateOutcome
+		thinAdapterBoundary:         #ValidationGateOutcome
+		runtimeReductionObservation: #ValidationGateOutcome
+	}
+	overallOutcome: #ValidationGateOutcome
+	sourceArtifacts: [...string]
+	validationCommands: [...string]
+	exportCommands: [...string]
+	runtimeEvidence: {
+		acceptedExposedFiles:  int
+		rejectedExposedFiles:  int
+		rejectedDeniedLoads:   int
+		broadSurfaceBytes:     int
+		broadSurfaceLines:     int
+		broadSurfaceFiles:     int
+		projectedSurfaceBytes: int
+		projectedSurfaceLines: int
+		projectedSurfaceFiles: int
+		byteReductionPercent:  number
+		lineReductionPercent:  number
+		fileReductionPercent:  number
+		estimatorMethod:       string
+	}
+	contextReduction: {
+		broad: {
+			bytes: int
+			lines: int
+			files: int
+		}
+		projected: {
+			bytes: int
+			lines: int
+			files: int
+		}
+		reductionPercent: {
+			bytes: number
+			lines: number
+			files: number
+		}
+	}
+	roughEdges: [...string]
+	nextHardening: [...string]
+	rationale: string
+}
+
 sourceFacts: {
 	"flow.low_level_workflow_manager_based_on_cue_instance": {
 		id:          "flow.low_level_workflow_manager_based_on_cue_instance"

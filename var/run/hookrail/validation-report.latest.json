@@ -1,0 +1,484 @@
+{
+    "schemaVersion": "cuerail.validationReportManifest.v1",
+    "reportID": "cue-flow-validation-report.latest",
+    "generatedFrom": {
+        "projection": "cueFlowValidationReportManifest",
+        "command": "cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json"
+    },
+    "validationAssessmentRef": "cueFlowValidationAssessmentSlice",
+    "validationContractRef": "domain.#RootValidationContract",
+    "observedFacts": {
+        "facts": {
+            "review.green_light_review_exists": {
+                "id": "review.green_light_review_exists",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "The AgentNode green-light review exists.",
+                "value": true,
+                "rationale": "The review document is the local review evidence source for this validation slice."
+            },
+            "runtime.flow_trace_exists": {
+                "id": "runtime.flow_trace_exists",
+                "source": "var/run/hookrail/flow-trace.latest.json",
+                "claim": "The latest Hookrail flow trace exists.",
+                "value": true,
+                "rationale": "The trace artifact records normalized adapter consumption and rough context metrics."
+            },
+            "review.accepted_exposed_file_count": {
+                "id": "review.accepted_exposed_file_count",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "The accepted runtime path exposed three files.",
+                "value": 3,
+                "rationale": "Accepted exposure remains limited to selected-pattern authorized files."
+            },
+            "review.rejected_exposed_file_count": {
+                "id": "review.rejected_exposed_file_count",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "The rejected runtime path exposed zero files.",
+                "value": 0,
+                "rationale": "Rejected promotion does not expose agent context files."
+            },
+            "review.rejected_denied_load_count": {
+                "id": "review.rejected_denied_load_count",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "The rejected runtime path recorded two denied loads.",
+                "value": 2,
+                "rationale": "Denied loads remain diagnostic evidence instead of context exposure."
+            },
+            "review.broad_surface_bytes": {
+                "id": "review.broad_surface_bytes",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Broad input surface was 87,137 bytes.",
+                "value": 87137,
+                "rationale": "Rough broad-surface byte count from the review and trace."
+            },
+            "review.broad_surface_lines": {
+                "id": "review.broad_surface_lines",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Broad input surface was 2,618 lines.",
+                "value": 2618,
+                "rationale": "Rough broad-surface line count from the review and trace."
+            },
+            "review.broad_surface_files": {
+                "id": "review.broad_surface_files",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Broad input surface was 10 files.",
+                "value": 10,
+                "rationale": "Rough broad-surface file count from the review and trace."
+            },
+            "review.projected_surface_bytes": {
+                "id": "review.projected_surface_bytes",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Accepted projected context was 34,229 bytes.",
+                "value": 34229,
+                "rationale": "Rough projected byte count from accepted context."
+            },
+            "review.projected_surface_lines": {
+                "id": "review.projected_surface_lines",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Accepted projected context was 1,026 lines.",
+                "value": 1026,
+                "rationale": "Rough projected line count from accepted context."
+            },
+            "review.projected_surface_files": {
+                "id": "review.projected_surface_files",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Accepted projected context was 3 files.",
+                "value": 3,
+                "rationale": "Rough projected file count from accepted context."
+            },
+            "review.reduction_bytes_percent": {
+                "id": "review.reduction_bytes_percent",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Accepted byte reduction was 60.7%.",
+                "value": 60.7,
+                "rationale": "The recorded byte reduction is material for this rough estimator slice."
+            },
+            "review.reduction_lines_percent": {
+                "id": "review.reduction_lines_percent",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Accepted line reduction was 60.8%.",
+                "value": 60.8,
+                "rationale": "The recorded line reduction is material for this rough estimator slice."
+            },
+            "review.reduction_files_percent": {
+                "id": "review.reduction_files_percent",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Accepted file-count reduction was 70.0%.",
+                "value": 70.0,
+                "rationale": "The recorded file-count reduction is material for this rough estimator slice."
+            },
+            "root.schema_owns_validation_contract_shape": {
+                "id": "root.schema_owns_validation_contract_shape",
+                "source": "cue/patterns/domain/schema.cue",
+                "claim": "The root schema owns #RootValidationContract, #ValidationGate, #ValidationRequirement, #ValidationGateOutcome, #ObservedFact, #ObservedFactSet, and #ValidationAssessment.",
+                "value": true,
+                "rationale": "Validation shape is defined in the root domain schema rather than in Go or a local fixture type."
+            },
+            "scheme.fragments_conform_to_root_contracts": {
+                "id": "scheme.fragments_conform_to_root_contracts",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Promotion scheme fragments unify with root-owned gate contracts.",
+                "value": true,
+                "rationale": "Existing promotion fragments are typed as domain.#PatternPromotionFragment and gates as domain.#PromotionGate."
+            },
+            "task_patterns_provide_fragments_not_authority_roots": {
+                "id": "task_patterns_provide_fragments_not_authority_roots",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Task patterns provide fragments and do not redefine authority roots.",
+                "value": true,
+                "rationale": "Pattern fragments carry requirements, invariant refs, allowed relation refs, and evidence expectations."
+            },
+            "promotion.outcome_derived_by_cue_unification": {
+                "id": "promotion.outcome_derived_by_cue_unification",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Promotion outcome is derived by CUE unification.",
+                "value": true,
+                "rationale": "The promotion slice unifies root gate, case, fragment, invariants, evidence, relations, and facts."
+            },
+            "normalized_response_is_adapter_boundary": {
+                "id": "normalized_response_is_adapter_boundary",
+                "source": "cue/patterns/domain/schema.cue",
+                "claim": "Normalized root response is the adapter boundary.",
+                "value": true,
+                "rationale": "The root response exposes consumable accepted/status plus either agentContext or diagnostics."
+            },
+            "adapter.does_not_bypass_promotion_root_authority": {
+                "id": "adapter.does_not_bypass_promotion_root_authority",
+                "source": "var/run/hookrail/flow-trace.latest.json",
+                "claim": "The adapter does not bypass promotion or root authority for exposure decisions.",
+                "value": true,
+                "rationale": "The runtime trace records normalized consumable state and root-shaped evidence."
+            },
+            "promotion.good_selected_pattern_accepted": {
+                "id": "promotion.good_selected_pattern_accepted",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "The accepted selected-pattern promotion fixture has accepted outcome.",
+                "value": true,
+                "rationale": "This is derived from the existing promotion-by-unification projection."
+            },
+            "promotion.bounded_fallback_accepted": {
+                "id": "promotion.bounded_fallback_accepted",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "The bounded fallback promotion fixture has accepted outcome.",
+                "value": true,
+                "rationale": "This is derived from the existing bounded fallback promotion gate."
+            },
+            "promotion.keyword_relevance_not_authorized": {
+                "id": "promotion.keyword_relevance_not_authorized",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Keyword relevance alone does not authorize loading.",
+                "value": false,
+                "rationale": "The bad keyword-relevance fixture is drift with accepted false."
+            },
+            "promotion.missing_relation_ref_not_accepted": {
+                "id": "promotion.missing_relation_ref_not_accepted",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Missing relationRef does not produce accepted promotion.",
+                "value": false,
+                "rationale": "The missing relationRef fixture is incomplete with accepted false."
+            },
+            "promotion.rejected_relation_not_allowed": {
+                "id": "promotion.rejected_relation_not_allowed",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Rejected relations do not satisfy allowed relation requirements.",
+                "value": false,
+                "rationale": "The rejected relation fixture is rejected with accepted false."
+            },
+            "promotion.bad_cases_not_accepted": {
+                "id": "promotion.bad_cases_not_accepted",
+                "source": "cue/patterns/projections/promotion-by-unification-slice.cue",
+                "claim": "Bad promotion cases produce accepted false with drift, rejected, or incomplete status.",
+                "value": true,
+                "rationale": "Keyword relevance is drift, missing relationRef is incomplete, rejected relation is rejected, and fixture-attempted accepted remains drift."
+            },
+            "accepted_response_exposes_agent_context": {
+                "id": "accepted_response_exposes_agent_context",
+                "source": "cue/patterns/projections/promoted-projection-binding-slice.cue",
+                "claim": "Accepted normalized response exposes agentContext.",
+                "value": "cue/patterns/domain/schema.cue",
+                "rationale": "The accepted normalized response can only export this path if agentContext exists."
+            },
+            "nonaccepted_response_exposes_diagnostics_only": {
+                "id": "nonaccepted_response_exposes_diagnostics_only",
+                "source": "cue/patterns/projections/promoted-projection-binding-slice.cue",
+                "claim": "Non-accepted normalized response exposes diagnostics only.",
+                "value": "drift",
+                "rationale": "The non-accepted branch exports diagnostics status from the normalized root response."
+            },
+            "nonaccepted_response_rejects_agent_context": {
+                "id": "nonaccepted_response_rejects_agent_context",
+                "source": "cue/patterns/domain/schema.cue",
+                "claim": "Non-accepted normalized response rejects agentContext.",
+                "value": true,
+                "rationale": "The non-accepted branch of #NormalizedRootResponse constrains agentContext to bottom."
+            },
+            "adapter.branches_on_consumable": {
+                "id": "adapter.branches_on_consumable",
+                "source": "var/run/hookrail/flow-trace.latest.json",
+                "claim": "Go branches on consumable.accepted/status.",
+                "value": true,
+                "rationale": "The trace records accepted and rejected consumable states at the adapter boundary."
+            },
+            "adapter.consumes_normalized_response_fields": {
+                "id": "adapter.consumes_normalized_response_fields",
+                "source": "var/run/hookrail/flow-trace.latest.json",
+                "claim": "Go consumes normalized response fields.",
+                "value": true,
+                "rationale": "The trace includes normalizedResponse, agentContext, diagnostics, and consumable fields."
+            },
+            "adapter.does_not_consume_promotion_internals": {
+                "id": "adapter.does_not_consume_promotion_internals",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Go does not consume promotion internals for exposure decisions.",
+                "value": true,
+                "rationale": "The review records promotion internals as non-consumed by the adapter exposure branch."
+            },
+            "adapter.action_classification": {
+                "id": "adapter.action_classification",
+                "source": "var/run/hookrail/flow-trace.latest.json",
+                "claim": "Adapter action classification remains adapter/emitter/enforcer.",
+                "value": "adapter/emitter/enforcer",
+                "rationale": "The review green-lights Go only as adapter, emitter, and boundary enforcer."
+            },
+            "adapter.not_policy_source": {
+                "id": "adapter.not_policy_source",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "Go does not become the validation or authorization policy source.",
+                "value": true,
+                "rationale": "Policy remains in CUE root contracts; Go consumes the normalized boundary."
+            },
+            "estimator.method_is_rough_not_tokenizer_exact": {
+                "id": "estimator.method_is_rough_not_tokenizer_exact",
+                "source": "docs/architecture/agentnode-green-light-review.md",
+                "claim": "The estimator method is rough, not tokenizer exact.",
+                "value": "rough byte/line/file estimate; not tokenizer exact",
+                "rationale": "The review and trace both label the estimate as rough."
+            }
+        },
+        "factIDs": [
+            "review.green_light_review_exists",
+            "runtime.flow_trace_exists",
+            "review.accepted_exposed_file_count",
+            "review.rejected_exposed_file_count",
+            "review.rejected_denied_load_count",
+            "review.broad_surface_bytes",
+            "review.broad_surface_lines",
+            "review.broad_surface_files",
+            "review.projected_surface_bytes",
+            "review.projected_surface_lines",
+            "review.projected_surface_files",
+            "review.reduction_bytes_percent",
+            "review.reduction_lines_percent",
+            "review.reduction_files_percent",
+            "root.schema_owns_validation_contract_shape",
+            "scheme.fragments_conform_to_root_contracts",
+            "task_patterns_provide_fragments_not_authority_roots",
+            "promotion.outcome_derived_by_cue_unification",
+            "normalized_response_is_adapter_boundary",
+            "adapter.does_not_bypass_promotion_root_authority",
+            "promotion.good_selected_pattern_accepted",
+            "promotion.bounded_fallback_accepted",
+            "promotion.keyword_relevance_not_authorized",
+            "promotion.missing_relation_ref_not_accepted",
+            "promotion.rejected_relation_not_allowed",
+            "promotion.bad_cases_not_accepted",
+            "accepted_response_exposes_agent_context",
+            "nonaccepted_response_exposes_diagnostics_only",
+            "nonaccepted_response_rejects_agent_context",
+            "adapter.branches_on_consumable",
+            "adapter.consumes_normalized_response_fields",
+            "adapter.does_not_consume_promotion_internals",
+            "adapter.action_classification",
+            "adapter.not_policy_source",
+            "estimator.method_is_rough_not_tokenizer_exact"
+        ],
+        "rationale": "Observed facts are inputs from the current green-light review, runtime trace, and CUE projection fixtures; acceptance is derived by unifying them with root-owned validation gates."
+    },
+    "gateResults": {
+        "authorityBinding": {
+            "status": "passed",
+            "accepted": true,
+            "violations": [],
+            "missingFacts": [],
+            "rationale": "Root-owned validation contracts, scheme fragments, derived promotion, and normalized adapter boundary unified."
+        },
+        "promotionBehavior": {
+            "status": "passed",
+            "accepted": true,
+            "violations": [],
+            "missingFacts": [],
+            "rationale": "Promotion fixtures unify with expected accepted, drift, incomplete, and rejected outcomes."
+        },
+        "exposureBinding": {
+            "status": "passed",
+            "accepted": true,
+            "violations": [],
+            "missingFacts": [],
+            "rationale": "Accepted response exposes agentContext; non-accepted response exposes diagnostics only and rejected runtime files remain zero."
+        },
+        "thinAdapterBoundary": {
+            "status": "passed",
+            "accepted": true,
+            "violations": [],
+            "missingFacts": [],
+            "rationale": "Adapter facts unify with the thin boundary contract and do not introduce a Go policy source."
+        },
+        "runtimeReductionObservation": {
+            "status": "passed",
+            "accepted": true,
+            "violations": [],
+            "missingFacts": [],
+            "rationale": "Projected context surface is lower than broad input across bytes, lines, and files, with material rough reductions recorded."
+        }
+    },
+    "overallOutcome": {
+        "accepted": true,
+        "gateResults": {
+            "authorityBinding": {
+                "status": "passed",
+                "accepted": true,
+                "violations": [],
+                "missingFacts": [],
+                "rationale": "Root-owned validation contracts, scheme fragments, derived promotion, and normalized adapter boundary unified."
+            },
+            "promotionBehavior": {
+                "status": "passed",
+                "accepted": true,
+                "violations": [],
+                "missingFacts": [],
+                "rationale": "Promotion fixtures unify with expected accepted, drift, incomplete, and rejected outcomes."
+            },
+            "exposureBinding": {
+                "status": "passed",
+                "accepted": true,
+                "violations": [],
+                "missingFacts": [],
+                "rationale": "Accepted response exposes agentContext; non-accepted response exposes diagnostics only and rejected runtime files remain zero."
+            },
+            "thinAdapterBoundary": {
+                "status": "passed",
+                "accepted": true,
+                "violations": [],
+                "missingFacts": [],
+                "rationale": "Adapter facts unify with the thin boundary contract and do not introduce a Go policy source."
+            },
+            "runtimeReductionObservation": {
+                "status": "passed",
+                "accepted": true,
+                "violations": [],
+                "missingFacts": [],
+                "rationale": "Projected context surface is lower than broad input across bytes, lines, and files, with material rough reductions recorded."
+            }
+        },
+        "missingFacts": [],
+        "observedFactsUsed": [
+            "review.green_light_review_exists",
+            "runtime.flow_trace_exists",
+            "review.accepted_exposed_file_count",
+            "review.rejected_exposed_file_count",
+            "review.rejected_denied_load_count",
+            "review.broad_surface_bytes",
+            "review.broad_surface_lines",
+            "review.broad_surface_files",
+            "review.projected_surface_bytes",
+            "review.projected_surface_lines",
+            "review.projected_surface_files",
+            "review.reduction_bytes_percent",
+            "review.reduction_lines_percent",
+            "review.reduction_files_percent",
+            "root.schema_owns_validation_contract_shape",
+            "scheme.fragments_conform_to_root_contracts",
+            "task_patterns_provide_fragments_not_authority_roots",
+            "promotion.outcome_derived_by_cue_unification",
+            "normalized_response_is_adapter_boundary",
+            "adapter.does_not_bypass_promotion_root_authority",
+            "promotion.good_selected_pattern_accepted",
+            "promotion.bounded_fallback_accepted",
+            "promotion.keyword_relevance_not_authorized",
+            "promotion.missing_relation_ref_not_accepted",
+            "promotion.rejected_relation_not_allowed",
+            "promotion.bad_cases_not_accepted",
+            "accepted_response_exposes_agent_context",
+            "nonaccepted_response_exposes_diagnostics_only",
+            "nonaccepted_response_rejects_agent_context",
+            "adapter.branches_on_consumable",
+            "adapter.consumes_normalized_response_fields",
+            "adapter.does_not_consume_promotion_internals",
+            "adapter.action_classification",
+            "adapter.not_policy_source",
+            "estimator.method_is_rough_not_tokenizer_exact"
+        ],
+        "rationale": "RootValidationContract & ObservedFactSet & AuthorityBindingGate & PromotionBehaviorGate & ExposureBindingGate & ThinAdapterBoundaryGate & RuntimeReductionObservationGate unified to a passed validation assessment.",
+        "status": "passed",
+        "violations": []
+    },
+    "sourceArtifacts": [
+        "docs/architecture/agentnode-green-light-review.md",
+        "var/run/hookrail/flow-trace.latest.json",
+        "cue/patterns/domain/schema.cue",
+        "cue/patterns/projections/validation-assessment-slice.cue"
+    ],
+    "validationCommands": [
+        "cue vet .",
+        "cue vet ./cue/agentnode/...",
+        "cue vet ./nodes/workspace/...",
+        "cue vet ./cue/patterns/...",
+        "cue export ./cue/patterns/projections -e cueFlowFactRootedRelationSlice --out json",
+        "cue export ./cue/patterns/projections -e cueFlowAuthorizationEvidenceSlice --out json",
+        "cue export ./cue/patterns/projections -e cueFlowPromotionByUnificationSlice --out json",
+        "cue export ./cue/patterns/projections -e cueFlowPromotedProjectionBindingSlice --out json",
+        "cue export ./cue/patterns/projections -e cueFlowValidationAssessmentSlice --out json",
+        "cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json",
+        "go test ./... (from shell-wrap/src/hookrail)"
+    ],
+    "exportCommands": [
+        "cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json",
+        "cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json > var/run/hookrail/validation-report.latest.json"
+    ],
+    "runtimeEvidence": {
+        "acceptedExposedFiles": 3,
+        "rejectedExposedFiles": 0,
+        "rejectedDeniedLoads": 2,
+        "broadSurfaceBytes": 87137,
+        "broadSurfaceLines": 2618,
+        "broadSurfaceFiles": 10,
+        "projectedSurfaceBytes": 34229,
+        "projectedSurfaceLines": 1026,
+        "projectedSurfaceFiles": 3,
+        "byteReductionPercent": 60.7,
+        "lineReductionPercent": 60.8,
+        "fileReductionPercent": 70.0,
+        "estimatorMethod": "rough byte/line/file estimate; not tokenizer exact"
+    },
+    "contextReduction": {
+        "broad": {
+            "bytes": 87137,
+            "lines": 2618,
+            "files": 10
+        },
+        "projected": {
+            "bytes": 34229,
+            "lines": 1026,
+            "files": 3
+        },
+        "reductionPercent": {
+            "bytes": 60.7,
+            "lines": 60.8,
+            "files": 70.0
+        }
+    },
+    "roughEdges": [
+        "Observed runtime/review values are encoded manually from the current review and trace artifact for this slice.",
+        "Reduction evidence uses rough bytes, newline-counted lines, and file counts; it is not tokenizer exact.",
+        "The live runtime cases remain fixture-backed and narrow to the current CUE-flow adapter slice."
+    ],
+    "nextHardening": [
+        "Persist trace artifacts per run if comparison history is needed beyond flow-trace.latest.json.",
+        "Add an exact tokenizer or better estimator if rough byte/line/file estimates stop being predictive.",
+        "Add more real task-pattern runs.",
+        "Harden the negative-path matrix from observed traces.",
+        "Normalize projectedPrompt versus promptProjection if the duplication remains after consumer integration.",
+        "Add a CI wrapper for the module-local Go test and the CUE exports."
+    ],
+    "rationale": "RootValidationContract & ObservedFactSet & AuthorityBindingGate & PromotionBehaviorGate & ExposureBindingGate & ThinAdapterBoundaryGate & RuntimeReductionObservationGate unified to a passed validation assessment."
+}
