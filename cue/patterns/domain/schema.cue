@@ -25,7 +25,8 @@ package domain
 	"root.promotion_gate_outcome_is_derived" |
 	"root.task_patterns_provide_promotion_fragments" |
 	"root.rejected_relations_do_not_satisfy_promotion" |
-	"fixture.promotion_by_unification_slice_exports"
+	"fixture.promotion_by_unification_slice_exports" |
+	"fixture.promoted_projection_binding_slice_exports"
 
 #SourceFact: {
 	id:          #SourceFactID
@@ -245,14 +246,26 @@ package domain
 			accepted: true
 		}
 		selectedPatternIDs: [...string]
-		exposedFiles:        [...#LoadedFileEvidence]
-		projectedPrompt:     string
+		exposedFiles: [...#LoadedFileEvidence]
+		projectedPrompt:  string
+		promptProjection: string
+		evidenceSummary: {
+			selectedPatternIDs: [...string]
+			exposedFiles: [...#LoadedFileEvidence]
+			authorizationSource: #AuthorizationSource
+			relationRefs:        #RelationRefList
+			factRefs:            #FactRefList
+			rationale:           string
+		}
 		contextProjection: {
 			authorizationSource: #AuthorizationSource
 			rationale:           string
 			relationRefs:        #RelationRefList
 			factRefs:            #FactRefList
 		}
+		relationRefs: #RelationRefList
+		factRefs:     #FactRefList
+		rationale:    string
 		evidenceRefs: #FactRefList
 	} |
 	{
@@ -260,31 +273,73 @@ package domain
 			accepted: false
 		}
 		diagnostics: {
-			status:              #PromotionGateStatus
-			classification?:     string
-			violations:         [...string]
+			status:          #PromotionGateStatus
+			classification?: string
+			violations: [...string]
 			missingRequirements: [...string]
-			rationale:          string
-			deniedLoads:        [...#DeniedLoadEvidence]
-			relationRefs:       #RelationRefList
-			factRefs:           #FactRefList
+			rationale: string
+			deniedLoads: [...#DeniedLoadEvidence]
+			relationRefs: #RelationRefList
+			factRefs:     #FactRefList
 		}
-		evidenceRefs: #FactRefList
+		evidenceRefs:        #FactRefList
 		selectedPatternIDs?: _|_
-		exposedFiles?:        _|_
-		projectedPrompt?:     _|_
-		contextProjection?:   _|_
+		exposedFiles?:       _|_
+		projectedPrompt?:    _|_
+		promptProjection?:   _|_
+		evidenceSummary?:    _|_
+		contextProjection?:  _|_
+		relationRefs?:       _|_
+		factRefs?:           _|_
 	}
 
-#NormalizedRootResponse: {
+#AgentConsumableContext: {
+	selectedPatternIDs: [...string]
+	exposedFiles: [...#LoadedFileEvidence]
+	projectedPrompt:  string
+	promptProjection: string
+	evidenceSummary: {
+		selectedPatternIDs: [...string]
+		exposedFiles: [...#LoadedFileEvidence]
+		authorizationSource: #AuthorizationSource
+		relationRefs:        #RelationRefList
+		factRefs:            #FactRefList
+		rationale:           string
+	}
+	relationRefs: #RelationRefList
+	factRefs:     #FactRefList
+	rationale:    string
+}
+
+#NormalizedRootResponse: ({
 	schemaVersion: "cuerail.normalizedRootResponse.v1"
 	requestID:     string
-	promotion:    #PromotedProjection
+	promotion: #PromotedProjection & {
+		promotionOutcome: {
+			accepted: true
+		}
+	}
 	consumable: {
 		accepted: promotion.promotionOutcome.accepted
 		status:   promotion.promotionOutcome.status
 	}
-}
+	agentContext: #AgentConsumableContext
+	diagnostics?: _|_
+} | {
+	schemaVersion: "cuerail.normalizedRootResponse.v1"
+	requestID:     string
+	promotion: #PromotedProjection & {
+		promotionOutcome: {
+			accepted: false
+		}
+	}
+	consumable: {
+		accepted: promotion.promotionOutcome.accepted
+		status:   promotion.promotionOutcome.status
+	}
+	diagnostics:   promotion.diagnostics
+	agentContext?: _|_
+})
 
 sourceFacts: {
 	"flow.low_level_workflow_manager_based_on_cue_instance": {
@@ -457,6 +512,13 @@ sourceFacts: {
 		source:      "cue/patterns/projections/promotion-by-unification-slice.cue"
 		claim:       "The promotion-by-unification projection exports."
 		consequence: "Promotion status is visible as a replayable CUE proof expression normal form."
+	}
+	"fixture.promoted_projection_binding_slice_exports": {
+		id:          "fixture.promoted_projection_binding_slice_exports"
+		kind:        "fixture"
+		source:      "cue/patterns/projections/promoted-projection-binding-slice.cue"
+		claim:       "The promoted projection binding projection exports."
+		consequence: "Only accepted promotion outcomes expose agent-consumable context in the normalized root response."
 	}
 }
 
