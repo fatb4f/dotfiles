@@ -37,3 +37,10 @@ badWorkflowAuthority: git.#RejectedGitContractCandidate & {
 		"Patch stack allows scope inversion.",
 	]
 }
+
+badWorkflowAuthorityFixturePattern: {
+	classification:       "bad-as-data"
+	exportShouldSucceed:  true
+	validationShouldFail: false
+	rationale:            "badWorkflowAuthority is an explicit rejected outcome object, not an invalid CUE fixture."
+}
