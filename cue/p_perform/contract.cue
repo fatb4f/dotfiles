@@ -1,10 +1,10 @@
 package p_perform
 
 #ExecutedTask: {
-	id: string
+	id:                      string
 	acceptedBeforeExecution: true
-	runner: string
-	evidencePath?: string
+	runner:                  string
+	evidencePath?:           string
 }
 
 #RunManifest: {
@@ -14,23 +14,23 @@ package p_perform
 	executedOnlyAcceptedTasks: bool
 
 	agent: {
-		role: "semantic-runner"
-		proposedFill: bool
-		ownsPolicy: false
+		role:          "semantic-runner"
+		proposedFill:  bool
+		ownsPolicy:    false
 		calledRawFill: false
 	}
 
 	runner: {
-		role: "go-flow-runner" | "hookrail-evidence" | "adapter-runner"
-		validatedFill: bool
+		role:           "ralph-runner" | "hookrail-evidence" | "adapter-runner"
+		validatedFill:  bool
 		calledTaskFill: bool
-		ownsPolicy: false
+		ownsPolicy:     false
 	}
 
-	flow: {
-		sourcePackage: string
-		terminated: bool
-		finalValueContainsFill: bool
+	execution: {
+		sourcePackage:             string
+		terminated:                bool
+		completionEvidencePresent: bool
 	}
 
 	ambiguity: [...string]
@@ -45,9 +45,9 @@ package p_perform
 	name: "perform"
 
 	input: {
-		flowContract:    _
-		validationFacts: _
-		legitimized:     true
+		taskGraphContract: _
+		validationFacts:   _
+		legitimized:       true
 	}
 
 	output: #RunManifest

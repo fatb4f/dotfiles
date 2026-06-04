@@ -6,23 +6,23 @@ package l_legitimize
 }
 
 #RunnerBoundaries: {
-	accepted: bool
-	agentOwnsPolicy: false
-	runnerOwnsPolicy: false
-	adapterOwnsPolicy: false
-	agentMayCallRawFill: false
-	runnerMayCallTaskFill: true
+	accepted:                     bool
+	agentOwnsPolicy:              false
+	runnerOwnsPolicy:             false
+	adapterOwnsPolicy:            false
+	agentMayCompleteTaskDirectly: false
+	runnerMayCompleteTask:        true
 }
 
 #MutationAdmissibility: {
-	accepted: bool
+	accepted:                 bool
 	requiresAcceptedContract: true
 }
 
 #ValidationFacts: {
-	rootSchema: #GateResult
-	promoGate:  #GateResult
-	runnerBoundaries: #RunnerBoundaries
+	rootSchema:            #GateResult
+	promoGate:             #GateResult
+	runnerBoundaries:      #RunnerBoundaries
 	mutationAdmissibility: #MutationAdmissibility
 	ambiguity: [...string]
 }
@@ -36,8 +36,8 @@ package l_legitimize
 	name: "legitimize"
 
 	input: {
-		flowContract:         _
-		flowContractAccepted: true
+		taskGraphContract:         _
+		taskGraphContractAccepted: true
 	}
 
 	output: #ValidationFacts

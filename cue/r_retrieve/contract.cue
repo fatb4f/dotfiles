@@ -25,9 +25,9 @@ package r_retrieve
 }
 
 #AmbiguityFinding: {
-	kind: "unbound_source" | "legacy_source_selectable" | "duplicate_authority" | "keyword_relevance_authorizes_load" | "direct_registry_load_before_root_acceptance"
-	path: string
-	reason: string
+	kind:     "unbound_source" | "legacy_source_selectable" | "duplicate_authority" | "keyword_relevance_authorizes_load" | "direct_registry_load_before_root_acceptance"
+	path:     string
+	reason:   string
 	severity: "blocker"
 }
 
@@ -35,10 +35,10 @@ package r_retrieve
 	id: string
 
 	admissibleSources: [...#AuthoritySource]
-	retrievedFacts:     [...#RetrievedFact]
-	priorEvidence:      [...#EvidenceRef]
-	patternRefs:        [...#EvidenceRef]
-	nodeFacts:          [...#EvidenceRef]
+	retrievedFacts: [...#RetrievedFact]
+	priorEvidence: [...#EvidenceRef]
+	patternRefs: [...#EvidenceRef]
+	nodeFacts: [...#EvidenceRef]
 
 	ambiguity: [...#AmbiguityFinding]
 }

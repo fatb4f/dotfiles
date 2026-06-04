@@ -162,8 +162,8 @@ rootAgentContract: agentnode.#RootIndex & {
 	]
 }
 
-cueFlowLoopContract: {
-	id: "dotfiles.cue-flow-loop"
+ralphLifecycleLoopContract: {
+	id: "dotfiles.ralph-lifecycle-loop"
 
 	authority: {
 		repositoryNodeContract: "AGENTS.cue"

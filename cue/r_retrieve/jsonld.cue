@@ -4,14 +4,14 @@ package r_retrieve
 
 #RetrieveJSONLD: {
 	"@context": {
-		"ralph": "https://fatb4f.dev/ns/ralph#"
+		"ralph":  "https://fatb4f.dev/ns/ralph#"
 		"source": "ralph:source"
 		"fact":   "ralph:fact"
 	}
 	"@id":   "ralph:R"
 	"@type": "ralph:PhaseNode"
 
-	id: "R"
+	id:     "R"
 	parent: "root"
 	leaves: [...#JSONLDID]
 }

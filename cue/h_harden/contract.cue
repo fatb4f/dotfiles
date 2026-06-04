@@ -1,32 +1,32 @@
 package h_harden
 
 #DurableFact: {
-	id: string
+	id:             string
 	sourceEvidence: string
-	claim: string
+	claim:          string
 }
 
 #PatternRef: {
-	id: string
+	id:   string
 	path: string
 }
 
 #AmbiguityFinding: {
-	kind: string
-	path: string
-	reason: string
+	kind:     string
+	path:     string
+	reason:   string
 	severity: "blocker"
 }
 
 #LifecycleRecord: {
 	id: string
 
-	sourceRun: string
+	sourceRun:         string
 	sourceRunAccepted: true
 
 	persisted: bool
 
-	distilledFacts:   [...#DurableFact]
+	distilledFacts: [...#DurableFact]
 	promotedPatterns: [...#PatternRef]
 	retiredAmbiguity: [...#AmbiguityFinding]
 

@@ -6,18 +6,18 @@ goodAssembly: #AssemblePhase & {
 		retrievalAccepted: true
 	}
 	output: {
-		id: "flow.good"
-		sourceRetrieval: "retrieval.good"
+		id:                      "taskGraph.good"
+		sourceRetrievalContract: "retrieval.good"
 		tasks: {}
 		graph: {cyclic: false, edges: []}
 		ambiguity: []
 	}
 }
 
-badCyclicGraph: #FlowContract & {
-	id: "flow.bad.cyclic"
-	sourceRetrieval: "retrieval.good"
+badCyclicGraph: #TaskGraphContract & {
+	id:                      "taskGraph.bad.cyclic"
+	sourceRetrievalContract: "retrieval.good"
 	tasks: {}
 	graph: {cyclic: true, edges: []}
-	ambiguity: ["flow_graph_cyclic"]
+	ambiguity: ["task_graph_cyclic"]
 }

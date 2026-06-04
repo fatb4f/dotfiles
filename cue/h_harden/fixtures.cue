@@ -3,10 +3,10 @@ package h_harden
 goodHarden: #HardenPhase & {
 	input: {runManifest: {id: "run.good"}, runAccepted: true}
 	output: {
-		id: "lifecycle.good"
-		sourceRun: "run.good"
+		id:                "lifecycle.good"
+		sourceRun:         "run.good"
 		sourceRunAccepted: true
-		persisted: true
+		persisted:         true
 		distilledFacts: []
 		promotedPatterns: []
 		retiredAmbiguity: []
@@ -15,10 +15,10 @@ goodHarden: #HardenPhase & {
 }
 
 badHardenWithoutRun: #LifecycleRecord & {
-	id: "lifecycle.bad.no_run"
-	sourceRun: "run.rejected"
+	id:                "lifecycle.bad.no_run"
+	sourceRun:         "run.rejected"
 	sourceRunAccepted: true
-	persisted: false
+	persisted:         false
 	distilledFacts: []
 	promotedPatterns: []
 	retiredAmbiguity: []

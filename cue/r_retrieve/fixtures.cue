@@ -2,7 +2,7 @@ package r_retrieve
 
 goodRetrieval: #RetrievePhase & {
 	input: {
-		objective: "Review graph node authority."
+		objective:         "Review graph node authority."
 		rootAuthorityPath: "cue/root"
 	}
 	output: {
@@ -16,7 +16,7 @@ goodRetrieval: #RetrievePhase & {
 	}
 }
 
-badLegacySelectable: #RetrievalContract & {
+badLegacySelectable: {
 	id: "retrieval.bad.legacy"
 	admissibleSources: [{id: "legacy-flow", path: "cue/flow", status: "legacy", selectable: true}]
 	retrievedFacts: []

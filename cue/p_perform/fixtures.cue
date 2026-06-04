@@ -1,24 +1,24 @@
 package p_perform
 
 goodPerform: #PerformPhase & {
-	input: {flowContract: {id: "flow.good"}, validationFacts: {id: "validation.good"}, legitimized: true}
+	input: {taskGraphContract: {id: "taskGraph.good"}, validationFacts: {id: "validation.good"}, legitimized: true}
 	output: {
 		id: "run.good"
 		executedTasks: []
 		executedOnlyAcceptedTasks: true
 		agent: {proposedFill: true}
-		runner: {role: "go-flow-runner", validatedFill: true, calledTaskFill: true}
-		flow: {sourcePackage: "cuelang.org/go/tools/flow", terminated: true, finalValueContainsFill: true}
+		runner: {role: "ralph-runner", validatedFill: true, calledTaskFill: true}
+		execution: {sourcePackage: "cuelang.org/go/tools/flow", terminated: true, completionEvidencePresent: true}
 		ambiguity: []
 	}
 }
 
-badRawFill: #RunManifest & {
+badRawFill: {
 	id: "run.bad.raw_fill"
 	executedTasks: []
 	executedOnlyAcceptedTasks: false
 	agent: {proposedFill: true, calledRawFill: true}
-	runner: {role: "go-flow-runner", validatedFill: false, calledTaskFill: false}
-	flow: {sourcePackage: "cuelang.org/go/tools/flow", terminated: false, finalValueContainsFill: false}
+	runner: {role: "ralph-runner", validatedFill: false, calledTaskFill: false}
+	execution: {sourcePackage: "cuelang.org/go/tools/flow", terminated: false, completionEvidencePresent: false}
 	ambiguity: ["raw_fill_called_by_agent"]
 }

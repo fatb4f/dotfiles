@@ -1,7 +1,7 @@
 package l_legitimize
 
 goodLegitimation: #LegitimizePhase & {
-	input: {flowContract: {id: "flow.good"}, flowContractAccepted: true}
+	input: {taskGraphContract: {id: "taskGraph.good"}, taskGraphContractAccepted: true}
 	output: {
 		rootSchema: {accepted: true, diagnostics: []}
 		promoGate: {accepted: true, diagnostics: []}
@@ -11,7 +11,7 @@ goodLegitimation: #LegitimizePhase & {
 	}
 }
 
-badAdapterPolicy: #ValidationFacts & {
+badAdapterPolicy: {
 	rootSchema: {accepted: true, diagnostics: []}
 	promoGate: {accepted: true, diagnostics: []}
 	runnerBoundaries: {accepted: false, adapterOwnsPolicy: true}

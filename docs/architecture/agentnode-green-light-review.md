@@ -6,7 +6,7 @@ Review date: 2026-06-03
 
 Decision: green-light.
 
-Scope: green-lit for the thin AgentNode CUE-flow workflow demonstrated by the current adapter run: one root-declared `flow` task, normalized root response consumption, accepted context exposure, rejected diagnostics-only exposure, runtime trace emission, and rough context-size comparison.
+Scope: green-lit for the thin AgentNode legacy projection workflow demonstrated by the current adapter run: one root-declared task, normalized root response consumption, accepted context exposure, rejected diagnostics-only exposure, runtime trace emission, and rough context-size comparison.
 
 This is not a green-light for semantic search, recursive traversal, planner behavior, daemon behavior, multi-node routing, or broader runtime policy. Go remains the adapter, emitter, and boundary enforcer; CUE remains the policy and projection source.
 
@@ -16,12 +16,12 @@ Accepted rough edges: the size estimator is rough, the live cases are fixture-ba
 
 | Link | Evidence |
 |---|---|
-| Fact-rooted relations | Relation edges cite known `factRefs`; fixtures export the CUE-flow relation slice. |
+| Fact-rooted relations | Relation edges cite known `factRefs`; fixtures export the relation slice. |
 | Typed authorization evidence | Root-owned authorization evidence records selected patterns, loaded files, denied loads, relation refs, fact refs, and rationale. |
 | Promotion by replayable CUE unification | Promotion status is derived by unifying gate, case, pattern fragment, invariants, evidence, allowed relations, and known facts. |
 | Promoted projection binding | Accepted bindings expose selected files and projection context; drift bindings expose diagnostics. |
 | Normalized root response | Root response has `consumable.accepted/status`; accepted responses require `agentContext`; non-accepted responses require `diagnostics` and reject `agentContext`. |
-| Go CUE-flow adapter consumption | The adapter decodes `normalizedResponse` into `Consumable`, `AgentContext`, and `Diagnostics` fields instead of reading promotion internals for exposure decisions. |
+| Go adapter consumption | The adapter decodes `normalizedResponse` into `Consumable`, `AgentContext`, and `Diagnostics` fields instead of reading promotion internals for exposure decisions. |
 | Runtime trace and rough estimate | The live adapter report includes accepted/rejected consumable state, exposed files, denied loads, relation refs, fact refs, broad input surface, and projected context surface. |
 
 Relevant commits:
@@ -29,7 +29,7 @@ Relevant commits:
 | Commit | Role |
 |---|---|
 | `375d196878864339a1f987af3e7da25e0658d32b` | Promoted projection binding and normalized root response. |
-| `3bce35b2586d82d278d282a0b40cab39860a0dab` | Normalized CUE-flow adapter consumption, runtime trace surfaces, and rough context estimator. |
+| `3bce35b2586d82d278d282a0b40cab39860a0dab` | Normalized legacy adapter consumption, runtime trace surfaces, and rough context estimator. |
 
 ## Validation Evidence
 
@@ -41,12 +41,12 @@ Validation commands reported for the current slice:
 | `cue vet ./cue/agentnode/...` | Passed. |
 | `cue vet ./nodes/workspace/...` | Passed. |
 | `cue vet ./cue/patterns/...` | Passed. |
-| `cue export ./cue/patterns/projections -e cueFlowFactRootedRelationSlice --out json` | Passed. |
-| `cue export ./cue/patterns/projections -e cueFlowAuthorizationEvidenceSlice --out json` | Passed. |
-| `cue export ./cue/patterns/projections -e cueFlowPromotionByUnificationSlice --out json` | Passed. |
-| `cue export ./cue/patterns/projections -e cueFlowPromotedProjectionBindingSlice --out json` | Passed. |
-| `cue export ./cue/patterns/projections -e cueFlowValidationAssessmentSlice --out json` | Passed. |
-| `cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json` | Passed. |
+| Legacy relation slice export | Passed. |
+| Legacy authorization evidence export | Passed. |
+| Legacy promotion-by-unification export | Passed. |
+| Legacy promoted binding export | Passed. |
+| Legacy validation assessment export | Passed. |
+| Legacy validation manifest export | Passed. |
 | `go test ./...` from `shell-wrap/src/hookrail` | Passed. |
 | Repo-root `go test ./...` | Not applicable; the repository root is not a Go module root. |
 
@@ -74,17 +74,13 @@ Stable validation report artifact:
 var/run/hookrail/validation-report.latest.json
 ```
 
-Materialization command:
-
-```sh
-cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json > var/run/hookrail/validation-report.latest.json
-```
+Materialization command: legacy validation manifest export to `var/run/hookrail/validation-report.latest.json`.
 
 Adapter result: passed with `schemaVersion: "cuerail.hookrailFlowReport.v1"`, `taskKind: "gopls"`, evidence `status: "ok"`, and `diagnostics: "No diagnostics."`.
 
 ## Runtime Observation
 
-The live adapter result executed the declared CUE-flow task path exactly as `flow`. The accepted response came from normalized root response data and exposed context; the rejected response exposed diagnostics only.
+The live adapter result executed the declared legacy task path exactly as requested. The accepted response came from normalized root response data and exposed context; the rejected response exposed diagnostics only.
 
 | Observation | Accepted | Rejected |
 |---|---:|---:|
@@ -125,7 +121,7 @@ The estimator is a rough bytes, newline-counted lines, and file-count comparison
 |---|---|
 | Byte/line/file estimate is not tokenizer exact. | Accept for green-light; improve only if later runs need tokenizer precision. |
 | Current accepted/rejected cases are fixture-backed. | Accept for this decision because the adapter consumed the normalized runtime result and enforced the boundary in Go. |
-| Task path is narrow and asserted as exactly `flow`. | Accept; this is the intended slice boundary. |
+| Task path is narrow and asserted as the legacy task. | Accept; this is the intended slice boundary. |
 | gopls/MCP path is MVP. | Accept; it proves the adapter can run and emit root-shaped evidence. |
 | Repo-root `go test ./...` is not applicable. | Accept; validation belongs to the Go module at `shell-wrap/src/hookrail`. |
 | `projectedPrompt` and `promptProjection` duplication may need normalization later if still present. | Defer until it becomes a consumer problem. |

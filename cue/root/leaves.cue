@@ -25,7 +25,7 @@ foldInventory: [...#InventoryItem] & [
 		currentSurface: "cue/contracts/schema.cue"
 		status:         "adapt"
 		foldInto:       "root"
-		newRole:        "contract, gate, and evidence ref vocabulary without cue-flow legacy names"
+		newRole:        "contract, gate, and evidence ref vocabulary without legacy loop names"
 		reason:         "Keeps enums, removes old loop-shaped authority vocabulary."
 	},
 	{
@@ -45,12 +45,12 @@ foldInventory: [...#InventoryItem] & [
 		reason:         "Execution evidence belongs to P."
 	},
 	{
-		id:             "flow.contract"
+		id:             "task_graph.contract"
 		currentSurface: "cue/flow/schema.cue"
 		status:         "adapt"
 		foldInto:       "A"
-		newRole:        "candidate graph assembly contract"
-		reason:         "Flow is an assembly leaf, not root authority."
+		newRole:        "candidate task graph assembly contract"
+		reason:         "Task graph assembly is an assembly leaf, not root authority."
 	},
 	{
 		id:             "registry.schema"
@@ -101,8 +101,8 @@ foldInventory: [...#InventoryItem] & [
 		reason:         "Durable hardening consumes accepted process evidence."
 	},
 	{
-		id:             "agents.cueflow.loop"
-		currentSurface: "AGENTS.cue cueFlowLoopContract"
+		id:             "agents.legacy.loop"
+		currentSurface: "AGENTS.cue legacyLoopContract"
 		status:         "prune"
 		foldInto:       "none"
 		newRole:        "none"

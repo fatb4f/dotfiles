@@ -5,12 +5,12 @@ manifest: {
 	"@id":      "ralph:P"
 	"@type":    "ralph:PhaseManifest"
 
-	id: "P"
+	id:    "P"
 	label: "Perform"
 
 	scope: {
 		owns: ["accepted task execution", "adapter invocation evidence", "task.Fill evidence", "run manifest emission"]
-		mayRead: ["A.output.FlowContract", "L.output.ValidationFacts", "leaf.agentflow.run_manifest", "leaf.registry.execution"]
+		mayRead: ["A.output.TaskGraphContract", "L.output.ValidationFacts", "leaf.agentflow.run_manifest", "leaf.registry.execution"]
 		mayWrite: ["RunManifest", "execution evidence"]
 		mayExecute: true
 		mayPersist: false
@@ -24,7 +24,7 @@ manifest: {
 	}
 
 	inputs: [
-		{id: "flowContract", from: "A", kind: "FlowContract", acceptedRequired: true},
+		{id: "taskGraphContract", from: "A", kind: "TaskGraphContract", acceptedRequired: true},
 		{id: "validationFacts", from: "L", kind: "ValidationFacts", acceptedRequired: true},
 	]
 	outputs: [{id: "runManifest", to: "H", kind: "RunManifest", acceptedBy: "P.accepted"}]

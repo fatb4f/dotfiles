@@ -6,12 +6,13 @@ package root
 	"@context": _
 	"@id":      #JSONLDID
 	"@type":    string
+	...
 }
 
 #RoundTrip: {
 	toNodeContract: string
-	toRootGraph:     "root"
-	backToLeaf:      string
+	toRootGraph:    "root"
+	backToLeaf:     string
 }
 
 #RootJSONLD: #JSONLDBase & {
@@ -27,7 +28,7 @@ package root
 }
 
 #LeafJSONLD: #JSONLDBase & {
-	"@type": "ralph:MetadataLeaf"
+	"@type":    "ralph:MetadataLeaf"
 	id:         string
 	parentNode: #PhaseID
 	roundTrip:  #RoundTrip

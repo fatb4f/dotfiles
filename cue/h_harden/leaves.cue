@@ -5,23 +5,23 @@ package h_harden
 	"@id":      string
 	"@type":    "ralph:MetadataLeaf"
 
-	id: "leaf.lifecycle.closeout"
-	parentNode: "H"
-	function: "hardening-evidence"
+	id:            "leaf.lifecycle.closeout"
+	parentNode:    "H"
+	function:      "hardening-evidence"
 	sourceSurface: "cue/patterns/lifecycle/schema.cue"
 
 	authority: {
-		isRoot: false
-		mayGrantLoadAdmissibility: false
+		isRoot:                        false
+		mayGrantLoadAdmissibility:     false
 		mayGrantMutationAdmissibility: false
-		mayExecute: false
-		mayPersist: false
+		mayExecute:                    false
+		mayPersist:                    false
 	}
 
 	roundTrip: {
 		toNodeContract: "H.contract"
-		toRootGraph: "root"
-		backToLeaf: "leaf.lifecycle.closeout"
+		toRootGraph:    "root"
+		backToLeaf:     "leaf.lifecycle.closeout"
 	}
 
 	invariants: [...string]

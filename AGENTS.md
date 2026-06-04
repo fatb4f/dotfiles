@@ -2,9 +2,9 @@
 
 Root router only.
 
-## Cue-Flow Loop Contract
+## RALPH Lifecycle Contract
 
-The intended cue-flow loop is root-contract driven:
+The intended RALPH lifecycle is root-contract driven:
 
 1. `AGENTS.cue` is the repository node contract when it exists.
 2. `AGENTS.md` states protocol and routing only; use it as natural-language overlay, not as the authority over CUE.

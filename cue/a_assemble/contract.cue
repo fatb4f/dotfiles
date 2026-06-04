@@ -2,7 +2,7 @@ package a_assemble
 
 #TaskState: "waiting" | "ready" | "running" | "terminated"
 
-#TaskKind: "resolve_patterns" | "assemble_pattern_bundle" | "compose_flow_contract" | "vet_root_schema" | "vet_promo_gate" | "project_agent_context" | "init_agentflow_run" | "check_git_mutation" | "record_lifecycle"
+#TaskKind: "resolve_patterns" | "assemble_pattern_bundle" | "compose_task_graph_contract" | "vet_root_schema" | "vet_promo_gate" | "project_agent_context" | "init_agentflow_run" | "check_git_mutation" | "record_lifecycle"
 
 #Runner: "pure-cue" | "cue-export" | "cue-vet" | "mcp-rag" | "mcp-composer" | "mcp-git" | "hookrail-evidence"
 
@@ -13,19 +13,19 @@ package a_assemble
 }
 
 #TaskContract: {
-	id:        string
-	kind:      #TaskKind
+	id:   string
+	kind: #TaskKind
 	dependsOn: [...string]
-	input:     _
-	output?:   _
-	runner:    #Runner
-	authority: "cue"
+	input:             _
+	output?:           _
+	runner:            #Runner
+	authority:         "cue"
 	adapterOwnsPolicy: false
 }
 
-#FlowContract: {
-	id: string
-	sourceRetrieval: string
+#TaskGraphContract: {
+	id:                      string
+	sourceRetrievalContract: string
 
 	config: {
 		root:       "cue/a_assemble"
@@ -37,7 +37,7 @@ package a_assemble
 	graph: {
 		edgeAuthority: "cue-references"
 		cyclic:        bool
-		edges:         [...#ReferenceDependency]
+		edges: [...#ReferenceDependency]
 	}
 
 	ambiguity: [...string]
@@ -56,7 +56,7 @@ package a_assemble
 		retrievalAccepted: true
 	}
 
-	output: #FlowContract
+	output: #TaskGraphContract
 
 	accepted: output.graph.cyclic == false && len(output.ambiguity) == 0
 

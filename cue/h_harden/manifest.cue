@@ -5,7 +5,7 @@ manifest: {
 	"@id":      "ralph:H"
 	"@type":    "ralph:PhaseManifest"
 
-	id: "H"
+	id:    "H"
 	label: "Harden"
 
 	scope: {

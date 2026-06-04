@@ -5,12 +5,12 @@ manifest: {
 	"@id":      "ralph:L"
 	"@type":    "ralph:PhaseManifest"
 
-	id: "L"
+	id:    "L"
 	label: "Legitimize"
 
 	scope: {
 		owns: ["root schema vet", "promotion gate vet", "runner boundary vet", "mutation admissibility"]
-		mayRead: ["A.output.FlowContract", "leaf.architecture.boundary", "leaf.agentflow.legitimation", "leaf.promotion"]
+		mayRead: ["A.output.TaskGraphContract", "leaf.architecture.boundary", "leaf.agentflow.legitimation", "leaf.promotion"]
 		mayWrite: ["ValidationFacts"]
 		mayExecute: false
 		mayPersist: false
@@ -23,7 +23,7 @@ manifest: {
 		authorityMode: "contract"
 	}
 
-	inputs: [{id: "flowContract", from: "A", kind: "FlowContract", acceptedRequired: true}]
+	inputs: [{id: "taskGraphContract", from: "A", kind: "TaskGraphContract", acceptedRequired: true}]
 	outputs: [{id: "validationFacts", to: "P", kind: "ValidationFacts", acceptedBy: "L.accepted"}]
 
 	control: {

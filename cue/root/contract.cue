@@ -14,7 +14,7 @@ package root
 }
 
 #LeafAuthority: {
-	isRoot:                         false
+	isRoot:                        false
 	mayGrantLoadAdmissibility:     bool | *false
 	mayGrantMutationAdmissibility: bool | *false
 	mayExecute:                    bool | *false
@@ -32,8 +32,8 @@ package root
 
 	roundTrip: {
 		toNodeContract: string
-		toRootGraph:     "root"
-		backToLeaf:      string
+		toRootGraph:    "root"
+		backToLeaf:     string
 	}
 
 	invariants: [...string]
@@ -49,23 +49,23 @@ package root
 }
 
 #NodeScope: {
-	owns:       [...string]
-	mayRead:    [...string]
-	mayWrite:   [...string]
+	owns: [...string]
+	mayRead: [...string]
+	mayWrite: [...string]
 	mayExecute: bool | *false
 	mayPersist: bool | *false
 }
 
 #NodeBoundaries: {
-	upstream:      [...string]
-	downstream:    [...string]
-	forbidden:     [...string]
+	upstream: [...string]
+	downstream: [...string]
+	forbidden: [...string]
 	authorityMode: #AuthorityMode
 }
 
 #NodeControl: {
 	invariants: [...string]
-	rejects:    [...string]
+	rejects: [...string]
 	acceptance: [...string]
 }
 
@@ -80,10 +80,10 @@ package root
 
 	scope:      #NodeScope
 	boundaries: #NodeBoundaries
-	inputs:     [...#NodeIO]
-	outputs:    [...#NodeIO]
-	control:    #NodeControl
-	leaves:     [...#LeafRef]
+	inputs: [...#NodeIO]
+	outputs: [...#NodeIO]
+	control: #NodeControl
+	leaves: [...#LeafRef]
 
 	accepted: bool | *false
 }
