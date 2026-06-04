@@ -3,12 +3,29 @@ package projections
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 _validationAssessment: cueFlowValidationAssessmentSlice
+_runID:                "agentflow-premutation-gate-001"
+_runArtifactDir:       "var/run/hookrail/runs/\(_runID)"
+_traceArtifactPath:    "\(_runArtifactDir)/flow-trace.json"
+_reportArtifactPath:   "\(_runArtifactDir)/validation-report.json"
+_latestTraceAlias:     "var/run/hookrail/flow-trace.latest.json"
+_latestReportAlias:    "var/run/hookrail/validation-report.latest.json"
 
 cueFlowValidationReportManifest: domain.#ValidationReportManifest & {
 	reportID: "cue-flow-validation-report.latest"
 	generatedFrom: {
 		projection: "cueFlowValidationReportManifest"
 		command:    "cue export ./cue/patterns/projections -e cueFlowValidationReportManifest --out json"
+	}
+	runID: _runID
+	artifacts: {
+		trace: {
+			path:        _traceArtifactPath
+			latestAlias: _latestTraceAlias
+		}
+		validationReport: {
+			path:        _reportArtifactPath
+			latestAlias: _latestReportAlias
+		}
 	}
 	validationAssessmentRef: "cueFlowValidationAssessmentSlice"
 	validationContractRef:   "domain.#RootValidationContract"
@@ -23,7 +40,10 @@ cueFlowValidationReportManifest: domain.#ValidationReportManifest & {
 	overallOutcome: _validationAssessment.outcome
 	sourceArtifacts: [
 		"docs/architecture/agentnode-green-light-review.md",
-		"var/run/hookrail/flow-trace.latest.json",
+		_traceArtifactPath,
+		_reportArtifactPath,
+		_latestTraceAlias,
+		_latestReportAlias,
 		"cue/patterns/domain/schema.cue",
 		"cue/patterns/projections/validation-assessment-slice.cue",
 	]
@@ -78,7 +98,7 @@ cueFlowValidationReportManifest: domain.#ValidationReportManifest & {
 	}
 	roughEdges: _validationAssessment.roughEdges
 	nextHardening: [
-		"Persist trace artifacts per run if comparison history is needed beyond flow-trace.latest.json.",
+		"Add comparison tooling over persisted run artifacts once multiple concrete runs exist.",
 		"Add an exact tokenizer or better estimator if rough byte/line/file estimates stop being predictive.",
 		"Add more real task-pattern runs.",
 		"Harden the negative-path matrix from observed traces.",

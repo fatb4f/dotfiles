@@ -498,6 +498,17 @@ package domain
 		projection: string
 		command:    string
 	}
+	runID: string
+	artifacts: {
+		trace: {
+			path:        string
+			latestAlias: string
+		}
+		validationReport: {
+			path:        string
+			latestAlias: string
+		}
+	}
 	validationAssessmentRef: string
 	validationContractRef:   string
 	observedFacts:           #ObservedFactSet
