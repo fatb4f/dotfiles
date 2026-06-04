@@ -1,5 +1,7 @@
 package a_assemble
 
+import retrieve "github.com/fatb4f/dotfiles/cue/r_retrieve"
+
 import "list"
 
 #TaskState: "waiting" | "ready" | "running" | "terminated"
@@ -54,7 +56,7 @@ import "list"
 	name: "assemble"
 
 	input: {
-		retrieval:         _
+		retrieval:         retrieve.#RetrievalContract
 		retrievalAccepted: true
 	}
 

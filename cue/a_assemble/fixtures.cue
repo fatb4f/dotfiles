@@ -1,5 +1,7 @@
 package a_assemble
 
+import retrieve "github.com/fatb4f/dotfiles/cue/r_retrieve"
+
 import "list"
 
 goodAssembly: #AssemblePhase & {
@@ -12,6 +14,42 @@ goodAssembly: #AssemblePhase & {
 		sourceRetrievalContract: "retrieval.good"
 		tasks: {}
 		graph: {cyclic: false, edges: []}
+		ambiguity: []
+	}
+}
+
+goodAssembleFromChezmoiRetrieval: #AssemblePhase & {
+	input: {
+		retrieval:         retrieve.goodChezmoiRetrieval.output
+		retrievalAccepted: retrieve.goodChezmoiRetrieval.accepted
+	}
+
+	output: {
+		id:                      "assemble.chezmoi.good"
+		sourceRetrievalContract: "retrieval.chezmoi.good"
+		graph: {
+			cyclic: false
+			edges: []
+		}
+		tasks: {}
+		ambiguity: []
+	}
+}
+
+badAssembleFromLegacyChezmoiRetrieval: {
+	input: {
+		retrieval:         retrieve.badLegacyChezmoiSource.output
+		retrievalAccepted: retrieve.badLegacyChezmoiSource.accepted
+	}
+
+	output: {
+		id:                      "assemble.chezmoi.bad.legacy"
+		sourceRetrievalContract: "retrieval.chezmoi.bad.legacy"
+		graph: {
+			cyclic: false
+			edges: []
+		}
+		tasks: {}
 		ambiguity: []
 	}
 }
