@@ -163,3 +163,40 @@ rootAgentContract: agentnode.#RootIndex & {
 }
 
 workspaceGraphFixture: agentnode.#WorkspaceGraph & rootAgentContract.workspaceGraph
+
+_gitMCPAllowlistRepoIDs: [
+	"dotfiles",
+	"git-mcp-go",
+	"frame",
+]
+
+_gitMCPGraphRepoPaths: [
+	for repoID in _gitMCPAllowlistRepoIDs
+	for node in rootAgentContract.workspaceGraph.nodes
+	if node.id == repoID {
+		node.path
+	},
+]
+
+_gitMCPPreservedRuntimeRepoPaths: [
+	"/home/_404/src/main-track",
+]
+
+gitMCPRepoAllowlistFixture: agentnode.#GitMCPRepoAllowlistProjection & {
+	sourceGraph:   "rootAgentContract.workspaceGraph"
+	mcpServer:     "git-mcp-server"
+	runtimeConfig: "/home/_404/.local/share/codex/config.toml"
+	argsFlag:      "-r"
+
+	graphRepoPaths: _gitMCPGraphRepoPaths
+	preservedRuntimeRepoPaths: _gitMCPPreservedRuntimeRepoPaths
+	repoPaths: [
+		rootAgentContract.workspaceGraph.nodes[0].path,
+		_gitMCPPreservedRuntimeRepoPaths[0],
+		rootAgentContract.workspaceGraph.nodes[2].path,
+		rootAgentContract.workspaceGraph.nodes[1].path,
+	]
+
+	policyBoundary: "This projection defines Git MCP tool-access candidates only; CUE workspace selection and denied-load evidence decide whether a task may use a repository."
+	evidence:       rootAgentContract.workspaceGraph.selectionCases[0].evidence
+}

@@ -120,6 +120,22 @@ package agentnode
 	deniedCases: [...#WorkspaceDeniedCase]
 }
 
+#GitMCPRepoAllowlistProjection: {
+	schemaVersion: "agentNode.gitMCPRepoAllowlist.v1"
+
+	sourceGraph:   string
+	mcpServer:     "git-mcp-server"
+	runtimeConfig: string
+	argsFlag:      "-r"
+
+	graphRepoPaths: [...string]
+	preservedRuntimeRepoPaths?: [...string]
+	repoPaths: [...string]
+
+	policyBoundary: string
+	evidence:       #RootAuthorizationEvidence
+}
+
 #RootSchemaSource: {
 	package: "github.com/fatb4f/dotfiles/cue/agentnode"
 	path:    "cue/agentnode/schema.cue"
