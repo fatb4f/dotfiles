@@ -4,6 +4,50 @@ import "list"
 
 import "strings"
 
+#PatternQuery: {
+	objective: string
+	entities?: [...string]
+	paths?:    [...string]
+	taskHints?: [...string]
+}
+
+#PatternIndexEntry: {
+	id:         string
+	patternRef: string
+	entities:   [...string]
+	keywords:   [...string]
+}
+
+#CandidatePattern: {
+	id:         string
+	patternRef: string
+	entities:   [...string]
+	keywords:   [...string]
+	matchedBy: [..."objective" | "entity" | "path" | "taskHint"]
+	blocked?: bool
+	blockReason?: string
+}
+
+#PatternRoute: {
+	id:          string
+	patternRef:  string
+	retrieval:   "cue-package" | "cue-file" | "mcp-rag"
+	entrypoints: [...string]
+}
+
+#PatternRetrievalPlan: {
+	query:    #PatternQuery
+	routes:   [...#PatternRoute]
+	selected: [...#PatternIndexEntry]
+}
+
+#PatternResolution: {
+	query: #PatternQuery
+	candidates: [...#PatternIndexEntry]
+	selected:   [...#PatternIndexEntry]
+	status:     "selected" | "ambiguous" | "blocked" | "none"
+}
+
 #PathRole: "policy" | "adapter" | "bootstrap" | "config" | "generated" | "legacy"
 
 #AuthorityOwner: "dotfiles" | "frame" | "chezmoi" | "shell-wrap"
@@ -17,7 +61,7 @@ import "strings"
 	path?:  string
 }
 
-#AuthorityNode: {
+#PatternRouteNode: {
 	id:          string
 	primaryPath: string
 	paths: [...string]
@@ -47,14 +91,14 @@ import "strings"
 }
 
 #PathMatch: {
-	node: #AuthorityNode
+	node: #PatternRouteNode
 	path: string
 
 	matches: path == node.primaryPath || strings.HasPrefix(path, node.primaryPath+"/") || list.Contains(node.paths, path)
 }
 
 #DotfilesRegistry: {
-	nodes: [string]:  #AuthorityNode
+	nodes: [string]:  #PatternRouteNode
 	routes: [string]: #RetrievalRoute
 }
 
@@ -68,7 +112,7 @@ import "strings"
 #RetrievalPlan: {
 	id:        string
 	objective: #RetrievalIntent
-	node:      #AuthorityNode
+	node:      #PatternRouteNode
 	route:     #RetrievalRoute
 	request: {
 		server_cmd: [...string]
@@ -81,7 +125,7 @@ import "strings"
 }
 
 #SelectionGate: {
-	node:            #AuthorityNode
+	node:            #PatternRouteNode
 	route:           #RetrievalRoute
 	query:           #RegistryQuery
 	pathMatches:     bool
@@ -91,7 +135,7 @@ import "strings"
 }
 
 #CandidateSelection: #SelectionGate & {
-	node:  #AuthorityNode
+	node:  #PatternRouteNode
 	route: #RetrievalRoute
 	query: #RegistryQuery
 }
