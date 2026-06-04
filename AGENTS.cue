@@ -182,13 +182,22 @@ _gitMCPPreservedRuntimeRepoPaths: [
 	"/home/_404/src/main-track",
 ]
 
+_selectedRuntimeCase: rootAgentContract.workspaceGraph.selectionCases[0]
+
+_selectedRuntimeRepoPath: [
+	for node in rootAgentContract.workspaceGraph.nodes
+	if node.id == _selectedRuntimeCase.selected {
+		node.path
+	},
+][0]
+
 gitMCPRepoAllowlistFixture: agentnode.#GitMCPRepoAllowlistProjection & {
 	sourceGraph:   "rootAgentContract.workspaceGraph"
 	mcpServer:     "git-mcp-server"
 	runtimeConfig: "/home/_404/.local/share/codex/config.toml"
 	argsFlag:      "-r"
 
-	graphRepoPaths: _gitMCPGraphRepoPaths
+	graphRepoPaths:            _gitMCPGraphRepoPaths
 	preservedRuntimeRepoPaths: _gitMCPPreservedRuntimeRepoPaths
 	repoPaths: [
 		rootAgentContract.workspaceGraph.nodes[0].path,
@@ -199,4 +208,20 @@ gitMCPRepoAllowlistFixture: agentnode.#GitMCPRepoAllowlistProjection & {
 
 	policyBoundary: "This projection defines Git MCP tool-access candidates only; CUE workspace selection and denied-load evidence decide whether a task may use a repository."
 	evidence:       rootAgentContract.workspaceGraph.selectionCases[0].evidence
+}
+
+runtimePreflightFixture: agentnode.#RuntimePreflightReport & {
+	selectedRepoPath: _selectedRuntimeRepoPath
+
+	gitMCPAllowed: true
+
+	goplsWorkspaceRoot: _selectedRuntimeRepoPath
+	goWorkspaceOK:      true
+
+	cueSelectedTargetMatchesToolRuntimeCapability: true
+
+	deniedSiblings: _selectedRuntimeCase.evidence.deniedLoads
+
+	sessionBoundaryPrimitive: "restart"
+	evidence:                 _selectedRuntimeCase.evidence
 }

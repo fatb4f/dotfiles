@@ -136,6 +136,24 @@ package agentnode
 	evidence:       #RootAuthorizationEvidence
 }
 
+#RuntimePreflightReport: {
+	schemaVersion: "agentNode.runtimePreflightReport.v1"
+
+	selectedRepoPath: string
+
+	gitMCPAllowed: bool
+
+	goplsWorkspaceRoot: string
+	goWorkspaceOK:      bool
+
+	cueSelectedTargetMatchesToolRuntimeCapability: bool
+
+	deniedSiblings: [...#DeniedLoad]
+
+	sessionBoundaryPrimitive: "restart"
+	evidence:                 #RootAuthorizationEvidence
+}
+
 #RootSchemaSource: {
 	package: "github.com/fatb4f/dotfiles/cue/agentnode"
 	path:    "cue/agentnode/schema.cue"
