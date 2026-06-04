@@ -1,13 +1,11 @@
-package fixtures
+package runs
 
 import agentflow "github.com/fatb4f/dotfiles/cue/contracts/agentflow"
 
-_objective: "Create first agentflow run-contract DAG slice."
-_workflow:  "agentflow.bootstrap.contract"
+_objective: "Install the first pre-mutation agentflow projection gate."
+_workflow:  "agentflow.premutation.gate"
 
-_acceptedAgentFlowRun: good
-
-good: agentflow.#AcceptedAgentFlowRun & {
+goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 	objective: _objective
 
 	rootResponse: {
@@ -27,8 +25,14 @@ good: agentflow.#AcceptedAgentFlowRun & {
 			exposesDownstreamRegistry: false
 			selectedWorkflow:          _workflow
 			executionEnvelope: {
-				planID: "plan.agentflow.bootstrap"
-				scope: ["cue/contracts/agentflow/**"]
+				planID: "plan.agentflow.premutation.gate"
+				scope: [
+					"cue/contracts/agentflow/schema.cue",
+					"cue/contracts/agentflow/fixtures/good.cue",
+					"cue/contracts/agentflow/runs/*.cue",
+					"bin/agentflow-check",
+					"docs/architecture/agentflow-premutation-gate.md",
+				]
 			}
 		}
 		audit: {
@@ -38,60 +42,64 @@ good: agentflow.#AcceptedAgentFlowRun & {
 	}
 
 	plan: {
-		id:               "plan.agentflow.bootstrap"
+		id:               "plan.agentflow.premutation.gate"
 		objective:        _objective
 		selectedWorkflow: _workflow
 		nodes: [
 			{
-				id:             "plan"
+				id:             "project-gate"
 				domain:         "cue"
-				objectiveSlice: "Generate the agentflow contract plan."
+				objectiveSlice: "Export and accept the projection-derived mutation scope before mutation."
 				predecessors: []
 				mutationPolicy: "none"
 				promoGate: {
 					requirementsImported: true
-					source:               "root-response.agentflow.bootstrap"
-					evidencePath:         "cue/contracts/agentflow/fixtures/good.cue#plan"
+					source:               "root-response.agentflow.premutation.gate"
+					evidencePath:         "cue/contracts/agentflow/runs/good-premutation.cue#project-gate"
 					evidenceGenerated:    true
 					evidenceCueVetted:    true
 					valid:                true
 				}
 				projection: {
-					exported:             false
-					accepted:             false
+					name:                 "agentflow.premutation.gate-scope"
+					exported:             true
+					accepted:             true
 					mutationScopeDerived: false
 					mutationScope: []
 				}
 				validationEvidence: [
-					"cue vet ./cue/contracts/agentflow/...",
+					"bin/agentflow-check cue/contracts/agentflow/runs/good-premutation.cue",
 				]
 			},
 			{
-				id:             "write-contract"
+				id:             "write-gate"
 				domain:         "cue"
-				objectiveSlice: "Write schema and fixtures inside accepted projection scope."
-				predecessors: ["plan"]
+				objectiveSlice: "Write the pre-mutation checker, run manifests, and architecture note."
+				predecessors: ["project-gate"]
 				mutationPolicy: "scoped"
 				promoGate: {
 					requirementsImported: true
-					source:               "root-response.agentflow.bootstrap"
-					evidencePath:         "cue/contracts/agentflow/fixtures/good.cue#write-contract"
+					source:               "root-response.agentflow.premutation.gate"
+					evidencePath:         "cue/contracts/agentflow/runs/good-premutation.cue#write-gate"
 					evidenceGenerated:    true
 					evidenceCueVetted:    true
 					valid:                true
 				}
 				projection: {
-					name:                 "agentflow.bootstrap.contract-scope"
+					name:                 "agentflow.premutation.gate-scope"
 					exported:             true
 					accepted:             true
 					mutationScopeDerived: true
 					mutationScope: [
 						"cue/contracts/agentflow/schema.cue",
-						"cue/contracts/agentflow/fixtures/*.cue",
+						"cue/contracts/agentflow/fixtures/good.cue",
+						"cue/contracts/agentflow/runs/*.cue",
+						"bin/agentflow-check",
+						"docs/architecture/agentflow-premutation-gate.md",
 					]
 				}
 				firstMutation: {
-					path:                "cue/contracts/agentflow/schema.cue"
+					path:                "cue/contracts/agentflow/runs/good-premutation.cue"
 					line:                1
 					timestamp:           "2026-06-03T00:00:00Z"
 					afterPromoGate:      true
@@ -101,14 +109,15 @@ good: agentflow.#AcceptedAgentFlowRun & {
 				validationEvidence: [
 					"cue fmt ./cue/contracts/agentflow/...",
 					"cue vet ./cue/contracts/agentflow/...",
+					"bin/agentflow-check cue/contracts/agentflow/runs/good-premutation.cue",
 				]
 			},
 		]
 		edges: [
-			{from: "plan", to: "write-contract"},
+			{from: "project-gate", to: "write-gate"},
 		]
 		derived: {
-			nodeOrder: ["plan", "write-contract"]
+			nodeOrder: ["project-gate", "write-gate"]
 			allNodesHavePromoGates:   true
 			allExecutedNodesAccepted: true
 			noMutatingNodeBeforeGate: true
@@ -116,62 +125,66 @@ good: agentflow.#AcceptedAgentFlowRun & {
 	}
 
 	manifest: {
-		runID:     "agentflow.bootstrap.good"
+		runID:     "agentflow.premutation.good"
 		objective: _objective
 		root: {
 			consultedViaMCP:  true
 			responseAccepted: true
 		}
 		plan: {
-			id:               "plan.agentflow.bootstrap"
+			id:               "plan.agentflow.premutation.gate"
 			selectedWorkflow: _workflow
-			nodeOrder: ["plan", "write-contract"]
+			nodeOrder: ["project-gate", "write-gate"]
 			edges: [
-				{from: "plan", to: "write-contract"},
+				{from: "project-gate", to: "write-gate"},
 			]
 		}
 		domainNodes: [
 			{
-				id:             "plan"
+				id:             "project-gate"
 				domain:         "cue"
 				mutationPolicy: "none"
 				promoGate: {
 					requirementsImported: true
-					evidencePath:         "cue/contracts/agentflow/fixtures/good.cue#plan"
+					evidencePath:         "cue/contracts/agentflow/runs/good-premutation.cue#project-gate"
 					evidenceCueVetted:    true
 					valid:                true
 				}
 				projection: {
-					exportedBeforeMutation:  false
-					acceptedBeforeMutation:  false
-					projectedBeforeMutation: false
+					name:                    "agentflow.premutation.gate-scope"
+					exportedBeforeMutation:  true
+					acceptedBeforeMutation:  true
+					projectedBeforeMutation: true
 					mutationScopeDerived:    false
 					mutationScope: []
 				}
 			},
 			{
-				id:             "write-contract"
+				id:             "write-gate"
 				domain:         "cue"
 				mutationPolicy: "scoped"
 				promoGate: {
 					requirementsImported: true
-					evidencePath:         "cue/contracts/agentflow/fixtures/good.cue#write-contract"
+					evidencePath:         "cue/contracts/agentflow/runs/good-premutation.cue#write-gate"
 					evidenceCueVetted:    true
 					valid:                true
 				}
 				projection: {
-					name:                    "agentflow.bootstrap.contract-scope"
+					name:                    "agentflow.premutation.gate-scope"
 					exportedBeforeMutation:  true
 					acceptedBeforeMutation:  true
 					projectedBeforeMutation: true
 					mutationScopeDerived:    true
 					mutationScope: [
 						"cue/contracts/agentflow/schema.cue",
-						"cue/contracts/agentflow/fixtures/*.cue",
+						"cue/contracts/agentflow/fixtures/good.cue",
+						"cue/contracts/agentflow/runs/*.cue",
+						"bin/agentflow-check",
+						"docs/architecture/agentflow-premutation-gate.md",
 					]
 				}
 				firstMutation: {
-					path:                            "cue/contracts/agentflow/schema.cue"
+					path:                            "cue/contracts/agentflow/runs/good-premutation.cue"
 					afterPromoGate:                  true
 					afterProjection:                 true
 					insideMutationScope:             true
@@ -188,11 +201,13 @@ good: agentflow.#AcceptedAgentFlowRun & {
 			runManifestWritten:   true
 			runManifestCueVetted: true
 			validationCommands: [
+				"cue fmt ./cue/contracts/agentflow/...",
 				"cue vet ./cue/contracts/agentflow/...",
+				"bin/agentflow-check cue/contracts/agentflow/runs/good-premutation.cue",
 			]
 			promoEvidenceSources: [
-				"cue/contracts/agentflow/fixtures/good.cue#plan",
-				"cue/contracts/agentflow/fixtures/good.cue#write-contract",
+				"cue/contracts/agentflow/runs/good-premutation.cue#project-gate",
+				"cue/contracts/agentflow/runs/good-premutation.cue#write-gate",
 			]
 		}
 	}

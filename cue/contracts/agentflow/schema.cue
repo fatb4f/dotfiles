@@ -311,17 +311,20 @@ import (
 	}
 
 	projection: {
-		name?:                  string
-		exportedBeforeMutation: bool
-		acceptedBeforeMutation: bool
-		mutationScopeDerived:   bool
+		name?:                   string
+		exportedBeforeMutation:  bool
+		acceptedBeforeMutation:  bool
+		projectedBeforeMutation: bool
+		mutationScopeDerived:    bool
+		mutationScope: [...string]
 	}
 
 	firstMutation?: {
-		path:                string
-		afterPromoGate:      bool
-		afterProjection:     bool
-		insideMutationScope: bool
+		path:                            string
+		afterPromoGate:                  bool
+		afterProjection:                 bool
+		insideMutationScope:             bool
+		mutationObservedAfterProjection: bool
 	}
 }
 
@@ -336,6 +339,7 @@ import (
 
 	projection: {
 		mutationScopeDerived: false
+		mutationScope: []
 	}
 
 	firstMutation?: _|_
@@ -351,15 +355,18 @@ import (
 	}
 
 	projection: {
-		exportedBeforeMutation: true
-		acceptedBeforeMutation: true
-		mutationScopeDerived:   true
+		exportedBeforeMutation:  true
+		acceptedBeforeMutation:  true
+		projectedBeforeMutation: true
+		mutationScopeDerived:    true
+		mutationScope: [string, ...string]
 	}
 
 	firstMutation: {
-		afterPromoGate:      true
-		afterProjection:     true
-		insideMutationScope: true
+		afterPromoGate:                  true
+		afterProjection:                 true
+		insideMutationScope:             true
+		mutationObservedAfterProjection: true
 	}
 }
 
