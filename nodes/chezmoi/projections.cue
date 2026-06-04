@@ -1,18 +1,11 @@
 package chezmoi
 
-sourceSurfaceProjection: {
-	id:     "chezmoi.source-surface"
-	nodeID: node.id
+retrieveLeaf: {
+	id:            "leaf.chezmoi.source"
+	parentNode:    "R"
+	nodeID:        node.id
+	nodeRoot:      node.root
+	sourceSurface: node.surfaces.source.path
 
-	readRoots: [
-		node.surfaces.source.path,
-		node.surfaces.config.path,
-		node.surfaces.rootMarker.path,
-	]
-
-	forbiddenUntilRetrievalAccepted: [
-		"recursive chezmoi scan",
-		"mutation through chezmoi apply",
-		"treat chezmoi source presence as policy authority",
-	]
+	claim: "chezmoi is the dotfiles source/materialization surface"
 }
