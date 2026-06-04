@@ -1,8 +1,8 @@
 package domain
 
-sourceCode: #DomainNodePattern & {
-	id:     "source-code"
-	domain: "source-code"
+sourceCode: #EntityProjection & {
+	id:   "source-code"
+	area: "source-code"
 
 	surface: {
 		summary: "tracked source tree and code-change surface"
@@ -29,16 +29,16 @@ sourceCode: #DomainNodePattern & {
 	}
 
 	discovery: {
-		authorityPaths: [
+		referencePaths: [
 			"cue/",
 			"shell-wrap/",
 			"cue/patterns/domain/source-code.cue",
 		]
-		entrypoints: [
+		startPoints: [
 			"cue/",
 			"shell-wrap/",
 		]
-		requiredLoads: [
+		suggestedLoads: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/domain/source-code.cue",
 			"cue/patterns/projections/workflow-slice.cue",

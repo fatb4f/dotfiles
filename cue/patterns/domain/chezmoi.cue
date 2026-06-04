@@ -1,8 +1,8 @@
 package domain
 
-chezmoi: #DomainNodePattern & {
-	id:     "chezmoi"
-	domain: "chezmoi"
+chezmoi: #EntityProjection & {
+	id:   "chezmoi"
+	area: "chezmoi"
 
 	surface: {
 		summary: "chezmoi source and materialization surface"
@@ -33,17 +33,17 @@ chezmoi: #DomainNodePattern & {
 	}
 
 	discovery: {
-		authorityPaths: [
+		referencePaths: [
 			"chezmoi/AGENTS.md",
 			"chezmoi/",
 			"cue/patterns/domain/chezmoi.cue",
 		]
-		entrypoints: [
+		startPoints: [
 			"chezmoi status",
 			"chezmoi diff",
 			"chezmoi apply",
 		]
-		requiredLoads: [
+		suggestedLoads: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/domain/chezmoi.cue",
 		]

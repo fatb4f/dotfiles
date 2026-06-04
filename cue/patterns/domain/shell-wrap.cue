@@ -1,8 +1,8 @@
 package domain
 
-shellWrap: #DomainNodePattern & {
-	id:     "shell-wrap"
-	domain: "shell-wrap"
+shellWrap: #EntityProjection & {
+	id:   "shell-wrap"
+	area: "shell-wrap"
 
 	surface: {
 		summary: "shell-wrap/src/hookrail command-surface"
@@ -26,16 +26,16 @@ shellWrap: #DomainNodePattern & {
 	}
 
 	discovery: {
-		authorityPaths: [
+		referencePaths: [
 			"shell-wrap/AGENTS.md",
 			"shell-wrap/src/hookrail/src/bashly.yml",
 			"cue/patterns/domain/shell-wrap.cue",
 		]
-		entrypoints: [
+		startPoints: [
 			"shell-wrap/src/hookrail/src/bashly.yml",
 			"shell-wrap/src/hookrail/src/cmd",
 		]
-		requiredLoads: [
+		suggestedLoads: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/projections/codex-slice.cue",
 			"shell-wrap/AGENTS.md",
@@ -70,7 +70,7 @@ shellWrap: #DomainNodePattern & {
 		{
 			id:        "schema-sprawl-without-a-card"
 			symptom:   "The slice grows without a concrete card."
-			avoidance: "Start from #DomainNodePattern and keep one concrete domain card."
+			avoidance: "Start from #EntityProjection and keep one concrete domain card."
 		},
 		{
 			id:        "prompt-drift-from-cue"

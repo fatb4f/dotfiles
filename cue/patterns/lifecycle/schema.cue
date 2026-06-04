@@ -91,7 +91,7 @@ package lifecycle
 	route: {
 		firstContactGuardFollowed: bool
 
-		requiredLoads: [...string]
+		suggestedLoads: [...string]
 		loadedPaths: [...string]
 
 		forbiddenLoads: [...string]

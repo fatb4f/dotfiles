@@ -19,7 +19,7 @@ import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 		git:        string
 	}
 
-	requiredLoads: [...string]
+	suggestedLoads: [...string]
 	forbiddenLoads: [...string]
 	proofCommands: [...string]
 
@@ -44,11 +44,11 @@ generatedCliChangeCarryOver: #CarryOverContract & {
 		git:        domain.git
 	}
 
-	requiredLoads: list.Concat([
-		_selectedDomainCards.sourceCode.discovery.requiredLoads,
-		_selectedDomainCards.shellWrap.discovery.requiredLoads,
-		_selectedDomainCards.cue.discovery.requiredLoads,
-		_selectedDomainCards.git.discovery.requiredLoads,
+	suggestedLoads: list.Concat([
+		_selectedDomainCards.sourceCode.discovery.suggestedLoads,
+		_selectedDomainCards.shellWrap.discovery.suggestedLoads,
+		_selectedDomainCards.cue.discovery.suggestedLoads,
+		_selectedDomainCards.git.discovery.suggestedLoads,
 	])
 
 	forbiddenLoads: list.Concat([

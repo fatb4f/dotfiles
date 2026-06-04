@@ -8,6 +8,8 @@ node: nodes.#Node & {
 	namespace: ["dotfiles"]
 	name: "chezmoi"
 
+	summary: "chezmoi source and materialization surface"
+
 	surfaces: {
 		source: {
 			kind: "filesystem"

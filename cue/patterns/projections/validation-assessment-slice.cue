@@ -43,7 +43,7 @@ _observedFacts: domain.#ObservedFactSet & {
 		"adapter.not_policy_source",
 		"estimator.method_is_rough_not_tokenizer_exact",
 	]
-	rationale: "Observed facts are inputs from the current green-light review, runtime trace, and CUE projection fixtures; acceptance is derived by unifying them with root-owned validation gates."
+	rationale: "Observed facts are inputs from the current green-light review, runtime trace, and CUE projection fixtures; acceptance is derived by unifying them with contract-defined validation gates."
 	facts: {
 		"review.green_light_review_exists": {
 			id:        "review.green_light_review_exists"
@@ -146,14 +146,14 @@ _observedFacts: domain.#ObservedFactSet & {
 		"root.schema_owns_validation_contract_shape": {
 			id:        "root.schema_owns_validation_contract_shape"
 			source:    "cue/patterns/domain/schema.cue"
-			claim:     "The root schema owns #RootValidationContract, #ValidationGate, #ValidationRequirement, #ValidationGateOutcome, #ObservedFact, #ObservedFactSet, and #ValidationAssessment."
+			claim:     "The contract schema defines #RootValidationContract, #ValidationGate, #ValidationRequirement, #ValidationGateOutcome, #ObservedFact, #ObservedFactSet, and #ValidationAssessment."
 			value:     true
 			rationale: "Validation shape is defined in the root domain schema rather than in Go or a local fixture type."
 		}
 		"scheme.fragments_conform_to_root_contracts": {
 			id:        "scheme.fragments_conform_to_root_contracts"
 			source:    "cue/patterns/projections/promotion-by-unification-slice.cue"
-			claim:     "Promotion scheme fragments unify with root-owned gate contracts."
+			claim:     "Promotion scheme fragments unify with contract-defined gate contracts."
 			value:     true
 			rationale: "Existing promotion fragments are typed as domain.#PatternPromotionFragment and gates as domain.#PromotionGate."
 		}
@@ -295,7 +295,7 @@ _observedFacts: domain.#ObservedFactSet & {
 
 _authorityBindingGate: domain.#ValidationGate & {
 	id:          "authority-binding"
-	description: "Validate that root schema and scheme contracts bind workflow authority and adapter exposure."
+	description: "Validate that contract schema and scheme contracts bind workflow authority and adapter exposure."
 	_rootShape: _observedFacts.facts["root.schema_owns_validation_contract_shape"] & {value: true}
 	_schemeShape: _observedFacts.facts["scheme.fragments_conform_to_root_contracts"] & {value: true}
 	_fragmentsOnly: _observedFacts.facts["task_patterns_provide_fragments_not_authority_roots"] & {value: true}
@@ -311,7 +311,7 @@ _authorityBindingGate: domain.#ValidationGate & {
 		},
 		{
 			id:          "req.scheme-fragments-root-conformant"
-			description: "Scheme fragments conform to root-owned promotion and validation contracts."
+			description: "Scheme fragments conform to contract-defined promotion and validation contracts."
 			observedFactRefs: ["scheme.fragments_conform_to_root_contracts", "task_patterns_provide_fragments_not_authority_roots"]
 			expected: ["true", "true"]
 		},
@@ -334,7 +334,7 @@ _authorityBindingGate: domain.#ValidationGate & {
 		status:    "passed"
 		rationale: "Root-owned validation contracts, scheme fragments, derived promotion, and normalized adapter boundary unified."
 	}
-	rationale: "This gate fails if any observed authority-binding fact does not unify with the root-owned expected value."
+	rationale: "This gate fails if any observed authority-binding fact does not unify with the contract-defined expected value."
 }
 
 _promotionBehaviorGate: domain.#ValidationGate & {
@@ -375,7 +375,7 @@ _promotionBehaviorGate: domain.#ValidationGate & {
 		status:    "passed"
 		rationale: "Promotion fixtures unify with expected accepted, drift, incomplete, and rejected outcomes."
 	}
-	rationale: "This gate binds task-pattern promotion behavior to existing root-owned promotion gate fixtures."
+	rationale: "This gate binds task-pattern promotion behavior to existing contract-defined promotion gate fixtures."
 }
 
 _exposureBindingGate: domain.#ValidationGate & {

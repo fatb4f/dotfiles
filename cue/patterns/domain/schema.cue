@@ -15,7 +15,7 @@ package domain
 	"flow.task_fill_fills_output_values_after_runner_execution" |
 	"root.relations_are_admitted_only_when_backed_by_facts" |
 	"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks" |
-	"root.authorization_evidence_is_root_owned" |
+	"contract.load_evidence_is_declared" |
 	"root.file_loads_require_authorization_relation" |
 	"root.bounded_fallback_limits_loads_to_declared_surfaces" |
 	"review.freeze_gate_rejects_relevance_only_loads" |
@@ -71,9 +71,9 @@ package domain
 	"rel.go-enables-arbitrary-task-inference" |
 	"rel.runner-fills-typed-output-evidence" |
 	"rel.root-schema-declares-authorization-evidence" |
-	"rel.root-policy-authorizes-loaded-file" |
-	"rel.selected-pattern-authorizes-loaded-file" |
-	"rel.bounded-fallback-authorizes-root-declared-surface" |
+	"rel.contract-policy-admits-loaded-file" |
+	"rel.selected-pattern-admits-loaded-file" |
+	"rel.bounded-fallback-admits-declared-surface" |
 	"rel.go-emits-authorization-evidence" |
 	"rel.go-owns-load-authorization" |
 	"rel.keyword-relevance-authorizes-load"
@@ -89,9 +89,9 @@ package domain
 	"rejected-drift"
 
 #AuthorizationRelationRefID:
-	"rel.root-policy-authorizes-loaded-file" |
-	"rel.selected-pattern-authorizes-loaded-file" |
-	"rel.bounded-fallback-authorizes-root-declared-surface"
+	"rel.contract-policy-admits-loaded-file" |
+	"rel.selected-pattern-admits-loaded-file" |
+	"rel.bounded-fallback-admits-declared-surface"
 
 #RejectedAuthorizationRelationRefID:
 	"rel.go-owns-load-authorization" |
@@ -653,13 +653,13 @@ sourceFacts: {
 		kind:        "root-schema"
 		source:      "cue/patterns/domain/schema.cue"
 		claim:       "Go may supply TaskFunc and Runner behavior for root-schema-declared CUE task values."
-		consequence: "Go may not define task shape or broaden InferTasks unless the root schema admits that risk."
+		consequence: "Go may not define task shape or broaden InferTasks unless the contract schema admits that risk."
 	}
-	"root.authorization_evidence_is_root_owned": {
-		id:          "root.authorization_evidence_is_root_owned"
+	"contract.load_evidence_is_declared": {
+		id:          "contract.load_evidence_is_declared"
 		kind:        "root-schema"
 		source:      "cue/patterns/domain/schema.cue"
-		claim:       "Authorization evidence is declared by the root schema."
+		claim:       "Authorization evidence is declared by the contract schema."
 		consequence: "Adapters may emit evidence values but must not own authorization policy."
 	}
 	"root.file_loads_require_authorization_relation": {
@@ -674,7 +674,7 @@ sourceFacts: {
 		kind:        "root-schema"
 		source:      "cue/patterns/domain/schema.cue"
 		claim:       "Bounded fallback loads are limited to explicit AGENTS.cue, index, or root-declared surfaces."
-		consequence: "Fallback mode remains an explicit root-owned authorization source."
+		consequence: "Fallback mode remains an explicit contract-defined authorization source."
 	}
 	"review.freeze_gate_rejects_relevance_only_loads": {
 		id:          "review.freeze_gate_rejects_relevance_only_loads"
@@ -701,7 +701,7 @@ sourceFacts: {
 		id:          "root.promotion_gate_contract_is_root_owned"
 		kind:        "root-schema"
 		source:      "cue/patterns/domain/schema.cue"
-		claim:       "The root schema owns the generic promotion gate interface."
+		claim:       "The contract schema defines the generic promotion gate interface."
 		consequence: "Task patterns may provide fragments, but may not redefine promotion gate shape."
 	}
 	"root.promotion_gate_outcome_is_derived": {
@@ -777,17 +777,17 @@ sourceFacts: {
 	proof:          string
 }
 
-#DomainNodePattern: {
-	id:     string
-	domain: string
+#EntityProjection: {
+	id:   string
+	area: string
 
 	surface: #DomainSurface
 	scopes:  #DomainScopes
 
 	discovery: {
-		authorityPaths: [...string]
-		entrypoints: [...string]
-		requiredLoads: [...string]
+		referencePaths: [...string]
+		startPoints: [...string]
+		suggestedLoads: [...string]
 		forbiddenLoads: [...string]
 		staleSignals: [...string]
 	}

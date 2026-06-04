@@ -39,7 +39,7 @@ generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
 	route: {
 		firstContactGuardFollowed: true
 
-		requiredLoads: [
+		suggestedLoads: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/domain/source-code.cue",
 			"cue/patterns/domain/shell-wrap.cue",

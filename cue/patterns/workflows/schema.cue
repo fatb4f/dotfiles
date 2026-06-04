@@ -36,23 +36,23 @@ import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 	factRefs:       domain.#FactRefList
 }
 
-#DomainNodePattern:  domain.#DomainNodePattern
+#EntityProjection:   domain.#EntityProjection
 #PatternGoodPattern: domain.#PatternGoodPattern
 #PatternFailure:     domain.#PatternFailure
 #PatternInvariant:   domain.#PatternInvariant
 
 #WorkflowPattern: {
 	id:      string
-	domain:  "workflow"
+	area:    "workflow"
 	summary: string
 
 	lifecycle: [...#WorkflowLifecycleLandmark]
 
 	cards: {
-		sourceCode: #DomainNodePattern
-		shellWrap:  #DomainNodePattern
-		cue:        #DomainNodePattern
-		git:        #DomainNodePattern
+		sourceCode: #EntityProjection
+		shellWrap:  #EntityProjection
+		cue:        #EntityProjection
+		git:        #EntityProjection
 	}
 
 	edges: [...#WorkflowEdge]

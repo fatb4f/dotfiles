@@ -1,4 +1,4 @@
-package dotfiles
+package dotfilesnodes
 
 import nodes "github.com/fatb4f/dotfiles/cue/nodes"
 

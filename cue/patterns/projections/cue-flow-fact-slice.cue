@@ -111,7 +111,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			stateKind:      "task-discovery-state"
 			allowed:        false
 			classification: "architectural-drift"
-			constraint:     "May be allowed only when explicitly declared as risky and bounded by root schema."
+			constraint:     "May be allowed only when explicitly declared as risky and bounded by contract schema."
 			factRefs: [
 				"flow.infer_tasks_searches_arbitrary_data_and_may_be_spurious",
 				"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks",
@@ -140,12 +140,12 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			stateKind: "contract-state"
 			allowed:   true
 			factRefs: [
-				"root.authorization_evidence_is_root_owned",
+				"contract.load_evidence_is_declared",
 				"root.relations_are_admitted_only_when_backed_by_facts",
 			]
 		},
 		{
-			id:        "rel.root-policy-authorizes-loaded-file"
+			id:        "rel.contract-policy-admits-loaded-file"
 			from:      "root-policy"
 			to:        "loaded-file-evidence"
 			artifact:  "domain.#LoadedFileEvidence"
@@ -159,7 +159,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			]
 		},
 		{
-			id:        "rel.selected-pattern-authorizes-loaded-file"
+			id:        "rel.selected-pattern-admits-loaded-file"
 			from:      "selected-pattern-contract"
 			to:        "loaded-file-evidence"
 			artifact:  "domain.#LoadedFileEvidence"
@@ -168,12 +168,12 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			stateKind: "authorization-state"
 			allowed:   true
 			factRefs: [
-				"root.authorization_evidence_is_root_owned",
+				"contract.load_evidence_is_declared",
 				"root.file_loads_require_authorization_relation",
 			]
 		},
 		{
-			id:         "rel.bounded-fallback-authorizes-root-declared-surface"
+			id:         "rel.bounded-fallback-admits-declared-surface"
 			from:       "bounded-fallback"
 			to:         "loaded-file-evidence"
 			artifact:   "domain.#LoadedFileEvidence"
@@ -198,7 +198,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			allowed:   true
 			factRefs: [
 				"flow.task_fill_fills_output_values_after_runner_execution",
-				"root.authorization_evidence_is_root_owned",
+				"contract.load_evidence_is_declared",
 			]
 		},
 		{
@@ -212,7 +212,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			allowed:        false
 			classification: "architectural-drift"
 			factRefs: [
-				"root.authorization_evidence_is_root_owned",
+				"contract.load_evidence_is_declared",
 				"review.freeze_gate_rejects_relevance_only_loads",
 			]
 		},
@@ -236,7 +236,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 	sliceRequirements: [
 		{
 			id:          "req.fact-rooted-relations"
-			description: "Every relation edge and slice requirement must be backed by a known upstream, root schema, fixture, or local review fact."
+			description: "Every relation edge and slice requirement must be backed by a known upstream, contract schema, fixture, or local review fact."
 			requires: [
 				"relationEdges.factRefs",
 				"sliceRequirements.factRefs",
@@ -263,7 +263,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 		},
 		{
 			id:          "req.typed-authorization-evidence"
-			description: "Authorization evidence must be root-owned, typed, and backed by valid authorization relations with known fact references."
+			description: "Authorization evidence must be contract-defined, typed, and backed by valid authorization relations with known fact references."
 			requires: [
 				"domain.#AuthorizationEvidence",
 				"loadedFiles.relationRef",
@@ -272,7 +272,7 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 				"relationEdges.factRefs",
 			]
 			factRefs: [
-				"root.authorization_evidence_is_root_owned",
+				"contract.load_evidence_is_declared",
 				"root.file_loads_require_authorization_relation",
 				"review.freeze_gate_rejects_relevance_only_loads",
 				"fixture.typed_authorization_evidence_slice_exports",

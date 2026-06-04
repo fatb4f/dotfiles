@@ -1,8 +1,8 @@
 package domain
 
-cue: #DomainNodePattern & {
-	id:     "cue"
-	domain: "cue"
+cue: #EntityProjection & {
+	id:   "cue"
+	area: "cue"
 
 	surface: {
 		summary: "CUE contracts, schemas, and projections"
@@ -33,16 +33,16 @@ cue: #DomainNodePattern & {
 	}
 
 	discovery: {
-		authorityPaths: [
+		referencePaths: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/domain/cue.cue",
 			"cue/patterns/projections/codex-slice.cue",
 		]
-		entrypoints: [
+		startPoints: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/projections/codex-slice.cue",
 		]
-		requiredLoads: [
+		suggestedLoads: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/domain/cue.cue",
 			"cue/patterns/workflows/schema.cue",

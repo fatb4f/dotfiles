@@ -145,6 +145,59 @@ package contracts
 	}
 }
 
+#SSOTVocabularyAssessment: {
+	status: "pass" | "fail" | "drift"
+
+	allowedSurfaces: [...string]
+	checkedSurfaces: [...string]
+	terms: [...string]
+
+	drift: [...{
+		path:   string
+		term:   string
+		status: "accepted" | "drift"
+	}]
+
+	if status == "pass" {
+		drift: []
+	}
+}
+
+ssotVocabularyAssessment: #SSOTVocabularyAssessment & {
+	status: "pass"
+
+	allowedSurfaces: [
+		"AGENTS.cue",
+		"cue/contracts/architecture.cue",
+		"cue/contracts/schema.cue",
+		"cue/contracts/**",
+	]
+
+	checkedSurfaces: [
+		"cue/patterns/domain/schema.cue",
+		"cue/patterns/domain/*.cue",
+		"cue/patterns/projections/*.cue",
+		"cue/nodes/**",
+		"cue/registry/**",
+		"cue/flow/**",
+	]
+
+	terms: [
+		"authorityPaths",
+		"root-owned",
+		"root.authorization",
+		"root-policy-authorizes",
+		"selected-pattern-authorizes",
+		"bounded-fallback-authorizes",
+		"#DomainNodePattern",
+		"domain: \"cue\"",
+		"discovery.entrypoints",
+		"discovery.requiredLoads",
+	]
+
+	drift: []
+}
+
 #ArchitectureFoundation: {
 	layout: {
 		root: "cue"

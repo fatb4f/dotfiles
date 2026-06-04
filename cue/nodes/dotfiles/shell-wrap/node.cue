@@ -8,6 +8,8 @@ node: nodes.#Node & {
 	namespace: ["dotfiles"]
 	name: "shell-wrap"
 
+	summary: "shell-wrap and Hookrail command-surface adapter metadata"
+
 	surfaces: {
 		source: {
 			kind: "filesystem"

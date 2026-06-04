@@ -12,7 +12,8 @@ package nodes
 
 	namespace: [...string]
 
-	name: string
+	name:     string
+	summary?: string
 
 	surfaces?: [string]: #Surface
 	relations?: [...#Relation]

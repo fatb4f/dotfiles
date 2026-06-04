@@ -13,10 +13,10 @@ package registry
 
 	request_id?: string
 	server_cmd: [...string]
-	tool_name: string
+	tool_name: *"search" | string
 	tool_args: [string]: _
-	cwd:        string
-	timeout_ms: int & >=0
+	cwd:        *"." | string
+	timeout_ms: *15000 | int & >=0
 	...
 }
 

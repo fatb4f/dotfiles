@@ -252,9 +252,12 @@ import "strings"
 	registry: #DotfilesRegistry
 	query:    #RegistryQuery
 
+	_registry: registry
+	_query:    query
+
 	resolution: #RegistryResolution & {
-		registry: registry
-		query:    query
+		registry: _registry
+		query:    _query
 	}
 
 	if resolution.status == "selected" {

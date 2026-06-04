@@ -2,9 +2,9 @@ package domain
 
 import gitcontract "github.com/fatb4f/dotfiles/cue/contracts/git"
 
-git: #DomainNodePattern & {
-	id:     "git"
-	domain: "git"
+git: #EntityProjection & {
+	id:   "git"
+	area: "git"
 
 	_contract: gitcontract.#GitContract
 
@@ -38,7 +38,7 @@ git: #DomainNodePattern & {
 	}
 
 	discovery: {
-		authorityPaths: [
+		referencePaths: [
 			".git/",
 			"cue/patterns/domain/git.cue",
 			"cue/contracts/git/schema.cue",
@@ -47,12 +47,12 @@ git: #DomainNodePattern & {
 			"cue/contracts/git/evidence.cue",
 			"cue/patterns/workflows/generated-cli-change.cue",
 		]
-		entrypoints: [
+		startPoints: [
 			"git status",
 			"git diff",
 			"git commit",
 		]
-		requiredLoads: [
+		suggestedLoads: [
 			"cue/patterns/domain/schema.cue",
 			"cue/patterns/domain/git.cue",
 			"cue/contracts/git/schema.cue",

@@ -8,7 +8,7 @@ import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 
 #CodexSlice: {
 	schemaVersion: "cueflow.codexSlice.v1"
-	selected:      domain.#DomainNodePattern
+	selected:      domain.#EntityProjection
 }
 
 shellWrapSlice: #CodexSlice & {
@@ -61,18 +61,18 @@ shellWrapSlice: #CodexSlice & {
 	thisIsNow: {
 		workflow: {
 			id:        _selected.id
-			domain:    _selected.domain
+			area:      _selected.area
 			summary:   _selected.summary
 			lifecycle: _selected.lifecycle
 		}
 		cards: {
 			sourceCode: {
 				id:      _involvedDomainCards.sourceCode.id
-				domain:  _involvedDomainCards.sourceCode.domain
+				area:    _involvedDomainCards.sourceCode.area
 				summary: _involvedDomainCards.sourceCode.surface.summary
 				discovery: {
-					authorityPaths: _involvedDomainCards.sourceCode.discovery.authorityPaths
-					entrypoints:    _involvedDomainCards.sourceCode.discovery.entrypoints
+					referencePaths: _involvedDomainCards.sourceCode.discovery.referencePaths
+					startPoints:    _involvedDomainCards.sourceCode.discovery.startPoints
 				}
 				proofs: {
 					commands:  _involvedDomainCards.sourceCode.proofs.commands
@@ -81,11 +81,11 @@ shellWrapSlice: #CodexSlice & {
 			}
 			shellWrap: {
 				id:      _involvedDomainCards.shellWrap.id
-				domain:  _involvedDomainCards.shellWrap.domain
+				area:    _involvedDomainCards.shellWrap.area
 				summary: _involvedDomainCards.shellWrap.surface.summary
 				discovery: {
-					authorityPaths: _involvedDomainCards.shellWrap.discovery.authorityPaths
-					entrypoints:    _involvedDomainCards.shellWrap.discovery.entrypoints
+					referencePaths: _involvedDomainCards.shellWrap.discovery.referencePaths
+					startPoints:    _involvedDomainCards.shellWrap.discovery.startPoints
 				}
 				proofs: {
 					commands:  _involvedDomainCards.shellWrap.proofs.commands
@@ -94,11 +94,11 @@ shellWrapSlice: #CodexSlice & {
 			}
 			cue: {
 				id:      _involvedDomainCards.cue.id
-				domain:  _involvedDomainCards.cue.domain
+				area:    _involvedDomainCards.cue.area
 				summary: _involvedDomainCards.cue.surface.summary
 				discovery: {
-					authorityPaths: _involvedDomainCards.cue.discovery.authorityPaths
-					entrypoints:    _involvedDomainCards.cue.discovery.entrypoints
+					referencePaths: _involvedDomainCards.cue.discovery.referencePaths
+					startPoints:    _involvedDomainCards.cue.discovery.startPoints
 				}
 				proofs: {
 					commands:  _involvedDomainCards.cue.proofs.commands
@@ -107,11 +107,11 @@ shellWrapSlice: #CodexSlice & {
 			}
 			git: {
 				id:      _involvedDomainCards.git.id
-				domain:  _involvedDomainCards.git.domain
+				area:    _involvedDomainCards.git.area
 				summary: _involvedDomainCards.git.surface.summary
 				discovery: {
-					authorityPaths: _involvedDomainCards.git.discovery.authorityPaths
-					entrypoints:    _involvedDomainCards.git.discovery.entrypoints
+					referencePaths: _involvedDomainCards.git.discovery.referencePaths
+					startPoints:    _involvedDomainCards.git.discovery.startPoints
 				}
 				proofs: {
 					commands:  _involvedDomainCards.git.proofs.commands
@@ -126,7 +126,7 @@ shellWrapSlice: #CodexSlice & {
 			id:        _selected.id
 			lifecycle: _selected.lifecycle
 			cardIDs: [_involvedDomainCards.sourceCode.id, _involvedDomainCards.shellWrap.id, _involvedDomainCards.cue.id, _involvedDomainCards.git.id]
-			cardDomains: [_involvedDomainCards.sourceCode.domain, _involvedDomainCards.shellWrap.domain, _involvedDomainCards.cue.domain, _involvedDomainCards.git.domain]
+			cardAreas: [_involvedDomainCards.sourceCode.area, _involvedDomainCards.shellWrap.area, _involvedDomainCards.cue.area, _involvedDomainCards.git.area]
 		}
 		mustHold: _selected.invariants[0].mustHold
 	}

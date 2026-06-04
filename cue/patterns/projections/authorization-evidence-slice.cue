@@ -30,11 +30,11 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 		rationale:           "Selected pattern files are loaded because the selected pattern contract authorizes them through root-schema-derived relations backed by known facts."
 		relationRefs: [
 			"rel.root-schema-declares-authorization-evidence",
-			"rel.selected-pattern-authorizes-loaded-file",
+			"rel.selected-pattern-admits-loaded-file",
 			"rel.go-emits-authorization-evidence",
 		]
 		factRefs: [
-			"root.authorization_evidence_is_root_owned",
+			"contract.load_evidence_is_declared",
 			"root.file_loads_require_authorization_relation",
 			"flow.task_fill_fills_output_values_after_runner_execution",
 			"fixture.typed_authorization_evidence_slice_exports",
@@ -44,18 +44,18 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 				path:            "cue/patterns/domain/schema.cue"
 				authorizedBy:    "selected-pattern"
 				sourcePatternID: "selected-pattern-contract"
-				relationRef:     "rel.selected-pattern-authorizes-loaded-file"
+				relationRef:     "rel.selected-pattern-admits-loaded-file"
 				factRefs: [
-					"root.authorization_evidence_is_root_owned",
+					"contract.load_evidence_is_declared",
 					"root.file_loads_require_authorization_relation",
 				]
-				reason: "The selected pattern contract requires the root schema that declares authorization evidence."
+				reason: "The selected pattern contract requires the contract schema that declares authorization evidence."
 			},
 			{
 				path:            "cue/patterns/projections/codex-slice.cue"
 				authorizedBy:    "selected-pattern"
 				sourcePatternID: "selected-pattern-contract"
-				relationRef:     "rel.selected-pattern-authorizes-loaded-file"
+				relationRef:     "rel.selected-pattern-admits-loaded-file"
 				factRefs: [
 					"root.file_loads_require_authorization_relation",
 					"review.freeze_gate_rejects_relevance_only_loads",
@@ -66,7 +66,7 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 				path:            "cue/patterns/projections/cue-flow-fact-slice.cue"
 				authorizedBy:    "selected-pattern"
 				sourcePatternID: "cue-flow-fact-rooted-relation"
-				relationRef:     "rel.selected-pattern-authorizes-loaded-file"
+				relationRef:     "rel.selected-pattern-admits-loaded-file"
 				factRefs: [
 					"fixture.fact_rooted_cue_flow_relation_slice_exports",
 					"root.relations_are_admitted_only_when_backed_by_facts",
@@ -116,7 +116,7 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 				deniedBy:            "rejected-drift"
 				rejectedRelationRef: "rel.go-owns-load-authorization"
 				factRefs: [
-					"root.authorization_evidence_is_root_owned",
+					"contract.load_evidence_is_declared",
 					"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks",
 				]
 				reason:         "The Go adapter may emit evidence but may not own hidden load authorization."
@@ -137,7 +137,7 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 		factRefs: [
 			"root.file_loads_require_authorization_relation",
 			"review.freeze_gate_rejects_relevance_only_loads",
-			"root.authorization_evidence_is_root_owned",
+			"contract.load_evidence_is_declared",
 		]
 		loadedFiles: []
 		deniedLoads: [
@@ -158,10 +158,10 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 				deniedBy:            "rejected-drift"
 				rejectedRelationRef: "rel.go-owns-load-authorization"
 				factRefs: [
-					"root.authorization_evidence_is_root_owned",
+					"contract.load_evidence_is_declared",
 					"flow.task_fill_fills_output_values_after_runner_execution",
 				]
-				reason:         "Go-owned hidden authorization is rejected; Go can emit evidence derived from root schema only."
+				reason:         "Go-owned hidden authorization is rejected; Go can emit evidence derived from contract schema only."
 				requestedBy:    "go-cue-flow-adapter"
 				classification: "architectural-drift"
 			},
@@ -173,19 +173,19 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 		authorizationSource: "bounded-fallback"
 		rationale:           "Fallback mode is authorized only for explicit root-declared surfaces and still records relation and fact evidence."
 		relationRefs: [
-			"rel.bounded-fallback-authorizes-root-declared-surface",
+			"rel.bounded-fallback-admits-declared-surface",
 			"rel.root-schema-declares-authorization-evidence",
 		]
 		factRefs: [
 			"root.bounded_fallback_limits_loads_to_declared_surfaces",
 			"root.file_loads_require_authorization_relation",
-			"root.authorization_evidence_is_root_owned",
+			"contract.load_evidence_is_declared",
 		]
 		loadedFiles: [
 			{
 				path:         "AGENTS.cue"
 				authorizedBy: "bounded-fallback"
-				relationRef:  "rel.bounded-fallback-authorizes-root-declared-surface"
+				relationRef:  "rel.bounded-fallback-admits-declared-surface"
 				factRefs: [
 					"root.bounded_fallback_limits_loads_to_declared_surfaces",
 					"root.file_loads_require_authorization_relation",
@@ -195,10 +195,10 @@ cueFlowAuthorizationEvidenceSlice: #AuthorizationEvidenceSlice & {
 			{
 				path:         "cue/patterns/domain/schema.cue"
 				authorizedBy: "bounded-fallback"
-				relationRef:  "rel.bounded-fallback-authorizes-root-declared-surface"
+				relationRef:  "rel.bounded-fallback-admits-declared-surface"
 				factRefs: [
 					"root.bounded_fallback_limits_loads_to_declared_surfaces",
-					"root.authorization_evidence_is_root_owned",
+					"contract.load_evidence_is_declared",
 				]
 				reason: "The root-declared schema surface is allowed under bounded fallback."
 			},

@@ -50,7 +50,7 @@ _promotionInvariants: [
 		id:       "go-adapter-does-not-own-policy"
 		mustHold: "Go may emit evidence from root-declared contracts, but hidden Go policy must not authorize promotion."
 		factRefs: [
-			"root.authorization_evidence_is_root_owned",
+			"contract.load_evidence_is_declared",
 			"root.go_may_supply_taskfunc_and_runner_for_root_schema_tasks",
 		]
 	},
@@ -58,7 +58,7 @@ _promotionInvariants: [
 		id:       "selected-pattern-files-require-authorization-evidence"
 		mustHold: "Loaded selected-pattern files must carry authorizedBy, relationRef, factRefs, and reason."
 		factRefs: [
-			"root.authorization_evidence_is_root_owned",
+			"contract.load_evidence_is_declared",
 			"root.file_loads_require_authorization_relation",
 		]
 	},
@@ -101,8 +101,8 @@ _normalCase: domain.#PromotionGateCase & {
 	status:              "accepted"
 	authorizationSource: "selected-pattern"
 	allowedRelationRefs: [
-		"rel.selected-pattern-authorizes-loaded-file",
-		"rel.root-policy-authorizes-loaded-file",
+		"rel.selected-pattern-admits-loaded-file",
+		"rel.contract-policy-admits-loaded-file",
 	]
 	requiredInvariantRefs: [
 		"keyword-relevance-is-not-load-authorization",
@@ -126,7 +126,7 @@ _fallbackCase: domain.#PromotionGateCase & {
 	status:              "accepted"
 	authorizationSource: "bounded-fallback"
 	allowedRelationRefs: [
-		"rel.bounded-fallback-authorizes-root-declared-surface",
+		"rel.bounded-fallback-admits-declared-surface",
 	]
 	requiredInvariantRefs: [
 		"bounded-fallback-limits-loads-to-root-declared-surfaces",
@@ -147,7 +147,7 @@ _driftCase: domain.#PromotionGateCase & {
 	status:              "drift"
 	authorizationSource: "rejected-drift"
 	allowedRelationRefs: [
-		"rel.root-policy-authorizes-loaded-file",
+		"rel.contract-policy-admits-loaded-file",
 	]
 	requiredInvariantRefs: [
 		"keyword-relevance-is-not-load-authorization",
@@ -166,7 +166,7 @@ _incompleteCase: domain.#PromotionGateCase & {
 	status:              "incomplete"
 	authorizationSource: "rejected-drift"
 	allowedRelationRefs: [
-		"rel.root-policy-authorizes-loaded-file",
+		"rel.contract-policy-admits-loaded-file",
 	]
 	requiredInvariantRefs: [
 		"selected-pattern-files-require-authorization-evidence",
@@ -184,7 +184,7 @@ _rejectedCase: domain.#PromotionGateCase & {
 	status:              "rejected"
 	authorizationSource: "rejected-drift"
 	allowedRelationRefs: [
-		"rel.root-policy-authorizes-loaded-file",
+		"rel.contract-policy-admits-loaded-file",
 	]
 	requiredInvariantRefs: [
 		"promotion-relations-require-known-factrefs",
@@ -221,7 +221,7 @@ _patternFragment: domain.#PatternPromotionFragment & {
 				"loadedFiles.reason",
 			]
 			factRefs: [
-				"root.authorization_evidence_is_root_owned",
+				"contract.load_evidence_is_declared",
 				"root.file_loads_require_authorization_relation",
 			]
 		},
@@ -247,12 +247,12 @@ _patternFragment: domain.#PatternPromotionFragment & {
 		"accepted-is-derived-not-fixture-authored",
 	]
 	allowedRelationRefs: [
-		"rel.selected-pattern-authorizes-loaded-file",
-		"rel.root-policy-authorizes-loaded-file",
+		"rel.selected-pattern-admits-loaded-file",
+		"rel.contract-policy-admits-loaded-file",
 	]
 	evidenceExpectations: [
 		"selectedPatternIDs present",
-		"loadedFiles authorized by root-owned source",
+		"loadedFiles authorized by contract-defined source",
 		"loadedFiles carry relationRef, factRefs, and reason",
 		"deniedLoads explain rejected paths",
 		"go adapter is adapter/emitter/enforcer only",
@@ -291,7 +291,7 @@ _fallbackFragment: domain.#PatternPromotionFragment & {
 		"accepted-is-derived-not-fixture-authored",
 	]
 	allowedRelationRefs: [
-		"rel.bounded-fallback-authorizes-root-declared-surface",
+		"rel.bounded-fallback-admits-declared-surface",
 	]
 	evidenceExpectations: [
 		"authorizationSource is bounded-fallback",
@@ -487,7 +487,7 @@ cueFlowPromotionByUnificationSlice: #PromotionByUnificationSlice & {
 					missingRequirements: [
 						"loadedFiles.factRefs",
 					]
-					rationale: "Fact references must inhabit the root-owned known fact ID space."
+					rationale: "Fact references must inhabit the contract-defined known fact ID space."
 				}
 			}
 			rejectedRelation: _rejectedPromotionGate & {
@@ -503,7 +503,7 @@ cueFlowPromotionByUnificationSlice: #PromotionByUnificationSlice & {
 				id: "promotion.bad.unknown-authorization-source"
 				outcome: {
 					violations: [
-						"authorization source is outside the root-owned authorization source vocabulary",
+						"authorization source is outside the contract-defined authorization source vocabulary",
 					]
 					rationale: "Unknown authorization sources are rejected by type membership before they can promote."
 				}
@@ -526,7 +526,7 @@ cueFlowPromotionByUnificationSlice: #PromotionByUnificationSlice & {
 					missingRequirements: [
 						"requires.factRefs",
 					]
-					rationale: "Promotion requirements are typed by the root-owned fact ID space."
+					rationale: "Promotion requirements are typed by the contract-defined fact ID space."
 				}
 			}
 			patternRedefinesGateShape: _driftPromotionGate & {
@@ -535,7 +535,7 @@ cueFlowPromotionByUnificationSlice: #PromotionByUnificationSlice & {
 					violations: [
 						"task pattern attempted to define promotion gate shape instead of providing a fragment",
 					]
-					rationale: "The root schema owns #PromotionGate; patterns provide thin fragments only."
+					rationale: "The contract schema defines #PromotionGate; patterns provide thin fragments only."
 				}
 			}
 			fixtureAttemptsAccepted: _driftPromotionGate & {

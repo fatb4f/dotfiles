@@ -9,7 +9,7 @@ _gitCard:        domain.git
 
 generatedCliChange: #WorkflowPattern & {
 	id:      "generated-cli-change"
-	domain:  "workflow"
+	area:    "workflow"
 	summary: "Generated CLI change workflow across source, shell-wrap, cue, and git"
 
 	lifecycle: [
