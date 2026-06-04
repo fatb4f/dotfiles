@@ -1,0 +1,26 @@
+{
+  "@context": "../../contexts/relevance.context.jsonld",
+  "@id": "registry:dotfiles/jsonld/missing-because",
+  "@type": "RegistryRelevanceFrame",
+  "objective": "Reject eligible candidates without evidence.",
+  "observes": [
+    {
+      "@id": "finding:jsonld/local-metadata",
+      "@type": "Finding"
+    }
+  ],
+  "candidates": [
+    {
+      "@id": "node:dotfiles/chezmoi",
+      "@type": "EntityCandidate",
+      "relevance": {
+        "status": "eligible"
+      }
+    }
+  ],
+  "invariants": {
+    "isAuthority": false,
+    "authorizesLoads": false,
+    "authorizesMutation": false
+  }
+}

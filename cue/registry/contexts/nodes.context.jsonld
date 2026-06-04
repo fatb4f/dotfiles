@@ -1,0 +1,22 @@
+{
+  "@context": {
+    "@vocab": "https://dotfiles.local/jsonld/nodes#",
+    "id": "@id",
+    "type": "@type",
+    "Entity": "Entity",
+    "name": "name",
+    "labels": "labels",
+    "surfaces": "surfaces",
+    "kind": "kind",
+    "ref": "ref",
+    "relations": "relations",
+    "target": {
+      "@id": "target",
+      "@type": "@id"
+    },
+    "invariants": "invariants",
+    "isAuthority": "isAuthority",
+    "authorizesLoads": "authorizesLoads",
+    "authorizesMutation": "authorizesMutation"
+  }
+}

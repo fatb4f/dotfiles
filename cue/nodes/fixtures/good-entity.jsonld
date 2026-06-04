@@ -1,0 +1,28 @@
+{
+  "@context": "../../registry/contexts/nodes.context.jsonld",
+  "@id": "node:dotfiles/chezmoi",
+  "@type": "Entity",
+  "name": "chezmoi dotfile lifecycle",
+  "labels": ["dotfiles", "chezmoi"],
+  "surfaces": [
+    {
+      "kind": "filesystem",
+      "ref": "chezmoi/"
+    },
+    {
+      "kind": "config",
+      "ref": "chezmoi/AGENTS.md"
+    }
+  ],
+  "relations": [
+    {
+      "type": "configures",
+      "target": "node:dotfiles/workspace"
+    }
+  ],
+  "invariants": {
+    "isAuthority": false,
+    "authorizesLoads": false,
+    "authorizesMutation": false
+  }
+}

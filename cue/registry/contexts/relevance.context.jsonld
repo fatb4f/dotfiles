@@ -1,0 +1,30 @@
+{
+  "@context": {
+    "@vocab": "https://dotfiles.local/jsonld/relevance#",
+    "id": "@id",
+    "type": "@type",
+    "RegistryRelevanceFrame": "RegistryRelevanceFrame",
+    "Finding": "Finding",
+    "EntityCandidate": "EntityCandidate",
+    "PatternCandidate": "PatternCandidate",
+    "objective": "objective",
+    "observes": "observes",
+    "candidates": "candidates",
+    "eligibleCandidates": "eligibleCandidates",
+    "keywords": "keywords",
+    "supports": "supports",
+    "source": "source",
+    "path": "path",
+    "span": "span",
+    "relevance": "relevance",
+    "status": "status",
+    "because": {
+      "@id": "because",
+      "@type": "@id"
+    },
+    "invariants": "invariants",
+    "isAuthority": "isAuthority",
+    "authorizesLoads": "authorizesLoads",
+    "authorizesMutation": "authorizesMutation"
+  }
+}

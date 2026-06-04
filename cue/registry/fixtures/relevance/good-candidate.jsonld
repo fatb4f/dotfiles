@@ -1,0 +1,40 @@
+{
+  "@context": "../../contexts/relevance.context.jsonld",
+  "@id": "registry:dotfiles/jsonld/minimal",
+  "@type": "RegistryRelevanceFrame",
+  "objective": "Introduce minimal JSON-LD metadata support.",
+  "observes": [
+    {
+      "@id": "finding:jsonld/local-metadata",
+      "@type": "Finding",
+      "keywords": ["json-ld", "metadata"],
+      "supports": ["JSON-LD remains descriptive metadata."],
+      "source": {
+        "path": "cue/nodes/jsonld.cue",
+        "span": "#EntityJSONLD"
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "@id": "node:dotfiles/chezmoi",
+      "@type": "EntityCandidate",
+      "relevance": {
+        "status": "eligible",
+        "because": ["finding:jsonld/local-metadata"]
+      }
+    },
+    {
+      "@id": "pattern:dotfiles/unrelated",
+      "@type": "PatternCandidate",
+      "relevance": {
+        "status": "rejected"
+      }
+    }
+  ],
+  "invariants": {
+    "isAuthority": false,
+    "authorizesLoads": false,
+    "authorizesMutation": false
+  }
+}
