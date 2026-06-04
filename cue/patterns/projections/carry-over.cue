@@ -19,9 +19,9 @@ import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 		git:        string
 	}
 
-	requiredLoads:  [...string]
+	requiredLoads: [...string]
 	forbiddenLoads: [...string]
-	proofCommands:  [...string]
+	proofCommands: [...string]
 
 	resumeInstruction: string
 }

@@ -51,11 +51,11 @@ package lifecycle
 
 #ProcessTokenUsage: {
 	available: bool
-	status:     #TokenUsageEvidenceStatus
-	degraded:   bool
+	status:    #TokenUsageEvidenceStatus
+	degraded:  bool
 
 	evidence?: #TokenUsageEvidence
-	notes:     [...string]
+	notes: [...string]
 
 	if available == true {
 		evidence: #TokenUsageEvidence
@@ -76,7 +76,7 @@ package lifecycle
 	}
 
 	git: {
-		commit?:    string
+		commit?:     string
 		dirtyState?: string
 	}
 
@@ -92,15 +92,15 @@ package lifecycle
 		firstContactGuardFollowed: bool
 
 		requiredLoads: [...string]
-		loadedPaths:   [...string]
+		loadedPaths: [...string]
 
-		forbiddenLoads:         [...string]
+		forbiddenLoads: [...string]
 		forbiddenLoadViolations: [...string]
 	}
 
 	change: {
 		filesChanged: [...string]
-		scope:        string
+		scope: string
 	}
 
 	validate: {

@@ -173,14 +173,14 @@ cueFlowFactRootedRelationSlice: #FactRootedRelationSlice & {
 			]
 		},
 		{
-			id:        "rel.bounded-fallback-authorizes-root-declared-surface"
-			from:      "bounded-fallback"
-			to:        "loaded-file-evidence"
-			artifact:  "domain.#LoadedFileEvidence"
-			operation: "authorizes"
-			authority: "root-policy"
-			stateKind: "authorization-state"
-			allowed:   true
+			id:         "rel.bounded-fallback-authorizes-root-declared-surface"
+			from:       "bounded-fallback"
+			to:         "loaded-file-evidence"
+			artifact:   "domain.#LoadedFileEvidence"
+			operation:  "authorizes"
+			authority:  "root-policy"
+			stateKind:  "authorization-state"
+			allowed:    true
 			constraint: "Fallback loads are limited to explicit AGENTS.cue, index, or root-declared surfaces."
 			factRefs: [
 				"root.bounded_fallback_limits_loads_to_declared_surfaces",

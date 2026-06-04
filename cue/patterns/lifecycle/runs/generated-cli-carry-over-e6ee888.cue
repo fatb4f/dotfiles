@@ -1,7 +1,9 @@
 package runs
 
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
+
 import lifecycle "github.com/fatb4f/dotfiles/cue/patterns/lifecycle"
+
 import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 
 generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
@@ -17,7 +19,7 @@ generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
 	}
 
 	git: {
-		commit:    "e6ee888333141a27f455a284c5dbd892b03a1d9f"
+		commit:     "e6ee888333141a27f455a284c5dbd892b03a1d9f"
 		dirtyState: "clean"
 	}
 
@@ -81,18 +83,18 @@ generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
 	validate: {
 		commands: [
 			{
-				cmd:    "cue vet ./cue/patterns/..."
-				status: "pass"
+				cmd:     "cue vet ./cue/patterns/..."
+				status:  "pass"
 				summary: "The pattern graph validated."
 			},
 			{
-				cmd:    "cue export ./cue/patterns/projections -e generatedCliChangeCarryOverLifecycleProof --out json"
-				status: "pass"
+				cmd:     "cue export ./cue/patterns/projections -e generatedCliChangeCarryOverLifecycleProof --out json"
+				status:  "pass"
 				summary: "The lifecycle proof exported."
 			},
 			{
-				cmd:    "cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json"
-				status: "pass"
+				cmd:     "cue export ./cue/patterns/projections -e generatedCliChangeCodexSlice --out json"
+				status:  "pass"
 				summary: "The Codex slice exported."
 			},
 		]
