@@ -8,7 +8,7 @@ badScopeDrift: agentflow.#AgentFlowRun & {
 	rootResponse: {
 		objective: badScopeDrift.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   true
@@ -87,8 +87,8 @@ badScopeDrift: agentflow.#AgentFlowRun & {
 		runID:     "agentflow.premutation.bad-scope-drift"
 		objective: badScopeDrift.objective
 		root: {
-			consultedViaMCP:  true
-			responseAccepted: true
+			consultedViaTransport: true
+			responseAccepted:      true
 		}
 		plan: {
 			id:               "plan.agentflow.bad-scope-drift"

@@ -7,7 +7,7 @@ import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 
 #CarryOverContract: {
-	schemaVersion: "cuerail.carryOverContract.v1"
+	schemaVersion: "cueflow.carryOverContract.v1"
 
 	selectedWorkflow:   string
 	selectedProjection: string

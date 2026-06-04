@@ -8,7 +8,7 @@ badMissingPromo: agentflow.#AgentFlowRun & {
 	rootResponse: {
 		objective: badMissingPromo.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   true
@@ -82,8 +82,8 @@ badMissingPromo: agentflow.#AgentFlowRun & {
 		runID:     "agentflow.premutation.bad-missing-promo"
 		objective: badMissingPromo.objective
 		root: {
-			consultedViaMCP:  true
-			responseAccepted: true
+			consultedViaTransport: true
+			responseAccepted:      true
 		}
 		plan: {
 			id:               "plan.agentflow.bad-missing-promo"

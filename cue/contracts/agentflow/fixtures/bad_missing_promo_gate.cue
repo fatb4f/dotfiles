@@ -32,7 +32,7 @@ badMissingPromoGate: agentflow.#PreMutationRejectedAgentFlowRun & {
 	rootResponse: {
 		objective: badMissingPromoGate.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   false

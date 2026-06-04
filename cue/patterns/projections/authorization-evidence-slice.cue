@@ -3,7 +3,7 @@ package projections
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 #AuthorizationEvidenceSlice: {
-	schemaVersion: "cuerail.authorizationEvidenceSlice.v1"
+	schemaVersion: "cueflow.authorizationEvidenceSlice.v1"
 
 	sourceFacts: [string]: domain.#SourceFact
 

@@ -17,18 +17,18 @@ package nodes
 	surfaces?: [string]: #Surface
 	relations?: [...#Relation]
 
-	patternRefs?:  [...string]
+	patternRefs?: [...string]
 	contractRefs?: [...string]
 
 	invariants: {
-		isAuthority:       false
-		authorizesLoads:   false
+		isAuthority:        false
+		authorizesLoads:    false
 		authorizesMutation: false
 	}
 }
 
 #Surface: {
-	kind: #SurfaceKind
+	kind:  #SurfaceKind
 	path?: string
 	ref?:  string
 }

@@ -20,12 +20,12 @@ package patterns
 
 	requires: {
 		contracts?: [...string]
-		gates?:     [...string]
-		evidence?:  [...string]
+		gates?: [...string]
+		evidence?: [...string]
 	}
 
 	produces: {
-		flowTasks?:  [...string]
+		flowTasks?: [...string]
 		projection?: string
 	}
 

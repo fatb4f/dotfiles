@@ -7,7 +7,7 @@ import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 
 #CodexSlice: {
-	schemaVersion: "cuerail.codexSlice.v1"
+	schemaVersion: "cueflow.codexSlice.v1"
 	selected:      domain.#DomainNodePattern
 }
 
@@ -16,7 +16,7 @@ shellWrapSlice: #CodexSlice & {
 }
 
 #WorkflowCodexSlice: {
-	schemaVersion: "cuerail.codexWorkflowSlice.v1"
+	schemaVersion: "cueflow.codexWorkflowSlice.v1"
 
 	_selected: workflows.#WorkflowPattern
 	_involvedDomainCards: {

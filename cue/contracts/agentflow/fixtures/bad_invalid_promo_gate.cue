@@ -35,7 +35,7 @@ badInvalidPromoGate: agentflow.#PreMutationRejectedAgentFlowRun & {
 	rootResponse: {
 		objective: badInvalidPromoGate.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   false

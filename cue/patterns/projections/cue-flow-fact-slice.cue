@@ -3,7 +3,7 @@ package projections
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 #FactRootedRelationSlice: {
-	schemaVersion: "cuerail.factRootedRelationSlice.v1"
+	schemaVersion: "cueflow.factRootedRelationSlice.v1"
 
 	sourceFacts: [string]: domain.#SourceFact
 

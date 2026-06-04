@@ -17,8 +17,8 @@ package lifecycle
 
 	requiredTools: [...string]
 	validations: [...{
-		command: string
-		result:  "passed" | "failed" | "not-run"
+		command:   string
+		result:    "passed" | "failed" | "not-run"
 		evidence?: string
 	}]
 

@@ -7,7 +7,7 @@ badNoRootMCPConsultation: agentflow.#PreMutationRejectedAgentFlowRun & {
 	rootResponse: {
 		objective: badNoRootMCPConsultation.objective
 		rootConsultation: {
-			viaMCP:             false
+			viaTransport:       false
 			objectivePresented: false
 			responseExported:   false
 			responseAccepted:   false

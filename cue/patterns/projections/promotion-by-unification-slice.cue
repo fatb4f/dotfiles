@@ -3,7 +3,7 @@ package projections
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 #PromotionByUnificationSlice: {
-	schemaVersion: "cuerail.promotionByUnificationSlice.v1"
+	schemaVersion: "cueflow.promotionByUnificationSlice.v1"
 
 	sourceFacts: [string]: domain.#SourceFact
 

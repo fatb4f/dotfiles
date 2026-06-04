@@ -1,9 +1,6 @@
 package agentflow
 
-import (
-	agentnode "github.com/fatb4f/dotfiles/cue/agentnode"
-	domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
-)
+import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 #AgentFlowRun: {
 	objective: string
@@ -20,7 +17,7 @@ import (
 	objective: string
 
 	rootConsultation: {
-		viaMCP:             bool
+		viaTransport:       bool
 		objectivePresented: bool
 		responseExported:   bool
 		responseAccepted:   bool
@@ -46,12 +43,12 @@ import (
 
 	// Optional adapter boundary hooks align this contract with existing root-response vocabulary.
 	normalizedRootResponse?: domain.#NormalizedRootResponse
-	runtimePreflight?:       agentnode.#RuntimePreflightReport
+	runtimePreflight?:       _
 }
 
 #AcceptedRootResponse: #RootResponse & {
 	rootConsultation: {
-		viaMCP:             true
+		viaTransport:       true
 		objectivePresented: true
 		responseExported:   true
 		responseAccepted:   true
@@ -268,8 +265,8 @@ import (
 	objective: string
 
 	root: {
-		consultedViaMCP:  bool
-		responseAccepted: bool
+		consultedViaTransport: bool
+		responseAccepted:      bool
 	}
 
 	plan: {
@@ -374,8 +371,8 @@ import (
 
 #AcceptedAgentFlowRunManifest: #AgentFlowRunManifest & {
 	root: {
-		consultedViaMCP:  true
-		responseAccepted: true
+		consultedViaTransport: true
+		responseAccepted:      true
 	}
 
 	domainNodes: [#AcceptedDomainNodeManifest, ...#AcceptedDomainNodeManifest]

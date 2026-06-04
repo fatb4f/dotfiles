@@ -3,7 +3,7 @@ package registry
 // Local mirror of the frame-side MCP request envelope.
 // The executable form adds runtime-only metadata such as `started_at`.
 #ProjectedMCPToolRequestTemplate: {
-	schemaVersion: "cuerail.mcpToolRequest.v1"
+	schemaVersion: "cueflow.mcpToolRequest.v1"
 	kind:          "mcp.tool_request"
 
 	adapter: {

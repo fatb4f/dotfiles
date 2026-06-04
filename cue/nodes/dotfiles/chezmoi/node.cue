@@ -3,10 +3,10 @@ package chezmoi
 import nodes "github.com/fatb4f/dotfiles/cue/nodes"
 
 node: nodes.#Node & {
-	id:        "dotfiles.chezmoi"
-	kind:      "tool"
+	id:   "dotfiles.chezmoi"
+	kind: "tool"
 	namespace: ["dotfiles"]
-	name:      "chezmoi"
+	name: "chezmoi"
 
 	surfaces: {
 		source: {

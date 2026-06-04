@@ -3,10 +3,10 @@ package shellwrap
 import nodes "github.com/fatb4f/dotfiles/cue/nodes"
 
 node: nodes.#Node & {
-	id:        "dotfiles.shell-wrap"
-	kind:      "adapter"
+	id:   "dotfiles.shell-wrap"
+	kind: "adapter"
 	namespace: ["dotfiles"]
-	name:      "shell-wrap"
+	name: "shell-wrap"
 
 	surfaces: {
 		source: {

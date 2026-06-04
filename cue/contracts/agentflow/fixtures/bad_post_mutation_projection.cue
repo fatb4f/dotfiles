@@ -42,7 +42,7 @@ badPostMutationProjection: agentflow.#PostViolationAuditRejectedAgentFlowRun & {
 	rootResponse: {
 		objective: badPostMutationProjection.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   true

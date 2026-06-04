@@ -7,7 +7,7 @@ badDirectRegistryLoadBeforeRootAcceptance: agentflow.#PreMutationRejectedAgentFl
 	rootResponse: {
 		objective: badDirectRegistryLoadBeforeRootAcceptance.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   false
 			responseAccepted:   false

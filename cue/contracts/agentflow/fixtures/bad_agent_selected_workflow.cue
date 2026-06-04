@@ -7,7 +7,7 @@ badAgentSelectedWorkflow: agentflow.#PreMutationRejectedAgentFlowRun & {
 	rootResponse: {
 		objective: badAgentSelectedWorkflow.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   false

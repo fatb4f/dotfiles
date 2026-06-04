@@ -7,7 +7,7 @@ import lifecycle "github.com/fatb4f/dotfiles/cue/patterns/lifecycle"
 import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 
 generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
-	schemaVersion: "cuerail.processLifecycleProof.v1"
+	schemaVersion: "cueflow.processLifecycleProof.v1"
 
 	slice: {
 		id:        "generated-cli-carry-over-e6ee888"
@@ -116,6 +116,6 @@ generatedCliCarryOverE6ee888: lifecycle.#ProcessLifecycleProof & {
 
 	notes: [
 		"No detours recorded.",
-		"Future token evidence capture: cuerail-token-usage --from-file <session-or-run-log> --run-id <id> --commit <sha> --source-kind codex-session-artifact --output <path>",
+		"Future token evidence capture: cueflow-token-usage --from-file <session-or-run-log> --run-id <id> --commit <sha> --source-kind codex-session-artifact --output <path>",
 	]
 }

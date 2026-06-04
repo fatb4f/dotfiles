@@ -55,7 +55,7 @@ workspaceEntityUpdate: #Pattern & {
 	}
 
 	mutation: {
-		allowed:            true
+		allowed:           true
 		admissionContract: "contracts.git.mutation"
 	}
 }

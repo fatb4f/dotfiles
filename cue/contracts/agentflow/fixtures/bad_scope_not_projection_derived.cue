@@ -42,7 +42,7 @@ badScopeNotProjectionDerived: agentflow.#PostViolationAuditRejectedAgentFlowRun 
 	rootResponse: {
 		objective: badScopeNotProjectionDerived.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   true

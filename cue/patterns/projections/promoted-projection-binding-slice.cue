@@ -3,7 +3,7 @@ package projections
 import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 
 #PromotedProjectionBindingSlice: {
-	schemaVersion: "cuerail.promotedProjectionBindingSlice.v1"
+	schemaVersion: "cueflow.promotedProjectionBindingSlice.v1"
 
 	sourceFacts: [string]: domain.#SourceFact
 

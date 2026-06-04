@@ -7,7 +7,7 @@ package lifecycle
 	summary?: string
 }
 
-#TokenUsageEvidenceSchemaVersion: "cuerail.tokenUsageEvidence.v2"
+#TokenUsageEvidenceSchemaVersion: "cueflow.tokenUsageEvidence.v2"
 #TokenUsageEvidenceStatus:        "ok" | "partial" | "unavailable" | "parse_failed"
 #TokenUsageEvidenceSourceKind:    "codex-script-log" | "codex-session-artifact" | "chat-paste" | "file" | "unknown"
 #TokenUsageEvidenceTimestamp:     =~"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
@@ -63,7 +63,7 @@ package lifecycle
 }
 
 #ProcessLifecycleProof: {
-	schemaVersion: "cuerail.processLifecycleProof.v1"
+	schemaVersion: "cueflow.processLifecycleProof.v1"
 
 	slice: {
 		id:        string

@@ -2,6 +2,8 @@ package contracts
 
 #ContractRef:
 	"contracts.architecture" |
+	"contracts.architecture.foundation" |
+	"contracts.cue-flow.loop" |
 	"contracts.agentflow.premutation" |
 	"contracts.git.mutation" |
 	"contracts.git.evidence" |
@@ -11,6 +13,9 @@ package contracts
 
 #GateRef:
 	"architecture-boundary" |
+	"root-schema-vet" |
+	"promo-gate-vet" |
+	"cue-flow-import" |
 	"agentflow-premutation" |
 	"git-mutation-admission" |
 	"git-closeout" |
@@ -20,6 +25,8 @@ package contracts
 	"loaded-files" |
 	"denied-loads" |
 	"required-mcp-tools" |
+	"mcp-rag-resolution" |
+	"mcp-flow-composer" |
 	"validation-commands" |
 	"git-status" |
 	"git-diff" |
@@ -29,8 +36,8 @@ package contracts
 	id: string
 
 	contracts: [...#ContractRef]
-	gates:     [...#GateRef]
-	evidence:  [...#EvidenceRef]
+	gates: [...#GateRef]
+	evidence: [...#EvidenceRef]
 
 	invariants: #ArchitectureContract
 }

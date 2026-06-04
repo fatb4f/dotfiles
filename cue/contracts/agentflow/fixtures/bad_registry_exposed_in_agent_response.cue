@@ -7,7 +7,7 @@ badRegistryExposedInAgentResponse: agentflow.#PreMutationRejectedAgentFlowRun & 
 	rootResponse: {
 		objective: badRegistryExposedInAgentResponse.objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   false

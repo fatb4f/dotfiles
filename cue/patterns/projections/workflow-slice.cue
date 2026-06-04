@@ -5,7 +5,7 @@ import domain "github.com/fatb4f/dotfiles/cue/patterns/domain"
 import workflows "github.com/fatb4f/dotfiles/cue/patterns/workflows"
 
 #WorkflowSlice: {
-	schemaVersion: "cuerail.workflowSlice.v1"
+	schemaVersion: "cueflow.workflowSlice.v1"
 	selected:      workflows.generatedCliChange
 	involvedDomainCards: {
 		sourceCode: domain.sourceCode

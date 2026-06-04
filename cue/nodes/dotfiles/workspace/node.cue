@@ -3,10 +3,10 @@ package workspace
 import nodes "github.com/fatb4f/dotfiles/cue/nodes"
 
 node: nodes.#Node & {
-	id:        "dotfiles.workspace"
-	kind:      "repo"
+	id:   "dotfiles.workspace"
+	kind: "repo"
 	namespace: ["dotfiles"]
-	name:      "workspace"
+	name: "workspace"
 
 	surfaces: {
 		root: {

@@ -312,7 +312,7 @@ package domain
 }
 
 #NormalizedRootResponse: ({
-	schemaVersion: "cuerail.normalizedRootResponse.v1"
+	schemaVersion: "cueflow.normalizedRootResponse.v1"
 	requestID:     string
 	promotion: #PromotedProjection & {
 		promotionOutcome: {
@@ -326,7 +326,7 @@ package domain
 	agentContext: #AgentConsumableContext
 	diagnostics?: _|_
 } | {
-	schemaVersion: "cuerail.normalizedRootResponse.v1"
+	schemaVersion: "cueflow.normalizedRootResponse.v1"
 	requestID:     string
 	promotion: #PromotedProjection & {
 		promotionOutcome: {
@@ -457,7 +457,7 @@ package domain
 }
 
 #RootValidationContract: {
-	schemaVersion: "cuerail.rootValidationContract.v1"
+	schemaVersion: "cueflow.rootValidationContract.v1"
 	source:        "cue/patterns/domain/schema.cue"
 	model: {
 		gateEvaluation: "pure-cue-unification"
@@ -475,7 +475,7 @@ package domain
 }
 
 #ValidationAssessment: {
-	schemaVersion: "cuerail.validationAssessmentSlice.v1"
+	schemaVersion: "cueflow.validationAssessmentSlice.v1"
 	contract:      #RootValidationContract
 	observedFacts: #ObservedFactSet
 	validationGates: {
@@ -492,7 +492,7 @@ package domain
 }
 
 #ValidationReportManifest: {
-	schemaVersion: "cuerail.validationReportManifest.v1"
+	schemaVersion: "cueflow.validationReportManifest.v1"
 	reportID:      string
 	generatedFrom: {
 		projection: string

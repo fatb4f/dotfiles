@@ -7,45 +7,45 @@ import "strings"
 #PatternQuery: {
 	objective: string
 	entities?: [...string]
-	paths?:    [...string]
+	paths?: [...string]
 	taskHints?: [...string]
 }
 
 #PatternIndexEntry: {
 	id:         string
 	patternRef: string
-	entities:   [...string]
-	keywords:   [...string]
+	entities: [...string]
+	keywords: [...string]
 }
 
 #CandidatePattern: {
 	id:         string
 	patternRef: string
-	entities:   [...string]
-	keywords:   [...string]
+	entities: [...string]
+	keywords: [...string]
 	matchedBy: [..."objective" | "entity" | "path" | "taskHint"]
-	blocked?: bool
+	blocked?:     bool
 	blockReason?: string
 }
 
 #PatternRoute: {
-	id:          string
-	patternRef:  string
-	retrieval:   "cue-package" | "cue-file" | "mcp-rag"
+	id:         string
+	patternRef: string
+	retrieval:  "cue-package" | "cue-file" | "mcp-rag"
 	entrypoints: [...string]
 }
 
 #PatternRetrievalPlan: {
-	query:    #PatternQuery
-	routes:   [...#PatternRoute]
+	query: #PatternQuery
+	routes: [...#PatternRoute]
 	selected: [...#PatternIndexEntry]
 }
 
 #PatternResolution: {
 	query: #PatternQuery
 	candidates: [...#PatternIndexEntry]
-	selected:   [...#PatternIndexEntry]
-	status:     "selected" | "ambiguous" | "blocked" | "none"
+	selected: [...#PatternIndexEntry]
+	status: "selected" | "ambiguous" | "blocked" | "none"
 }
 
 #PathRole: "policy" | "adapter" | "bootstrap" | "config" | "generated" | "legacy"

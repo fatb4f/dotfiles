@@ -11,7 +11,7 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 	rootResponse: {
 		objective: _objective
 		rootConsultation: {
-			viaMCP:             true
+			viaTransport:       true
 			objectivePresented: true
 			responseExported:   true
 			responseAccepted:   true
@@ -131,8 +131,8 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 		runID:     "agentflow.premutation.good"
 		objective: _objective
 		root: {
-			consultedViaMCP:  true
-			responseAccepted: true
+			consultedViaTransport: true
+			responseAccepted:      true
 		}
 		plan: {
 			id:               "plan.agentflow.premutation.gate"
