@@ -156,7 +156,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#RootIndex"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "root-agents-cue"
-			consumedBy: ["root-mcp", "go-cue-flow-adapter"]
+			consumedBy: ["root-mcp", "go-cue-adapter"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-cue-schema"
 			stateKind:        "contract-state"
@@ -168,7 +168,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#AgentNode"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "workspace-agents-cue"
-			consumedBy: ["root-mcp", "go-cue-flow-adapter"]
+			consumedBy: ["root-mcp", "go-cue-adapter"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-cue-schema"
 			stateKind:        "contract-state"
@@ -180,7 +180,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#RootSelectionResponse"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "workspace-projections-cue"
-			consumedBy: ["go-cue-flow-adapter", "agent-prompt"]
+			consumedBy: ["go-cue-adapter", "agent-prompt"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-mcp"
 			stateKind:        "projection-state"
@@ -192,7 +192,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			schema:          "agentnode.#RootAuthorizationEvidence"
 			schemaAuthority: "root-cue-schema"
 			producedBy:      "workspace-projections-cue"
-			consumedBy: ["root-mcp", "go-cue-flow-adapter", "agent-prompt"]
+			consumedBy: ["root-mcp", "go-cue-adapter", "agent-prompt"]
 			validatedBy: ["root-cue-schema"]
 			authorizedBy:     "root-cue-schema"
 			stateKind:        "evidence-state"
@@ -217,26 +217,26 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			name:          "root selection response"
 			owner:         "root-cue-schema"
 			sourceOfTruth: "root-cue-schema"
-			readBy: ["root-mcp", "go-cue-flow-adapter", "agent-prompt"]
+			readBy: ["root-mcp", "go-cue-adapter", "agent-prompt"]
 			writtenBy: ["workspace-projections-cue"]
 			validatedBy: ["root-cue-schema"]
 			persistenceClass: "artifact-backed"
 		},
 		{
 			name:          "cue flow adapter load observation"
-			owner:         "go-cue-flow-adapter"
+			owner:         "go-cue-adapter"
 			sourceOfTruth: "root-cue-schema"
 			readBy: ["root-mcp", "agent-prompt"]
-			writtenBy: ["go-cue-flow-adapter"]
+			writtenBy: ["go-cue-adapter"]
 			validatedBy: ["root-cue-schema"]
 			persistenceClass: "runtime-only"
 		},
 		{
 			name:          "cue flow execution state"
-			owner:         "cue-flow-engine"
+			owner:         "cuelang-flow-runtime"
 			sourceOfTruth: "root-cue-schema"
-			readBy: ["go-cue-flow-adapter"]
-			writtenBy: ["cue-flow-engine"]
+			readBy: ["go-cue-adapter"]
+			writtenBy: ["cuelang-flow-runtime"]
 			validatedBy: ["root-cue-schema"]
 			persistenceClass: "runtime-only"
 		},
@@ -245,7 +245,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 	relations: [
 		{
 			from:      "workspace-agents-cue"
-			to:        "go-cue-flow-adapter"
+			to:        "go-cue-adapter"
 			artifact:  "workspace.node"
 			operation: "consumes"
 			authority: "root-cue-schema"
@@ -258,7 +258,7 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			rationale: "The Go CUE flow adapter may consume workspace contracts only after they conform to the root AgentNode schema."
 		},
 		{
-			from:             "go-cue-flow-adapter"
+			from:             "go-cue-adapter"
 			to:               "workspace-projections-cue"
 			artifact:         "workspace.rootSelectionResponse.evidence"
 			operation:        "emits-evidence"
@@ -273,8 +273,8 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			rationale: "The Go CUE flow adapter may emit runtime observations only as root-shaped authorization evidence."
 		},
 		{
-			from:      "go-cue-flow-adapter"
-			to:        "cue-flow-engine"
+			from:      "go-cue-adapter"
+			to:        "cuelang-flow-runtime"
 			artifact:  "cuelang.org/go/tools/flow"
 			operation: "adapts"
 			authority: "root-cue-schema"
@@ -308,11 +308,11 @@ rootSchemaDerivedFixture: agentnode.#RootContractCatalog & {
 			rationale: "Agent prompts consume bounded projections derived from root-shaped CUE contracts."
 		},
 		{
-			from:      "go-cue-flow-adapter"
+			from:      "go-cue-adapter"
 			to:        "workspace-projections-cue"
 			artifact:  "hidden-go-policy"
 			operation: "authorizes"
-			authority: "go-cue-flow-adapter"
+			authority: "go-cue-adapter"
 			stateKind: "contract-state"
 			allowed:   false
 			rationale: "Go adapter-owned policy is architectural drift because policy authority must remain in the root CUE schema."

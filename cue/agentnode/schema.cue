@@ -98,19 +98,3 @@ package agentnode
 	sessionBoundaryPrimitive?: string
 	evidence?:                 #WorkspaceSelectionEvidence
 }
-
-#RALPHMCPSemanticTool: {
-	canonical:         bool
-	mode:              "read-only"
-	policyAuthority:   "cue"
-	adapterAuthority:  "runtime-containment"
-	adapterOwnsPolicy: false
-	lspSymbol:         string
-}
-
-#RALPHMCPSemanticBinding: {
-	authorityPackage: string
-	tools: [string]: #RALPHMCPSemanticTool
-	deniedAuthoritySurfaces?: [...string]
-	invariant: string
-}
