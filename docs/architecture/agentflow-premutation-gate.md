@@ -1,6 +1,6 @@
 # Agentflow Pre-Mutation Gate
 
-Status: contract gate proof slice.
+Status: mutation wrapper proof slice.
 
 ## Invariant
 
@@ -24,15 +24,31 @@ Presence is not enough. A scoped node has to prove `projectedBeforeMutation: tru
 bin/agentflow-check cue/contracts/agentflow/runs/good-premutation.cue
 ```
 
+Controlled mutation path:
+
+```sh
+bin/agentflow-mutate \
+  --manifest cue/contracts/agentflow/runs/good-premutation.cue \
+  -- touch tmp/agentflow-proof-ok
+```
+
 Expected rejection families:
 
 ```sh
 ! bin/agentflow-check cue/contracts/agentflow/runs/bad-missing-promo.cue
 ! bin/agentflow-check cue/contracts/agentflow/runs/bad-scope-drift.cue
+! bin/agentflow-mutate \
+  --manifest cue/contracts/agentflow/runs/bad-missing-promo.cue \
+  -- touch tmp/agentflow-proof-bad
+! bin/agentflow-mutate \
+  --manifest cue/contracts/agentflow/runs/bad-scope-drift.cue \
+  -- touch tmp/agentflow-proof-drift
+! bin/agentflow-mutate \
+  -- touch tmp/agentflow-proof-missing
 ```
 
 ## Boundary
 
-The genesis contract commit created the validator language. This slice adds the executable pre-mutation check surface for future mutating work.
+The genesis contract commit created the validator language. The first repair commit added the executable pre-mutation check surface. This slice adds a controlled write-capable command boundary that invokes the check before the requested command runs.
 
-It still depends on the agent or wrapper invoking `bin/agentflow-check` before mutation. The next enforcement step is to bind that command into the mutating runtime wrapper.
+This proves first-pass gate coverage for commands routed through `bin/agentflow-mutate`. It does not prove full runtime coverage for every other possible write path.

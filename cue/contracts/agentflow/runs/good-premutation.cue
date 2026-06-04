@@ -31,6 +31,7 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 					"cue/contracts/agentflow/fixtures/good.cue",
 					"cue/contracts/agentflow/runs/*.cue",
 					"bin/agentflow-check",
+					"bin/agentflow-mutate",
 					"docs/architecture/agentflow-premutation-gate.md",
 				]
 			}
@@ -95,6 +96,7 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 						"cue/contracts/agentflow/fixtures/good.cue",
 						"cue/contracts/agentflow/runs/*.cue",
 						"bin/agentflow-check",
+						"bin/agentflow-mutate",
 						"docs/architecture/agentflow-premutation-gate.md",
 					]
 				}
@@ -110,6 +112,7 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 					"cue fmt ./cue/contracts/agentflow/...",
 					"cue vet ./cue/contracts/agentflow/...",
 					"bin/agentflow-check cue/contracts/agentflow/runs/good-premutation.cue",
+					"bin/agentflow-mutate --manifest cue/contracts/agentflow/runs/good-premutation.cue -- touch tmp/agentflow-proof-ok",
 				]
 			},
 		]
@@ -180,6 +183,7 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 						"cue/contracts/agentflow/fixtures/good.cue",
 						"cue/contracts/agentflow/runs/*.cue",
 						"bin/agentflow-check",
+						"bin/agentflow-mutate",
 						"docs/architecture/agentflow-premutation-gate.md",
 					]
 				}
@@ -204,6 +208,7 @@ goodPremutation: agentflow.#AcceptedAgentFlowRun & {
 				"cue fmt ./cue/contracts/agentflow/...",
 				"cue vet ./cue/contracts/agentflow/...",
 				"bin/agentflow-check cue/contracts/agentflow/runs/good-premutation.cue",
+				"bin/agentflow-mutate --manifest cue/contracts/agentflow/runs/good-premutation.cue -- touch tmp/agentflow-proof-ok",
 			]
 			promoEvidenceSources: [
 				"cue/contracts/agentflow/runs/good-premutation.cue#project-gate",
