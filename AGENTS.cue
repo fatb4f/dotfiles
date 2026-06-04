@@ -256,3 +256,88 @@ runtimePreflightFixture: agentnode.#RuntimePreflightReport & {
 	sessionBoundaryPrimitive: "restart"
 	evidence:                 _selectedRuntimeCase.evidence
 }
+
+ralphMCPBinding: agentnode.#RALPHMCPSemanticBinding & {
+	authorityPackage: "root.AGENTS"
+	tools: {
+		cue_eval: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.cue_eval"
+		}
+		cue_validate: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.cue_validate"
+		}
+		ralph_runtime_preflight: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.ralph_runtime_preflight"
+		}
+		ralph_git_mcp_allowlist: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.ralph_git_mcp_allowlist"
+		}
+		cue_symbol_resolve: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.cue_symbol_resolve"
+		}
+		cue_symbol_references: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.cue_symbol_references"
+		}
+		cue_diagnostics: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.cue_diagnostics"
+		}
+		ralph_surface_resolve: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.ralph_surface_resolve"
+		}
+		ralph_surface_preflight: {
+			canonical:         true
+			mode:              "read-only"
+			policyAuthority:   "cue"
+			adapterAuthority:  "runtime-containment"
+			adapterOwnsPolicy: false
+			lspSymbol:         "ralphMCPBinding.tools.ralph_surface_preflight"
+		}
+	}
+	deniedAuthoritySurfaces: [
+		"cue-flow",
+		"cueFlowLoopContract",
+		"legacy root authority facts",
+		"snapshot-only permissions",
+	]
+	invariant: "cue-lsp-compatible symbol resolution is semantic evidence only; cue eval/vet remains contract-truth validation and mutation remains outside this read-only adapter."
+}
