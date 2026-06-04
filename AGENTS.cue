@@ -162,6 +162,37 @@ rootAgentContract: agentnode.#RootIndex & {
 	]
 }
 
+cueFlowLoopContract: {
+	id: "dotfiles.cue-flow-loop"
+
+	authority: {
+		repositoryNodeContract: "AGENTS.cue"
+		markdownRole:           "protocol-and-routing-overlay"
+		cueOwnsPolicy:          true
+		adapterOwnsPolicy:      false
+	}
+
+	loadAuthorization: {
+		requiredEvidence: [
+			"selected node",
+			"selected pattern",
+			"explicit index",
+			"root-declared fallback surface",
+		]
+		relevanceOnlyLoadsAllowed: false
+	}
+
+	operations: {
+		mcpToolsMustFollowSelectedNode: true
+		closeoutMustRecord: [
+			"loaded files",
+			"denied loads",
+			"required MCP/tool use",
+			"validation evidence",
+		]
+	}
+}
+
 workspaceGraphFixture: agentnode.#WorkspaceGraph & rootAgentContract.workspaceGraph
 
 _gitMCPAllowlistRepoIDs: [

@@ -2,6 +2,16 @@
 
 Root router only.
 
+## Cue-Flow Loop Contract
+
+The intended cue-flow loop is root-contract driven:
+
+1. `AGENTS.cue` is the repository node contract when it exists.
+2. `AGENTS.md` states protocol and routing only; use it as natural-language overlay, not as the authority over CUE.
+3. File loads require CUE authorization evidence: selected node, selected pattern, explicit index, or root-declared fallback surface.
+4. Adapters and MCP tools may emit evidence, but they must not create hidden authorization policy.
+5. Record loaded files, denied loads, required MCP/tool use, and validation evidence before close-out.
+
 ## First-Contact Discovery Guard
 
 When a task concerns cards, projections, or rediscovery-replacement records:
