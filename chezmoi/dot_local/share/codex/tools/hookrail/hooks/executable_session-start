@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-set -euo pipefail
-codex_home="${CODEX_HOME:-$HOME/.local/share/codex}"
-exec "${HOOKRAIL_BIN:-$codex_home/tools/hookrail/bin/hookrail}" hook "$@"
