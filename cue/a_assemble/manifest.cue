@@ -19,7 +19,7 @@ manifest: {
 	boundaries: {
 		upstream: ["R"]
 		downstream: ["L"]
-		forbidden: ["consume unaccepted retrieval", "execute tasks", "grant mutation admissibility", "call task.Fill"]
+		forbidden: ["consume unaccepted retrieval", "execute tasks", "grant mutation admissibility", "define task shape from adapter"]
 		authorityMode: "contract"
 	}
 

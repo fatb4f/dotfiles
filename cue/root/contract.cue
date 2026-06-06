@@ -115,9 +115,9 @@ package root
 
 	edges: [
 		{from: "R", to: "A", requires: "R.accepted", meaning: "accepted retrieval feeds assembly"},
-		{from: "A", to: "L", requires: "A.accepted", meaning: "accepted graph feeds legitimation"},
-		{from: "L", to: "P", requires: "L.accepted", meaning: "legitimized graph may perform"},
-		{from: "P", to: "H", requires: "P.accepted", meaning: "accepted run evidence may harden"},
+		{from: "A", to: "L", requires: "A.accepted", meaning: "accepted graph bounds context loading"},
+		{from: "L", to: "P", requires: "L.accepted", meaning: "loaded context feeds observed diff validation"},
+		{from: "P", to: "H", requires: "P.accepted", meaning: "accepted promotion candidate feeds final hardening"},
 	]
 
 	nodes: {
@@ -134,7 +134,7 @@ package root
 		"L precedes P",
 		"P precedes H",
 		"no adapter execution before L.accepted",
-		"no durable write before H",
+		"no export before H.accepted",
 		"contracts own policy",
 		"metadata leaves never claim root authority",
 	]

@@ -1,26 +1,53 @@
 package h_harden
 
 goodHarden: #HardenPhase & {
-	input: {runManifest: {id: "run.good"}, runAccepted: true}
+	input: {promotionCandidate: {id: "promotion.good"}, promotionAccepted: true}
 	output: {
-		id:                "lifecycle.good"
-		sourceRun:         "run.good"
-		sourceRunAccepted: true
-		persisted:         true
-		distilledFacts: []
-		promotedPatterns: []
-		retiredAmbiguity: []
+		id:                      "acceptedRunManifest.good"
+		sourcePromotion:         "promotion.good"
+		sourcePromotionAccepted: true
+		boundaryProof: {
+			noCustomRuntimeInvented:    true
+			noAppServerBoundaryCrossed: true
+			noUnacceptedMutationExport: true
+			noUndeclaredMutation:       true
+			noHiddenAppServerState:     true
+			noCommitStackReasoning:     true
+			cueExportBoundaryAccepted:  true
+		}
+		export: {command: "cue export", produces: "acceptedRunManifest"}
 		ambiguity: []
 	}
 }
 
-badHardenWithoutRun: #LifecycleRecord & {
-	id:                "lifecycle.bad.no_run"
-	sourceRun:         "run.rejected"
-	sourceRunAccepted: true
-	persisted:         false
-	distilledFacts: []
-	promotedPatterns: []
-	retiredAmbiguity: []
-	ambiguity: [{kind: "harden_without_accepted_run", path: "P.output.RunManifest", reason: "Cannot persist without accepted run evidence.", severity: "blocker"}]
+acceptedRunManifest: goodHarden.output
+
+negativeRuntimeBoundaryInvented: {
+	id: "acceptedRunManifest.bad.runtime"
+	boundaryProof: {
+		noCustomRuntimeInvented: false
+	}
+	ambiguity: [{kind: "runtime_boundary_invented", path: "H.boundaryProof", reason: "H may not accept a custom runtime boundary.", severity: "blocker"}]
+}
+
+negativeCommitStackReasoningIntroduced: {
+	id: "acceptedRunManifest.bad.commit_stack"
+	boundaryProof: {
+		noCommitStackReasoning: false
+	}
+	ambiguity: [{kind: "commit_stack_reasoning_introduced", path: "H.boundaryProof", reason: "H does not own commit-stack or squash reasoning.", severity: "blocker"}]
+}
+
+negativeHiddenAppServerStateAssumed: {
+	id: "acceptedRunManifest.bad.hidden_app_state"
+	boundaryProof: {
+		noHiddenAppServerState: false
+	}
+	ambiguity: [{kind: "hidden_app_server_state_assumed", path: "H.boundaryProof", reason: "H requires explicit boundary evidence.", severity: "blocker"}]
+}
+
+negativeDurableExportBeforeAcceptedState: {
+	id:                      "acceptedRunManifest.bad.unaccepted"
+	sourcePromotionAccepted: false
+	ambiguity: [{kind: "durable_export_before_accepted_state", path: "P.accepted", reason: "H cannot export before P.accepted.", severity: "blocker"}]
 }

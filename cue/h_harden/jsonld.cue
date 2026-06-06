@@ -3,14 +3,14 @@ package h_harden
 #HardenJSONLD: {
 	"@context": {
 		"ralph":  "https://fatb4f.dev/ns/ralph#"
-		"record": "ralph:record"
-		"memory": "ralph:memory"
+		"proof":  "ralph:proof"
+		"export": "ralph:export"
 	}
 	"@id":   "ralph:H"
 	"@type": "ralph:PhaseNode"
 
 	id:       "H"
 	parent:   "root"
-	consumes: "RunManifest"
-	produces: "LifecycleRecord"
+	consumes: "PromotionCandidate"
+	produces: "AcceptedRunManifest"
 }

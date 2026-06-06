@@ -1,37 +1,37 @@
 package p_perform
 
 manifest: {
-	"@context": "https://fatb4f.dev/ns/ralph/perform/v0"
+	"@context": "https://fatb4f.dev/ns/ralph/promote/v0"
 	"@id":      "ralph:P"
 	"@type":    "ralph:PhaseManifest"
 
 	id:    "P"
-	label: "Perform"
+	label: "Promote"
 
 	scope: {
-		owns: ["accepted task execution", "adapter invocation evidence", "task.Fill evidence", "run manifest emission"]
-		mayRead: ["A.output.TaskGraphContract", "L.output.ValidationFacts", "leaf.agentflow.run_manifest", "leaf.registry.execution"]
-		mayWrite: ["RunManifest", "execution evidence"]
-		mayExecute: true
+		owns: ["observed mutation validation", "changed path evidence", "validation evidence", "promotion candidate emission"]
+		mayRead: ["A.output.TaskGraphContract", "L.output.LoadedContext", "worktree diff evidence", "validation evidence"]
+		mayWrite: ["PromotionCandidate"]
+		mayExecute: false
 		mayPersist: false
 	}
 
 	boundaries: {
 		upstream: ["L"]
 		downstream: ["H"]
-		forbidden: ["execute before L.accepted", "authorize mutation", "broaden mutation scope", "persist durable memory"]
+		forbidden: ["validate before L.accepted", "authorize mutation", "broaden mutation scope", "persist durable memory", "export final manifest"]
 		authorityMode: "evidence"
 	}
 
 	inputs: [
 		{id: "taskGraphContract", from: "A", kind: "TaskGraphContract", acceptedRequired: true},
-		{id: "validationFacts", from: "L", kind: "ValidationFacts", acceptedRequired: true},
+		{id: "loadedContext", from: "L", kind: "LoadedContext", acceptedRequired: true},
 	]
-	outputs: [{id: "runManifest", to: "H", kind: "RunManifest", acceptedBy: "P.accepted"}]
+	outputs: [{id: "promotionCandidate", to: "H", kind: "PromotionCandidate", acceptedBy: "P.accepted"}]
 
 	control: {
-		invariants: ["L.accepted == true", "executedOnlyAcceptedTasks == true", "agentCalledRawFill == false", "runner owns no policy"]
-		rejects: ["raw_fill_called_by_agent", "taskfill_unvalidated", "nonaccepted_task_executed", "mutation_outside_scope"]
-		acceptance: ["only accepted tasks executed", "run evidence emitted", "len(ambiguity) == 0"]
+		invariants: ["L.accepted == true", "changed paths match task graph", "validations passed", "prior accepted states preserved"]
+		rejects: ["validation_missing", "changed_path_not_in_graph", "graph_not_preserved", "ready_for_mutation_too_early"]
+		acceptance: ["observed diff is declared", "validations passed", "readyForExport == true", "len(ambiguity) == 0"]
 	}
 }

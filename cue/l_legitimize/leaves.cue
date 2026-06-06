@@ -1,13 +1,13 @@
 package l_legitimize
 
 #Leaf: {
-	"@context": "https://fatb4f.dev/ns/ralph/legitimize/v0"
+	"@context": "https://fatb4f.dev/ns/ralph/load/v0"
 	"@id":      string
 	"@type":    "ralph:MetadataLeaf"
 
 	id:            string
 	parentNode:    "L"
-	function:      "legitimation-contract" | "promotion-gate-vocabulary" | "surface-authority-matrix"
+	function:      "bounded-context" | "denied-load-evidence" | "surface-authority-matrix"
 	sourceSurface: string
 
 	authority: {
@@ -34,27 +34,27 @@ leaves: [...#Leaf] & [
 		parentNode:    "L"
 		function:      "surface-authority-matrix"
 		sourceSurface: "cue/contracts/architecture.cue"
-		authority: {mayGrantLoadAdmissibility: true, mayGrantMutationAdmissibility: true}
+		authority: {mayGrantLoadAdmissibility: true, mayGrantMutationAdmissibility: false}
 		roundTrip: {backToLeaf: "leaf.architecture.boundary"}
 		invariants: ["contracts own policy", "adapters own no policy", "nodes/patterns/registry are non-authority"]
 	},
 	{
-		"@id":         "ralph:leaf.agentflow.legitimation"
-		id:            "leaf.agentflow.legitimation"
+		"@id":         "ralph:leaf.loaded_context"
+		id:            "leaf.loaded_context"
 		parentNode:    "L"
-		function:      "legitimation-contract"
-		sourceSurface: "cue/contracts/agentflow/schema.cue"
-		authority: {mayGrantLoadAdmissibility: false, mayGrantMutationAdmissibility: true}
-		roundTrip: {backToLeaf: "leaf.agentflow.legitimation"}
-		invariants: ["root response accepted", "promo requirements imported", "no direct registry loads before root acceptance"]
+		function:      "bounded-context"
+		sourceSurface: "cue/l_legitimize/contract.cue"
+		authority: {mayGrantLoadAdmissibility: true, mayGrantMutationAdmissibility: false}
+		roundTrip: {backToLeaf: "leaf.loaded_context"}
+		invariants: ["loaded files are selected or declared", "hidden authority loads are rejected"]
 	},
 	{
-		"@id":         "ralph:leaf.promotion"
-		id:            "leaf.promotion"
+		"@id":         "ralph:leaf.denied_loads"
+		id:            "leaf.denied_loads"
 		parentNode:    "L"
-		function:      "promotion-gate-vocabulary"
-		sourceSurface: "cue/patterns/domain/schema.cue"
-		roundTrip: {backToLeaf: "leaf.promotion"}
-		invariants: ["promotion outcome derives by CUE unification", "rejected relations cannot satisfy promotion"]
+		function:      "denied-load-evidence"
+		sourceSurface: "cue/l_legitimize/fixtures.cue"
+		roundTrip: {backToLeaf: "leaf.denied_loads"}
+		invariants: ["sibling loads remain denied", "unbounded scans remain denied"]
 	},
 ]

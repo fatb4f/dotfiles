@@ -1,65 +1,81 @@
 package p_perform
 
-#ExecutedTask: {
-	id:                      string
-	acceptedBeforeExecution: true
-	runner:                  string
-	evidencePath?:           string
+#ChangedPath: {
+	path:       string
+	taskID:     string
+	declaredIn: string
 }
 
-#RunManifest: {
+#ValidationResult: {
+	id:       string
+	command:  string
+	passed:   bool
+	evidence: string
+}
+
+#PromotionCandidate: {
 	id: string
 
-	executedTasks: [...#ExecutedTask]
-	executedOnlyAcceptedTasks: bool
+	taskGraphContract:         _
+	taskGraphContractAccepted: true
+	loadedContext:             _
+	loadedContextAccepted:     true
+
+	changedPaths: [...#ChangedPath]
+	validations: [...#ValidationResult]
+
+	checks: {
+		changedPathsMatchTaskGraph: true
+		noUndeclaredMutation:       true
+		validationsPassed:          true
+		priorAcceptedStatesHeld:    true
+		readyForMutationWasFalse:   true
+		readyForExport:             true
+		ambiguityCount:             0
+
+		for validation in validations {
+			validationsPassed: validation.passed == true
+		}
+	}
 
 	agent: {
-		role:          "semantic-runner"
-		proposedFill:  bool
-		ownsPolicy:    false
-		calledRawFill: false
+		role:       "codex-worktree"
+		ownsPolicy: false
 	}
 
 	runner: {
-		role:           "ralph-runner" | "hookrail-evidence" | "adapter-runner"
-		validatedFill:  bool
-		calledTaskFill: bool
-		ownsPolicy:     false
-	}
-
-	execution: {
-		sourcePackage:             string
-		terminated:                bool
-		completionEvidencePresent: bool
+		role:       "ambient-worktree" | "apply-patch" | "validation-command"
+		ownsPolicy: false
 	}
 
 	ambiguity: [...string]
 }
 
-#PerformPhase: {
-	"@context": "https://fatb4f.dev/ns/ralph/perform/v0"
+#PromotePhase: {
+	"@context": "https://fatb4f.dev/ns/ralph/promote/v0"
 	"@id":      "ralph:P"
 	"@type":    "ralph:PhaseNode"
 
 	id:   "P"
-	name: "perform"
+	name: "promote"
 
 	input: {
-		taskGraphContract: _
-		validationFacts:   _
-		legitimized:       true
+		taskGraphContract:     _
+		loadedContext:         _
+		loadedContextAccepted: true
 	}
 
-	output: #RunManifest
+	output: #PromotionCandidate
 
-	accepted: output.executedOnlyAcceptedTasks == true && output.runner.calledTaskFill == true && output.agent.calledRawFill == false && len(output.ambiguity) == 0
+	accepted: output.checks.changedPathsMatchTaskGraph == true && output.checks.noUndeclaredMutation == true && output.checks.validationsPassed == true && output.checks.priorAcceptedStatesHeld == true && output.checks.readyForExport == true && len(output.ambiguity) == 0
 
 	control: {
 		invariants: [
-			"P executes only what L legitimized",
-			"P does not authorize",
-			"P does not persist durable memory",
-			"agent never calls raw fill",
+			"P validates observed mutation evidence",
+			"P changed paths must match the accepted graph",
+			"P does not broaden mutation scope",
+			"P preserves prior accepted states",
+			"P emits an export candidate only",
 		]
 	}
 }

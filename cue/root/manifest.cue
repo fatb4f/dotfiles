@@ -39,7 +39,7 @@ rootManifest: {
 			"each metadata leaf belongs to exactly one RALPH node",
 			"each leaf round-trips to node contract and root graph",
 			"root never executes adapters",
-			"root never writes durable memory directly",
+			"root never exports a manifest directly",
 		]
 	}
 }

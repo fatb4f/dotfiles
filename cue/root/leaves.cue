@@ -29,20 +29,20 @@ foldInventory: [...#InventoryItem] & [
 		reason:         "Keeps enums, removes old loop-shaped authority vocabulary."
 	},
 	{
-		id:             "contracts.agentflow.legitimation"
+		id:             "contracts.agentflow.load_context"
 		currentSurface: "cue/contracts/agentflow/schema.cue"
 		status:         "split"
 		foldInto:       "L"
-		newRole:        "root response, promo gate, mutation admissibility"
-		reason:         "Pre-execution legitimacy belongs to L."
+		newRole:        "bounded context and load evidence"
+		reason:         "Declared load materialization belongs to L."
 	},
 	{
-		id:             "contracts.agentflow.run_manifest"
+		id:             "contracts.agentflow.promotion_candidate"
 		currentSurface: "cue/contracts/agentflow/schema.cue"
 		status:         "split"
 		foldInto:       "P"
-		newRole:        "run manifest and execution evidence"
-		reason:         "Execution evidence belongs to P."
+		newRole:        "promotion candidate and observed mutation evidence"
+		reason:         "Observed diff validation belongs to P."
 	},
 	{
 		id:             "task_graph.contract"
@@ -73,8 +73,8 @@ foldInventory: [...#InventoryItem] & [
 		currentSurface: "cue/registry/evidence.cue"
 		status:         "adapt"
 		foldInto:       "P"
-		newRole:        "adapter execution evidence"
-		reason:         "Runtime evidence belongs to P, not retrieval authority."
+		newRole:        "validation evidence"
+		reason:         "Validation evidence belongs to P, not retrieval authority."
 	},
 	{
 		id:             "nodes.schema"
@@ -89,16 +89,16 @@ foldInventory: [...#InventoryItem] & [
 		currentSurface: "cue/patterns/domain/schema.cue"
 		status:         "adapt"
 		foldInto:       "L"
-		newRole:        "promotion and validation vocabulary"
-		reason:         "Promotion gates are legitimacy facts."
+		newRole:        "bounded context vocabulary"
+		reason:         "Load admissibility vocabulary belongs to L."
 	},
 	{
 		id:             "patterns.lifecycle.schema"
 		currentSurface: "cue/patterns/lifecycle/schema.cue"
 		status:         "adapt"
 		foldInto:       "H"
-		newRole:        "closeout and lifecycle evidence"
-		reason:         "Durable hardening consumes accepted process evidence."
+		newRole:        "boundary proof and export evidence"
+		reason:         "Final boundary proof consumes accepted promotion evidence."
 	},
 	{
 		id:             "agents.legacy.loop"

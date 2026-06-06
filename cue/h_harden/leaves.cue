@@ -7,8 +7,8 @@ package h_harden
 
 	id:            "leaf.lifecycle.closeout"
 	parentNode:    "H"
-	function:      "hardening-evidence"
-	sourceSurface: "cue/patterns/lifecycle/schema.cue"
+	function:      "boundary-proof"
+	sourceSurface: "cue/h_harden/contract.cue"
 
 	authority: {
 		isRoot:                        false
@@ -29,5 +29,5 @@ package h_harden
 
 leaves: [#Leaf & {
 	"@id": "ralph:leaf.lifecycle.closeout"
-	invariants: ["closeout evidence is input to H", "closeout evidence is not durable memory by itself", "only accepted run evidence may be hardened"]
+	invariants: ["boundary proof is input to H", "cue export is the final projection", "only accepted promotion evidence may be hardened"]
 }]

@@ -9,26 +9,26 @@ manifest: {
 	label: "Harden"
 
 	scope: {
-		owns: ["durable lifecycle record", "accepted evidence distillation", "pattern promotion record", "retired ambiguity record"]
-		mayRead: ["P.output.RunManifest", "leaf.lifecycle.closeout"]
-		mayWrite: ["LifecycleRecord", "durable CUE state"]
+		owns: ["final boundary proof", "accepted manifest projection", "cue export boundary"]
+		mayRead: ["P.output.PromotionCandidate", "boundary evidence"]
+		mayWrite: ["AcceptedRunManifest"]
 		mayExecute: false
-		mayPersist: true
+		mayPersist: false
 	}
 
 	boundaries: {
 		upstream: ["P"]
 		downstream: []
-		forbidden: ["persist without accepted run", "promote rejected evidence", "promote ambiguity as fact", "write memory from adapter output alone"]
+		forbidden: ["export without accepted promotion", "invent custom runtime", "cross app-server boundary", "assume hidden app-server state", "introduce commit-stack reasoning"]
 		authorityMode: "contract"
 	}
 
-	inputs: [{id: "runManifest", from: "P", kind: "RunManifest", acceptedRequired: true}]
-	outputs: [{id: "lifecycleRecord", to: "durable-state", kind: "LifecycleRecord", acceptedBy: "H.accepted"}]
+	inputs: [{id: "promotionCandidate", from: "P", kind: "PromotionCandidate", acceptedRequired: true}]
+	outputs: [{id: "acceptedRunManifest", to: "cue export", kind: "AcceptedRunManifest", acceptedBy: "H.accepted"}]
 
 	control: {
-		invariants: ["P.accepted == true", "sourceRunAccepted == true", "persisted == true", "distilled facts cite accepted evidence"]
-		rejects: ["harden_without_accepted_run", "durable_write_from_unaccepted_manifest", "promotion_from_rejected_evidence"]
-		acceptance: ["runAccepted == true", "persisted == true", "len(ambiguity) == 0"]
+		invariants: ["P.accepted == true", "boundary proof accepted", "cue export is the final projection", "no undeclared mutation exported"]
+		rejects: ["runtime_boundary_invented", "commit_stack_reasoning_introduced", "hidden_app_server_state_assumed", "durable_export_before_accepted_state"]
+		acceptance: ["promotionAccepted == true", "boundaryProof accepted", "len(ambiguity) == 0"]
 	}
 }

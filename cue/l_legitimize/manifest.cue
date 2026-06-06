@@ -1,17 +1,17 @@
 package l_legitimize
 
 manifest: {
-	"@context": "https://fatb4f.dev/ns/ralph/legitimize/v0"
+	"@context": "https://fatb4f.dev/ns/ralph/load/v0"
 	"@id":      "ralph:L"
 	"@type":    "ralph:PhaseManifest"
 
 	id:    "L"
-	label: "Legitimize"
+	label: "Load"
 
 	scope: {
-		owns: ["root schema vet", "promotion gate vet", "runner boundary vet", "mutation admissibility"]
-		mayRead: ["A.output.TaskGraphContract", "leaf.architecture.boundary", "leaf.agentflow.legitimation", "leaf.promotion"]
-		mayWrite: ["ValidationFacts"]
+		owns: ["bounded context materialization", "declared load evidence", "denied load evidence", "tool surface binding"]
+		mayRead: ["A.output.TaskGraphContract", "root.AGENTS", "selected leaf schemas"]
+		mayWrite: ["LoadedContext"]
 		mayExecute: false
 		mayPersist: false
 	}
@@ -19,16 +19,16 @@ manifest: {
 	boundaries: {
 		upstream: ["A"]
 		downstream: ["P"]
-		forbidden: ["execute adapter", "write durable memory", "accept runner-owned policy", "accept agent-selected workflow without root response"]
+		forbidden: ["execute adapter", "authorize mutation", "load unselected sibling repo", "perform unbounded scan", "accept hidden authority load"]
 		authorityMode: "contract"
 	}
 
 	inputs: [{id: "taskGraphContract", from: "A", kind: "TaskGraphContract", acceptedRequired: true}]
-	outputs: [{id: "validationFacts", to: "P", kind: "ValidationFacts", acceptedBy: "L.accepted"}]
+	outputs: [{id: "loadedContext", to: "P", kind: "LoadedContext", acceptedBy: "L.accepted"}]
 
 	control: {
-		invariants: ["root schema accepted", "promotion gate accepted", "runner boundary accepted", "mutation admissibility accepted"]
-		rejects: ["agent_claims_policy", "runner_claims_policy", "adapter_claims_policy", "mutation_before_legitimation", "post_mutation_projection"]
-		acceptance: ["A.accepted == true", "all gates accepted", "len(ambiguity) == 0"]
+		invariants: ["loadedFiles are declared or root-authorized", "deniedLoads remain denied", "no unbounded scan", "readyForMutation is false"]
+		rejects: ["undeclared_loaded_file", "sibling_repo_loadable", "unbounded_home_src_scan", "unvetted_leaf_loaded", "tool_surface_not_declared"]
+		acceptance: ["A.accepted == true", "context accepted", "ambiguityCount == 0", "readyForMutation == false"]
 	}
 }

@@ -1,16 +1,16 @@
 package p_perform
 
-#PerformJSONLD: {
+#PromoteJSONLD: {
 	"@context": {
-		"ralph": "https://fatb4f.dev/ns/ralph#"
-		"run":   "ralph:run"
-		"fill":  "ralph:fill"
+		"ralph":    "https://fatb4f.dev/ns/ralph#"
+		"promote":  "ralph:promote"
+		"evidence": "ralph:evidence"
 	}
 	"@id":   "ralph:P"
 	"@type": "ralph:PhaseNode"
 
 	id:       "P"
 	parent:   "root"
-	consumes: "ValidationFacts"
-	produces: "RunManifest"
+	consumes: "LoadedContext"
+	produces: "PromotionCandidate"
 }

@@ -1,24 +1,50 @@
 package p_perform
 
-goodPerform: #PerformPhase & {
-	input: {taskGraphContract: {id: "taskGraph.good"}, validationFacts: {id: "validation.good"}, legitimized: true}
+goodPromote: #PromotePhase & {
+	input: {
+		taskGraphContract: {id: "taskGraph.good"}
+		loadedContext: {id: "loadedContext.good"}
+		loadedContextAccepted: true
+	}
 	output: {
-		id: "run.good"
-		executedTasks: []
-		executedOnlyAcceptedTasks: true
-		agent: {proposedFill: true}
-		runner: {role: "ralph-runner", validatedFill: true, calledTaskFill: true}
-		execution: {sourcePackage: "cuelang.org/go/tools/flow", terminated: true, completionEvidencePresent: true}
+		id: "promotion.good"
+		taskGraphContract: {id: "taskGraph.good"}
+		taskGraphContractAccepted: true
+		loadedContext: {id: "loadedContext.good"}
+		loadedContextAccepted: true
+		changedPaths: []
+		validations: [
+			{id: "cue-vet", command: "cue vet ./cue/...", passed: true, evidence: "validation.cue-vet"},
+		]
+		agent: {role: "codex-worktree"}
+		runner: {role: "apply-patch"}
 		ambiguity: []
 	}
 }
 
-badRawFill: {
-	id: "run.bad.raw_fill"
-	executedTasks: []
-	executedOnlyAcceptedTasks: false
-	agent: {proposedFill: true, calledRawFill: true}
-	runner: {role: "ralph-runner", validatedFill: false, calledTaskFill: false}
-	execution: {sourcePackage: "cuelang.org/go/tools/flow", terminated: false, completionEvidencePresent: false}
-	ambiguity: ["raw_fill_called_by_agent"]
+negativeValidationMissing: {
+	id: "promotion.bad.validation_missing"
+	validations: []
+	validationsPassed: false
+	ambiguity: ["validation_missing"]
+}
+
+negativeChangedPathNotInGraph: {
+	id: "promotion.bad.changed_path"
+	changedPaths: [{path: "unowned/path", taskID: "unknown", declaredIn: "none"}]
+	noUndeclaredMutation:       false
+	changedPathsMatchTaskGraph: false
+	ambiguity: ["changed_path_not_in_graph"]
+}
+
+negativeGraphNotPreserved: {
+	id:                      "promotion.bad.graph_not_preserved"
+	priorAcceptedStatesHeld: false
+	ambiguity: ["graph_not_preserved"]
+}
+
+negativeReadyForMutationTooEarly: {
+	id:                       "promotion.bad.ready_for_mutation"
+	readyForMutationWasFalse: false
+	ambiguity: ["ready_for_mutation_too_early"]
 }

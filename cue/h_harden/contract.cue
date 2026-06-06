@@ -1,16 +1,5 @@
 package h_harden
 
-#DurableFact: {
-	id:             string
-	sourceEvidence: string
-	claim:          string
-}
-
-#PatternRef: {
-	id:   string
-	path: string
-}
-
 #AmbiguityFinding: {
 	kind:     string
 	path:     string
@@ -18,17 +7,27 @@ package h_harden
 	severity: "blocker"
 }
 
-#LifecycleRecord: {
+#BoundaryProof: {
+	noCustomRuntimeInvented:    true
+	noAppServerBoundaryCrossed: true
+	noUnacceptedMutationExport: true
+	noUndeclaredMutation:       true
+	noHiddenAppServerState:     true
+	noCommitStackReasoning:     true
+	cueExportBoundaryAccepted:  true
+}
+
+#AcceptedRunManifest: {
 	id: string
 
-	sourceRun:         string
-	sourceRunAccepted: true
+	sourcePromotion:         string
+	sourcePromotionAccepted: true
 
-	persisted: bool
-
-	distilledFacts: [...#DurableFact]
-	promotedPatterns: [...#PatternRef]
-	retiredAmbiguity: [...#AmbiguityFinding]
+	boundaryProof: #BoundaryProof
+	export: {
+		command:  "cue export"
+		produces: "acceptedRunManifest"
+	}
 
 	ambiguity: [...#AmbiguityFinding]
 }
@@ -42,19 +41,20 @@ package h_harden
 	name: "harden"
 
 	input: {
-		runManifest: _
-		runAccepted: true
+		promotionCandidate: _
+		promotionAccepted:  true
 	}
 
-	output: #LifecycleRecord
+	output: #AcceptedRunManifest
 
-	accepted: output.persisted == true && output.sourceRunAccepted == true && len(output.ambiguity) == 0
+	accepted: output.sourcePromotionAccepted == true && output.boundaryProof.noCustomRuntimeInvented == true && output.boundaryProof.noAppServerBoundaryCrossed == true && output.boundaryProof.noUnacceptedMutationExport == true && output.boundaryProof.noUndeclaredMutation == true && output.boundaryProof.noHiddenAppServerState == true && output.boundaryProof.noCommitStackReasoning == true && output.boundaryProof.cueExportBoundaryAccepted == true && len(output.ambiguity) == 0
 
 	control: {
 		invariants: [
-			"H is the only durable memory boundary",
-			"H consumes only accepted run evidence",
-			"durable facts cite accepted evidence",
+			"H consumes only accepted promotion evidence",
+			"H proves runtime and app-server boundaries",
+			"H rejects undeclared or unaccepted mutation export",
+			"H is the final cue export boundary",
 		]
 	}
 }

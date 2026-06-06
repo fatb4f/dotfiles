@@ -1,10 +1,10 @@
 package l_legitimize
 
-#LegitimizeJSONLD: {
+#LoadJSONLD: {
 	"@context": {
-		"ralph":  "https://fatb4f.dev/ns/ralph#"
-		"gate":   "ralph:gate"
-		"policy": "ralph:policy"
+		"ralph":   "https://fatb4f.dev/ns/ralph#"
+		"load":    "ralph:load"
+		"surface": "ralph:surface"
 	}
 	"@id":   "ralph:L"
 	"@type": "ralph:PhaseNode"
@@ -12,5 +12,5 @@ package l_legitimize
 	id:       "L"
 	parent:   "root"
 	consumes: "TaskGraphContract"
-	produces: "ValidationFacts"
+	produces: "LoadedContext"
 }

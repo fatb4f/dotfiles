@@ -1,20 +1,20 @@
 package p_perform
 
 #Leaf: {
-	"@context": "https://fatb4f.dev/ns/ralph/perform/v0"
+	"@context": "https://fatb4f.dev/ns/ralph/promote/v0"
 	"@id":      string
 	"@type":    "ralph:MetadataLeaf"
 
 	id:            string
 	parentNode:    "P"
-	function:      "execution-evidence" | "adapter-execution-evidence"
+	function:      "mutation-evidence" | "validation-evidence"
 	sourceSurface: string
 
 	authority: {
 		isRoot:                        false
 		mayGrantLoadAdmissibility:     false
 		mayGrantMutationAdmissibility: false
-		mayExecute:                    bool | *false
+		mayExecute:                    false
 		mayPersist:                    false
 	}
 
@@ -29,22 +29,21 @@ package p_perform
 
 leaves: [...#Leaf] & [
 	{
-		"@id":         "ralph:leaf.agentflow.run_manifest"
-		id:            "leaf.agentflow.run_manifest"
+		"@id":         "ralph:leaf.promotion_candidate"
+		id:            "leaf.promotion_candidate"
 		parentNode:    "P"
-		function:      "execution-evidence"
-		sourceSurface: "cue/contracts/agentflow/schema.cue"
-		roundTrip: {backToLeaf: "leaf.agentflow.run_manifest"}
-		invariants: ["all promo evidence cue-vetted", "all domain nodes accepted", "no mutation before gate"]
+		function:      "mutation-evidence"
+		sourceSurface: "cue/p_perform/contract.cue"
+		roundTrip: {backToLeaf: "leaf.promotion_candidate"}
+		invariants: ["changed paths match task graph", "prior accepted states preserved"]
 	},
 	{
-		"@id":         "ralph:leaf.registry.execution"
-		id:            "leaf.registry.execution"
+		"@id":         "ralph:leaf.validation_evidence"
+		id:            "leaf.validation_evidence"
 		parentNode:    "P"
-		function:      "adapter-execution-evidence"
-		sourceSurface: "cue/registry/evidence.cue"
-		authority: {mayExecute: true}
-		roundTrip: {backToLeaf: "leaf.registry.execution"}
-		invariants: ["adapter execution is evidence", "adapter execution does not authorize behavior"]
+		function:      "validation-evidence"
+		sourceSurface: "cue/p_perform/fixtures.cue"
+		roundTrip: {backToLeaf: "leaf.validation_evidence"}
+		invariants: ["validations pass before export readiness", "missing validation rejects promotion"]
 	},
 ]
