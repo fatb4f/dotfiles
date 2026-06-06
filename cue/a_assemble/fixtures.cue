@@ -36,7 +36,7 @@ goodAssembleFromChezmoiRetrieval: #AssemblePhase & {
 	}
 }
 
-badAssembleFromLegacyChezmoiRetrieval: {
+badAssembleFromLegacyChezmoiRetrieval: #AssemblePhase & {
 	input: {
 		retrieval:         retrieve.badLegacyChezmoiSource.output
 		retrievalAccepted: retrieve.badLegacyChezmoiSource.accepted
