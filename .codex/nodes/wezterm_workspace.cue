@@ -1,17 +1,46 @@
-package workspace
+package nodes
 
-import agentnode "github.com/fatb4f/dotfiles/cue/agentnode"
+weztermWorkspace: #LocalNodeContext & {
+	id:         "wezterm.workspace"
+	role:       "local-node-context"
+	sourcePath: "nodes/workspace/patterns/wezterm_workspace.cue"
+	domain:     "workspace"
+	kind:       "pattern"
 
-weztermWorkspacePattern: agentnode.#TaskPatternCard & {
-	id: "wezterm.workspace"
+	surfaces: [
+		{
+			id:       "wezterm.workspace.pattern"
+			path:     "nodes/workspace/patterns/wezterm_workspace.cue"
+			function: "retrieval-card"
+		},
+	]
 
-	authority: {
-		loadableFiles: [
+	retrievalHints: {
+		matchedTerms: [
+			"wezterm",
+			"workspace",
+		]
+		relevantFiles: [
+			"nodes/workspace/AGENTS.cue",
 			"nodes/workspace/patterns/wezterm_workspace.cue",
 		]
+		patternIDs: [
+			"wezterm.workspace",
+		]
+		stage: "plan"
 	}
 
-	workflow: {
-		stage: "plan"
+	negativeAuthority: {
+		isRoot:                        false
+		mayGrantLoadAdmissibility:     false
+		mayGrantMutationAdmissibility: false
+		mayExecute:                    false
+		mayPersist:                    false
+	}
+
+	provenance: {
+		generatedBy:    "R"
+		sourceObserved: "nodes/workspace/patterns/wezterm_workspace.cue"
+		manifestID:     "local-node-context-normalization"
 	}
 }

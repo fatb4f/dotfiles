@@ -1,25 +1,39 @@
-package chezmoi
+package nodes
 
-#ChezmoiNode: {
-	id:     "chezmoi"
-	kind:   "node"
-	root:   "nodes/chezmoi"
-	domain: "dotfiles-materialization"
+chezmoi: #LocalNodeContext & {
+	id:         "chezmoi"
+	role:       "local-node-context"
+	sourcePath: "nodes/chezmoi"
+	domain:     "dotfiles-materialization"
+	kind:       "node"
 
-	surfaces: {
-		source: {
+	surfaces: [
+		{
 			id:       "chezmoi.source"
 			path:     "chezmoi"
 			function: "source-tree"
-		}
-		config: {
+		},
+		{
 			id:       "chezmoi.config"
 			path:     "chezmoi.toml.tmpl"
 			function: "config-template"
-		}
+		},
+	]
+
+	retrievalHints: {
+		matchedTerms: [
+			"chezmoi",
+			"dotfiles",
+			"materialization",
+		]
+		relevantFiles: [
+			"chezmoi",
+			"chezmoi.toml.tmpl",
+		]
+		stage: "retrieve"
 	}
 
-	authority: {
+	negativeAuthority: {
 		isRoot:                        false
 		mayGrantLoadAdmissibility:     false
 		mayGrantMutationAdmissibility: false
@@ -27,12 +41,9 @@ package chezmoi
 		mayPersist:                    false
 	}
 
-	invariants: [
-		"chezmoi node is an entity/source fact surface",
-		"chezmoi node does not authorize loads",
-		"chezmoi node does not authorize mutation",
-		"chezmoi node does not execute or persist",
-	]
+	provenance: {
+		generatedBy:    "R"
+		sourceObserved: "nodes/chezmoi"
+		manifestID:     "local-node-context-normalization"
+	}
 }
-
-node: #ChezmoiNode
