@@ -1,2 +1,0 @@
-#!/bin/sh
-exec fuzzel --launch-prefix='uwsm-app --'

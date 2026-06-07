@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Chromium
-Exec=/usr/bin/chromium --user-data-dir=/home/_404/.local/state/chromium --disk-cache-dir=/home/_404/.cache/chromium/disk-cache %U
-
-[Desktop Action new-window]
-Exec=/usr/bin/chromium --user-data-dir=/home/_404/.local/state/chromium --disk-cache-dir=/home/_404/.cache/chromium/disk-cache
-
-[Desktop Action new-private-window]
-Exec=/usr/bin/chromium --user-data-dir=/home/_404/.local/state/chromium --disk-cache-dir=/home/_404/.cache/chromium/disk-cache --incognito

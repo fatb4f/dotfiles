@@ -1,8 +1,0 @@
-#!/bin/sh
-# ~/.local/bin/session-exit
-
-set -eu
-
-systemd-run --user --collect --unit=session-exit \
-  --property=Slice=session-graphical.slice \
-  /usr/bin/loginctl terminate-session "${XDG_SESSION_ID}"
