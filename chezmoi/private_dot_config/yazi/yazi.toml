@@ -1,5 +1,5 @@
 [mgr]
-ratio = [1, 2, 5]
+ratio = [0, 2, 6]
 
 [opener]
 edit = [{ run = 'nvim "$@"', block = true, for = "unix" }]
@@ -17,7 +17,7 @@ prepend_previewers = [
   { mime = "application/{*zip,tar,bzip2,7z*,rar,xz,zstd,java-archive}", run = "ouch" },
   { url = "**/.git/", run = "preview-git" },
   { url = "*.json", run = 'piper -- jq -C . "$1"' },
-  { url = "*.md", run = 'piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark "$1"' },
+  { url = "*.md", run = 'piper -- CLICOLOR_FORCE=1 glow -w "$(tput cols)" -s=dark "$1"' },
   { url = "*.tar*", run = 'piper --format=url -- tar tf "$1"' },
   { url = "*.cue", run = 'piper -- bat --color=always --style=numbers "$1"' },
   { url = "*.service", run = 'piper -- bat --color=always --style=numbers "$1"' },

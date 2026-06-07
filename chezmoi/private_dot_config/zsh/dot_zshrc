@@ -53,3 +53,7 @@ if [[ -o interactive && "${TERM_PROGRAM:-}" == "WezTerm" ]]; then
     unset _wezterm_integration
   fi
 fi
+
+if (( $+commands[zoxide] )); then
+  eval "$(zoxide init zsh)"
+fi
