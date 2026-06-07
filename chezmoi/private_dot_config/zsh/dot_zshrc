@@ -55,5 +55,19 @@ if [[ -o interactive && "${TERM_PROGRAM:-}" == "WezTerm" ]]; then
 fi
 
 if (( $+commands[zoxide] )); then
+  export _ZO_DATA_DIR="${_ZO_DATA_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/zoxide}"
+
+  export _ZO_FZF_OPTS=$'
+    --height=45%
+    --min-height=15
+    --layout=reverse
+    --border=rounded
+    --info=inline
+    --prompt=zi❯
+    --pointer=▶
+    --marker=✓
+    --scheme=path
+  '
+
   eval "$(zoxide init zsh)"
 fi
