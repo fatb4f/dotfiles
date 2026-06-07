@@ -57,17 +57,19 @@ fi
 if (( $+commands[zoxide] )); then
   export _ZO_DATA_DIR="${_ZO_DATA_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/zoxide}"
 
-  export _ZO_FZF_OPTS=$'
+  _zo_fzf_opts=(
     --height=45%
     --min-height=15
     --layout=reverse
     --border=rounded
     --info=inline
-    --prompt=zi❯
-    --pointer=▶
-    --marker=✓
+    --prompt='zi❯'
+    --pointer='▶'
+    --marker='✓'
     --scheme=path
-  '
+  )
+  export _ZO_FZF_OPTS="${(j: :)_zo_fzf_opts}"
+  unset _zo_fzf_opts
 
   eval "$(zoxide init zsh)"
 fi
