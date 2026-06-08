@@ -38,7 +38,7 @@ import (
 command: validate: {
 	#HookInput
 
-	base: #RunChecks & {
-		checks: #BaseChecks
+	cueChecks: #RunChecks & {
+		checks: workflow.checks
 	}
 }

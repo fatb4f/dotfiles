@@ -35,3 +35,9 @@ package codex
 	"cue vet .codex/workflow.cue",
 	"cue eval .codex/workflow.cue >/dev/null",
 ]
+
+#Workflow: {
+	checks: [...string] | *#BaseChecks
+}
+
+workflow: #Workflow & {}

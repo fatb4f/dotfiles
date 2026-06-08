@@ -31,6 +31,16 @@ jobs:
             exit 1
           fi
 
+          if cue cmd -t hook='{"tool_name":"command","tool_input":{"command":""}}' validate ./.codex; then
+            echo "expected empty command string to fail" >&2
+            exit 1
+          fi
+
+          if cue cmd -t hook='{"tool_name":"command","tool_input":{"cmd":""}}' validate ./.codex; then
+            echo "expected empty cmd string to fail" >&2
+            exit 1
+          fi
+
           if cue cmd -t hook='{"tool_name":"command"}' validate ./.codex; then
             echo "expected missing command tool_input to fail" >&2
             exit 1
