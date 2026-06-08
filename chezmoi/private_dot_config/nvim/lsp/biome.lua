@@ -1,6 +1,8 @@
+local launchers = require("lang.launchers")
+
 ---@type vim.lsp.Config
 return {
-  cmd = { "bun", "run", "lsp:biome" },
+  cmd = launchers.bunx("@biomejs/biome", "biome", "lsp-proxy"),
   filetypes = {
     "javascript",
     "javascriptreact",

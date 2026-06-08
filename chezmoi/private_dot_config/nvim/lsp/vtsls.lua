@@ -1,6 +1,8 @@
+local launchers = require("lang.launchers")
+
 ---@type vim.lsp.Config
 return {
-  cmd = { "bun", "run", "lsp:vtsls" },
+  cmd = launchers.bunx("@vtsls/language-server", "vtsls", "--stdio"),
   filetypes = {
     "javascript",
     "javascriptreact",

@@ -8,7 +8,7 @@ require("config.autocmds")
 require("lang.diagnostics")
 require("lang.completion")
 require("lang.format")
-require("lang.enable")
+require("lang.attach")
 
 require("ui")
 require("workflow")
