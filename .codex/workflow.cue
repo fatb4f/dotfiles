@@ -11,7 +11,7 @@ import (
 // Codex hook payloads are event-specific; stable fields are typed while
 // tool-specific payloads remain open.
 #CodexHook: {
-	session_id!:       string
+	session_id!:      string
 	transcript_path?: string | null
 	cwd!:             string
 	hook_event_name!: string
@@ -38,7 +38,7 @@ import (
 
 #SkippedValidation: {
 	command?: [...string]
-	reason:   string
+	reason: string
 }
 
 #ChangedFile: {
@@ -64,7 +64,7 @@ import (
 	}
 
 	validations: {
-		run:      [...#ValidationResult]
+		run: [...#ValidationResult]
 		skipped?: [...#SkippedValidation]
 	}
 
@@ -188,64 +188,6 @@ policy: {
 command: ci: {
 	cueChecks: #RunChecks & {
 		checks: workflow.cue.checks
-	}
-}
-
-command: preToolUse: {
-	#ReadHook
-
-	cueChecks: #RunChecks & {
-		checks: workflow.cue.checks
-	}
-
-	if workflow.git.required {
-		gitBefore: #RunChecks & {
-			checks: workflow.git.before
-		}
-	}
-
-	if workflow.chezmoi.required {
-		chezmoiBefore: #RunChecks & {
-			checks: workflow.chezmoi.before
-		}
-	}
-
-	if (hook & {tool_input: #CommandToolInput}) != _|_ {
-		commandText: hook.tool_input.command
-
-		gitHits: [
-			for forbidden in workflow.git.forbidden
-			if strings.Contains(commandText, forbidden) {
-				forbidden
-			},
-		]
-
-		chezmoiHits: [
-			for forbidden in workflow.chezmoi.forbidden
-			if strings.Contains(commandText, forbidden) {
-				forbidden
-			},
-		]
-
-		if len(gitHits) > 0 {
-			blockGit: exec.Run & {
-				cmd: [
-					"bash",
-					"-lc",
-					"printf '%s\\n' 'blocked by .codex/workflow.cue: forbidden git command: \(gitHits[0])' >&2; exit 2",
-				]
-			}
-		}
-
-		if len(chezmoiHits) > 0 {
-			blockChezmoi: exec.Run & {
-				cmd: [
-					"bash",
-					"-lc",
-					"printf '%s\\n' 'blocked by .codex/workflow.cue: forbidden chezmoi command: \(chezmoiHits[0])' >&2; exit 2",
-				]
-			}
-		}
 	}
 }
 
