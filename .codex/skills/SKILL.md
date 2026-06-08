@@ -1,7 +1,7 @@
-```
+---
 name: dotfiles skill
 description: meta-skill
-```
+---
 Use this skill for repository-level dotfiles routing, workspace registry review,
 workspace registry edits, and cross-domain handoff.
 
