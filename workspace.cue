@@ -316,7 +316,7 @@ domains: {
 skills: {
 	dotfiles: #Skill & {
 		name: "dotfiles"
-		path: "chezmoi/dot_local/share/codex/skills/dotfiles/SKILL.md"
+		path: ".codex/skills/SKILL.md"
 		tasks: [
 			"dotfiles.discovery",
 			"dotfiles.registry",

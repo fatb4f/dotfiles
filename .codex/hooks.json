@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -lc 'cd \"$(git rev-parse --show-toplevel)\" && cue cmd validate .codex/workflow.cue'",
+            "command": "bash -lc 'cd \"$(git rev-parse --show-toplevel)\" && payload=\"$(cat /dev/stdin)\" && { [ -n \"$payload\" ] || payload=\"{}\"; } && cue cmd -t hook=\"$payload\" validate ./.codex'",
             "statusMessage": "Validating workspace constraints"
           }
         ]

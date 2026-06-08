@@ -16,5 +16,5 @@ jobs:
         with:
           version: v0.16.1
 
-      - name: Validate workspace model and Codex workflow contract
-        run: cue cmd ci .codex/workflow.cue
+      - name: Validate workspace constraints
+        run: cue cmd validate ./.codex
