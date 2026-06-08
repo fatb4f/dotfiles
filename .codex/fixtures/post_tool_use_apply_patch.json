@@ -1,0 +1,16 @@
+{
+  "session_id": "fixture-session",
+  "transcript_path": null,
+  "cwd": ".",
+  "hook_event_name": "PostToolUse",
+  "model": "gpt-5.5-thinking",
+  "turn_id": "fixture-turn",
+  "tool_name": "apply_patch",
+  "tool_use_id": "fixture-tool",
+  "tool_input": {
+    "command": "*** Begin Patch\n*** End Patch"
+  },
+  "tool_response": {
+    "status": "ok"
+  }
+}
