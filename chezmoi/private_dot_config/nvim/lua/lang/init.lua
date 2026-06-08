@@ -1,0 +1,5 @@
+require("lang.diagnostics")
+require("lang.lua")
+require("lang.completion")
+require("lang.format")
+require("lang.enable")
