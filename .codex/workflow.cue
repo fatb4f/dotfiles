@@ -8,22 +8,20 @@ import (
 )
 
 // #CodexHook is intentionally permissive.
-// Codex hook payloads are event-specific; this keeps the stable fields typed
-// while allowing tool-specific payloads to pass through.
+// Codex hook payloads are event-specific; stable fields are typed while
+// tool-specific payloads remain open.
 #CodexHook: {
 	session_id!:       string
 	transcript_path?: string | null
 	cwd!:             string
 	hook_event_name!: string
-
 	model?:           string
 	turn_id?:         string
 	tool_name?:       string
 	tool_use_id?:     string
 	permission_mode?: string
-
-	tool_input?:    _
-	tool_response?: _
+	tool_input?:      _
+	tool_response?:   _
 	...
 }
 
@@ -32,23 +30,72 @@ import (
 	...
 }
 
+#ValidationResult: {
+	command: [...string]
+	result:  "passed" | "failed"
+	output?: string
+}
+
+#SkippedValidation: {
+	command?: [...string]
+	reason:   string
+}
+
+#ChangedFile: {
+	path:    string
+	reason?: string
+}
+
+#Closeout: {
+	selectedDomain: string
+	matchedSurface: string
+
+	filesChanged: [...#ChangedFile]
+
+	workflowState: {
+		git: {
+			status: string
+			diff?:  string
+		}
+		chezmoi?: {
+			status: string
+			diff?:  string
+		}
+	}
+
+	validations: {
+		run:      [...#ValidationResult]
+		skipped?: [...#SkippedValidation]
+	}
+
+	handoff?: {
+		target: string
+		reason: string
+	}
+}
+
 #Workflow: {
 	cue: {
 		checks: [...string] | *[
 			"cue vet workspace.cue",
+			"cue eval workspace.cue >/dev/null",
 			"cue vet .codex/workflow.cue",
+			"cue eval .codex/workflow.cue >/dev/null",
 		]
 	}
 
 	git: {
 		required: bool | *true
+
 		before: [...string] | *[
 			"git status --short",
 		]
+
 		after: [...string] | *[
 			"git diff --name-only",
 			"git status --short",
 		]
+
 		forbidden: [...string] | *[
 			"git commit",
 			"git push",
@@ -58,13 +105,16 @@ import (
 
 	chezmoi: {
 		required: bool | *true
+
 		before: [...string] | *[
 			"chezmoi status",
 		]
+
 		after: [...string] | *[
 			"chezmoi diff",
 			"chezmoi status",
 		]
+
 		forbidden: [...string] | *[
 			"chezmoi apply",
 			"chezmoi init",
@@ -72,7 +122,49 @@ import (
 	}
 }
 
+#CloseoutPolicy: {
+	schema: "#Closeout"
+
+	required: [...string] | *[
+		"selectedDomain",
+		"matchedSurface",
+		"filesChanged",
+		"workflowState",
+		"validations",
+	]
+
+	order: [...string] | *[
+		"selectedDomain",
+		"matchedSurface",
+		"filesChanged",
+		"workflowState",
+		"validations",
+		"handoff",
+	]
+
+	validationResult: {
+		run: {
+			required: [...string] | *[
+				"command",
+				"result",
+			]
+		}
+
+		skipped: {
+			required: [...string] | *[
+				"reason",
+			]
+		}
+	}
+}
+
 workflow: #Workflow & {}
+
+policy: {
+	output: {
+		closeout: #CloseoutPolicy
+	}
+}
 
 #RunChecks: {
 	checks: [...string]
