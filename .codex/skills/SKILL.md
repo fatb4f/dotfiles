@@ -135,7 +135,6 @@ cue vet workspace.cue
 cue eval workspace.cue
 ```
 
-If CUE is unavailable, report that validation was skipped and provide the reason.
 
 Output:
 
@@ -146,47 +145,3 @@ domains modified
 validation evidence
 ```
 
-### dotfiles.closeout
-
-Use at the end of repository-level dotfiles work.
-
-Report:
-
-```text
-selected domain
-files loaded
-files changed
-validations run
-validations skipped with reason
-handoff target, if any
-```
-
-## File loading policy
-
-Allowed by default:
-
-```text
-workspace.cue
-.chezmoiroot
-.gitignore
-chezmoi/AGENTS.md
-shell-wrap/AGENTS.md
-```
-
-Load additional files only when they match the selected domain surface in `workspace.cue`.
-
-Denied by default:
-
-```text
-.git/**
-.tmp/**
-cache paths
-runtime state paths
-auth files
-```
-
-## Close-out rule
-
-Stop after the selected dotfiles task report.
-
-Do not stage, commit, apply, regenerate, or reload unless explicitly requested.
