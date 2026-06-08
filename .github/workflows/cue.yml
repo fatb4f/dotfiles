@@ -16,5 +16,27 @@ jobs:
         with:
           version: v0.16.1
 
-      - name: Validate workspace constraints
+      - name: Validate CUE workflow
         run: cue cmd validate ./.codex
+
+      - name: Validate hook payload fixtures
+        run: |
+          set -euo pipefail
+
+          cue cmd -t hook='{"tool_name":"command","tool_input":{"command":"echo ok"}}' validate ./.codex
+          cue cmd -t hook='{"tool_name":"command","tool_input":{"cmd":"echo ok"}}' validate ./.codex
+
+          if cue cmd -t hook='{"tool_name":"command","tool_input":{}}' validate ./.codex; then
+            echo "expected empty command tool_input to fail" >&2
+            exit 1
+          fi
+
+          if cue cmd -t hook='{"tool_name":"command"}' validate ./.codex; then
+            echo "expected missing command tool_input to fail" >&2
+            exit 1
+          fi
+
+          if cue cmd -t hook='{"tool_name":"command","tool_input":null}' validate ./.codex; then
+            echo "expected null command tool_input to fail" >&2
+            exit 1
+          fi

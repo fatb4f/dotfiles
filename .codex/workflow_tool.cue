@@ -12,7 +12,17 @@ import (
 	hook: json.Unmarshal(payload)
 
 	if hook.tool_name == "command" {
-		commandToolInput: #CommandToolInput & hook.tool_input
+		commandHook: hook & #CommandHook
+
+		forceCommandPayload: exec.Run & {
+			cmd: [
+				"bash",
+				"-lc",
+				"test -n \"$1\" || { echo 'command hook payload requires non-empty tool_input.command or tool_input.cmd' >&2; exit 2; }",
+				"--",
+				commandHook.tool_input._command,
+			]
+		}
 	}
 }
 

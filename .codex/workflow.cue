@@ -15,13 +15,19 @@ package codex
 	...
 }
 
-#CommandToolInput: ({
-	command!: string
+#NonEmptyString: string & =~"(?s).+"
+
+#CommandToolInput: {
+	command?: #NonEmptyString
+	cmd?:     #NonEmptyString
+	_command: *command | cmd
 	...
-} | {
-	cmd!: string
-	...
-})
+}
+
+#CommandHook: #CodexHook & {
+	tool_name: "command"
+	tool_input: #CommandToolInput
+}
 
 #BaseChecks: [
 	"cue vet workspace.cue",
