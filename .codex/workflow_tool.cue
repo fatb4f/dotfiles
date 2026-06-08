@@ -11,7 +11,7 @@ import (
 	hook: #CodexHook
 	hook: json.Unmarshal(payload)
 
-	if hook.tool_name == "command" {
+	if hook.tool_name == "Bash" || hook.tool_name == "command" {
 		commandHook: hook & #CommandHook
 
 		forceCommandPayload: exec.Run & {

@@ -1,8 +1,8 @@
 package workspace
 
 #Workspace: {
-	name: string
-	root: string
+	name:        string
+	root:        string
 	chezmoiRoot: string
 	registries: {
 		domains: [string]: #Domain
@@ -11,9 +11,9 @@ package workspace
 }
 
 #Domain: {
-	name: string
-	kind: "workspace" | "materializer" | "adapter" | "config" | "shell"
-	root: string
+	name:    string
+	kind:    "workspace" | "materializer" | "adapter" | "config" | "shell"
+	root:    string
 	router?: string
 	surfaces: [...string]
 	owns: [...string]
@@ -29,22 +29,22 @@ package workspace
 }
 
 workspace: #Workspace & {
-	name: "dotfiles"
-	root: "."
+	name:        "dotfiles"
+	root:        "."
 	chezmoiRoot: "chezmoi"
 
 	registries: {
 		domains: domains
-		skills: skills
+		skills:  skills
 	}
 }
 
 domains: {
 	dotfiles: #Domain & {
-		name: "dotfiles"
-		kind: "workspace"
-		root: "."
-		router: "chezmoi/AGENTS.md"
+		name:   "dotfiles"
+		kind:   "workspace"
+		root:   "."
+		router: ".codex/skills/SKILL.md"
 		surfaces: [
 			".chezmoiroot",
 			".gitignore",
@@ -78,7 +78,6 @@ domains: {
 		name: "chezmoi"
 		kind: "materializer"
 		root: "chezmoi"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/.chezmoiignore",
 			"chezmoi/dot_*",
@@ -111,7 +110,6 @@ domains: {
 		name: "agent-skills"
 		kind: "config"
 		root: "chezmoi/dot_local/share/codex/skills"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/dot_local/share/codex/skills/**",
 		]
@@ -135,7 +133,6 @@ domains: {
 		name: "hypr"
 		kind: "config"
 		root: "chezmoi/private_dot_config/hypr"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/private_dot_config/hypr/**",
 		]
@@ -156,7 +153,6 @@ domains: {
 		name: "nvim"
 		kind: "config"
 		root: "chezmoi/private_dot_config/nvim"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/private_dot_config/nvim/**",
 		]
@@ -176,7 +172,6 @@ domains: {
 		name: "wezterm"
 		kind: "config"
 		root: "chezmoi/private_dot_config/wezterm"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/private_dot_config/wezterm/**",
 		]
@@ -200,7 +195,6 @@ domains: {
 		name: "xplr"
 		kind: "config"
 		root: "chezmoi/private_dot_config/xplr"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/private_dot_config/xplr/**",
 		]
@@ -223,7 +217,6 @@ domains: {
 		name: "zsh"
 		kind: "shell"
 		root: "chezmoi/private_dot_config/zsh"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/dot_zprofile",
 			"chezmoi/dot_zshenv",
@@ -244,7 +237,6 @@ domains: {
 		name: "local-bin"
 		kind: "config"
 		root: "chezmoi/dot_local/bin"
-		router: "chezmoi/AGENTS.md"
 		surfaces: [
 			"chezmoi/dot_local/bin/**",
 		]
@@ -258,9 +250,9 @@ domains: {
 	}
 
 	shell_wrap: #Domain & {
-		name: "shell-wrap"
-		kind: "adapter"
-		root: "shell-wrap"
+		name:   "shell-wrap"
+		kind:   "adapter"
+		root:   "shell-wrap"
 		router: "shell-wrap/AGENTS.md"
 		surfaces: [
 			"shell-wrap/**",
@@ -290,9 +282,9 @@ domains: {
 	}
 
 	session: #Domain & {
-		name: "session"
-		kind: "adapter"
-		root: "shell-wrap/src/session"
+		name:   "session"
+		kind:   "adapter"
+		root:   "shell-wrap/src/session"
 		router: "shell-wrap/AGENTS.md"
 		surfaces: [
 			"shell-wrap/src/session/**",
