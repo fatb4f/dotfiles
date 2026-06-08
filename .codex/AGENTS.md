@@ -7,7 +7,7 @@ Dotfiles source router.
 Use the repository workspace registry:
 
 ```text
-../workspace.cue
+.codex/workspace.cue
 ```
 
 Use the dotfiles skill when available:
