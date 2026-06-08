@@ -41,43 +41,8 @@ package codex
 	"cue eval .codex/workflow.cue >/dev/null",
 ]
 
-#CloseoutTask: {
-	domain:   string
-	task:     string
-	reason:   string
-	required: bool | *true
-}
-
-#CloseoutPolicy: {
-	required: [...#CloseoutTask] | *[
-		{
-			domain: "git"
-			task:   "git.closeout"
-			reason: "final repository state and diff summary"
-		},
-		{
-			domain: "chezmoi"
-			task:   "chezmoi.closeout"
-			reason: "managed source/rendered impact summary"
-		},
-	]
-
-	output: {
-		fields: [...string] | *[
-			"selectedDomain",
-			"matchedSurface",
-			"filesChanged",
-			"validations",
-			"git",
-			"chezmoi",
-			"handoff",
-		]
-	}
-}
-
 #Workflow: {
 	checks: [...string] | *#BaseChecks
-	closeout: #CloseoutPolicy
 }
 
 workflow: #Workflow & {}
