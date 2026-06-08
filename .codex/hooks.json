@@ -2,25 +2,25 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write",
+        "matcher": "^Bash$|^apply_patch$|Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/pre_tool_use.sh\"",
+            "command": "bash -lc 'cd \"$(git rev-parse --show-toplevel)\" && cue cmd preToolUse .codex/workflow.cue || exit 2'",
             "timeout": 30,
-            "statusMessage": "Checking workspace workflow constraints"
+            "statusMessage": "Checking workspace constraints"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "Bash|apply_patch|Edit|Write",
+        "matcher": "^Bash$|^apply_patch$|Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/post_tool_use.sh\"",
-            "timeout": 120,
+            "command": "bash -lc 'cd \"$(git rev-parse --show-toplevel)\" && cue cmd postToolUse .codex/workflow.cue || exit 2'",
+            "timeout": 60,
             "statusMessage": "Validating workspace state"
           }
         ]
