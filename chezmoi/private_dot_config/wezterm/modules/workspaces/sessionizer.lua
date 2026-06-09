@@ -184,10 +184,6 @@ local function schema()
 			callback = history.Wrapper(normalized_callback),
 		},
 
-		sessionizer.DefaultWorkspace({
-			cwd = wezterm.home_dir,
-		}),
-
 		history.MostRecentWorkspace({}),
 
 		sessionizer.AllActiveWorkspaces({

@@ -95,6 +95,18 @@ local function normalize(project)
 	return project
 end
 
+local function sort_projects(a, b)
+	if a.id == wezterm.home_dir then
+		return true
+	end
+
+	if b.id == wezterm.home_dir then
+		return false
+	end
+
+	return a.id < b.id
+end
+
 function M.list()
 	local files = wezterm.glob(projects_dir .. "/*.lua") or {}
 	local projects = {}
@@ -119,9 +131,7 @@ function M.list()
 		end
 	end
 
-	table.sort(projects, function(a, b)
-		return a.id < b.id
-	end)
+	table.sort(projects, sort_projects)
 
 	return projects
 end
