@@ -2,60 +2,9 @@ local wezterm = require("wezterm")
 
 local sessionizer = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer.wezterm")
 local history = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer-history.git")
+local projects = require("modules.workspaces.projects")
 
 local M = {}
-
-local manifest_env = "WEZTERM_WORKSPACE_PROJECTS_JSON"
-local default_manifest_path = wezterm.home_dir .. "/src/contract.cuemod/workspace.projects.json"
-
-local function manifest_path()
-	local override = os.getenv(manifest_env)
-	if type(override) == "string" and override ~= "" then
-		return override
-	end
-
-	return default_manifest_path
-end
-
-local function read_file(path)
-	local file, err = io.open(path, "r")
-	if not file then
-		wezterm.log_error("session manifest unreadable: " .. path .. " :: " .. tostring(err))
-		return nil
-	end
-
-	local body = file:read("*a")
-	file:close()
-
-	return body
-end
-
-local function decode_manifest()
-	local path = manifest_path()
-	local body = read_file(path)
-
-	if not body or body == "" then
-		return {
-			path = path,
-			version = nil,
-			sessions = {},
-			order = {},
-		}
-	end
-
-	local ok, decoded = pcall(wezterm.json_parse, body)
-	if not ok or type(decoded) ~= "table" then
-		wezterm.log_error("session manifest invalid json: " .. path)
-		return {
-			path = path,
-			version = nil,
-			sessions = {},
-			order = {},
-		}
-	end
-
-	return decoded
-end
 
 local function home_relative(path)
 	if type(path) ~= "string" then
@@ -95,22 +44,12 @@ local function adapter(project)
 	return project.adapters.wezterm
 end
 
-local function valid_project(project)
-	return type(project) == "table"
-		and type(project.id) == "string"
-		and project.id ~= ""
-		and type(project.label) == "string"
-		and project.label ~= ""
-		and type(project.root) == "string"
-		and project.root ~= ""
-end
-
 local function session_workspace(project)
-	return adapter(project).workspace or project.id
+	return adapter(project).workspace or project.workspace or project.id
 end
 
 local function session_cwd(project)
-	return adapter(project).cwd or project.root
+	return adapter(project).cwd or project.cwd or project.root
 end
 
 local function session_env(project)
@@ -125,7 +64,7 @@ local function session_env(project)
 	end
 
 	env.TERM_PROJECT_ID = project.id
-	env.TERM_PROJECT_ROOT = project.root
+	env.TERM_PROJECT_ROOT = project.root or project.cwd
 	env.TERM_PROJECT_CWD = session_cwd(project)
 	env.TERM_EDITOR = project.editor or env.TERM_EDITOR or "nvim"
 
@@ -138,7 +77,7 @@ local function normalize_session(project)
 		label = project.label,
 		kind = project.kind or "project",
 		intent = project.intent,
-		root = project.root,
+		root = project.root or project.cwd,
 		workspace = session_workspace(project),
 		cwd = session_cwd(project),
 		editor = project.editor or "nvim",
@@ -149,30 +88,21 @@ local function normalize_session(project)
 end
 
 local function load_sessions()
-	local manifest = decode_manifest()
-
 	local model = {
-		version = manifest.version,
-		contract_version = manifest.contractVersion,
+		version = "workspace.projects.v2",
 		sessions = {},
 		order = {},
 	}
 
-	if manifest.version ~= nil and manifest.version ~= "workspace.projects.v1" then
-		wezterm.log_error("session manifest version mismatch: " .. tostring(manifest.version))
-	end
+	for _, project in ipairs(projects.list()) do
+		local session = normalize_session(project)
 
-	if type(manifest.projects) ~= "table" then
-		return model
-	end
-
-	for _, project in ipairs(manifest.projects) do
-		if valid_project(project) then
-			local session = normalize_session(project)
-
-			model.sessions[session.id] = session
-			table.insert(model.order, session.id)
+		if model.sessions[session.id] then
+			error("Duplicate workspace project id: " .. session.id)
 		end
+
+		model.sessions[session.id] = session
+		table.insert(model.order, session.id)
 	end
 
 	table.sort(model.order)
@@ -253,6 +183,10 @@ local function schema()
 			prompt = "Session: ",
 			callback = history.Wrapper(normalized_callback),
 		},
+
+		sessionizer.DefaultWorkspace({
+			cwd = wezterm.home_dir,
+		}),
 
 		history.MostRecentWorkspace({}),
 
