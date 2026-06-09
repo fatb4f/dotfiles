@@ -20,7 +20,7 @@ table.insert(config.keys, {
 })
 
 require("modules.smart_splits").apply_to_config(config)
-require("modules.workspaces").apply_to_config(config)
+require("modules.sessions").apply_to_config(config)
 require("modules.scrollback").apply_to_config(config)
 require("modules.status").apply_to_config(config)
 
