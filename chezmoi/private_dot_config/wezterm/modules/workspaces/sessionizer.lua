@@ -1,7 +1,6 @@
 local wezterm = require("wezterm")
 
 local sessionizer = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer.wezterm")
-local history = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer-history.git")
 local projects = require("modules.workspaces.projects")
 
 local M = {}
@@ -91,6 +90,7 @@ local function load_sessions()
 	local model = {
 		version = "workspace.projects.v2",
 		sessions = {},
+		sessions_by_workspace = {},
 		order = {},
 	}
 
@@ -101,11 +101,14 @@ local function load_sessions()
 			error("Duplicate workspace project id: " .. session.id)
 		end
 
+		if model.sessions_by_workspace[session.workspace] then
+			error("Duplicate workspace project workspace: " .. session.workspace)
+		end
+
 		model.sessions[session.id] = session
+		model.sessions_by_workspace[session.workspace] = session
 		table.insert(model.order, session.id)
 	end
-
-	table.sort(model.order)
 
 	return model
 end
@@ -117,12 +120,42 @@ local function session_entries(model)
 		local session = model.sessions[id]
 
 		table.insert(entries, {
-			id = session.id,
-			label = string.format("%s [%s] (%s)", session.label, session.kind, home_relative(session.cwd)),
+			id = session.workspace,
+			label = session.workspace,
 		})
 	end
 
 	return entries
+end
+
+local function normalize_entries(entries)
+	local seen = {}
+	local next_index = 1
+
+	for _, entry in ipairs(entries) do
+		if type(entry.id) == "string" and not seen[entry.id] then
+			seen[entry.id] = true
+			entry.label = string.format("Workspace: '%s'", home_relative(entry.id))
+			entries[next_index] = entry
+			next_index = next_index + 1
+		end
+	end
+
+	for index = #entries, next_index, -1 do
+		entries[index] = nil
+	end
+
+	table.sort(entries, function(a, b)
+		if a.id == wezterm.home_dir then
+			return true
+		end
+
+		if b.id == wezterm.home_dir then
+			return false
+		end
+
+		return a.id < b.id
+	end)
 end
 
 local function switch_to_session(window, pane, session)
@@ -154,7 +187,7 @@ local function normalized_callback(window, pane, id, label)
 	end
 
 	local model = load_sessions()
-	local session = model.sessions[id]
+	local session = model.sessions[id] or model.sessions_by_workspace[id]
 
 	if session then
 		switch_to_session(window, pane, session)
@@ -181,10 +214,8 @@ local function schema()
 		options = {
 			title = "Session",
 			prompt = "Session: ",
-			callback = history.Wrapper(normalized_callback),
+			callback = normalized_callback,
 		},
-
-		history.MostRecentWorkspace({}),
 
 		sessionizer.AllActiveWorkspaces({
 			filter_current = true,
@@ -193,11 +224,7 @@ local function schema()
 
 		session_entries(model),
 
-		processing = sessionizer.for_each_entry(function(entry)
-			if type(entry.label) == "string" then
-				entry.label = home_relative(entry.label)
-			end
-		end),
+		processing = normalize_entries,
 	}
 end
 
@@ -208,12 +235,6 @@ function M.apply_to_config(config)
 		key = "s",
 		mods = "ALT",
 		action = sessionizer.show(schema()),
-	})
-
-	table.insert(config.keys, {
-		key = "m",
-		mods = "ALT",
-		action = history.switch_to_most_recent_workspace,
 	})
 
 	table.insert(config.keys, {
