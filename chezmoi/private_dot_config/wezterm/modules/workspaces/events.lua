@@ -5,8 +5,8 @@ local controller = require("modules.workspaces.controller")
 local M = {}
 
 function M.setup()
-	wezterm.on("term-ide-launch", function(window, pane)
-		controller.launch(window, pane)
+	wezterm.on("term-ide-launch", function(window)
+		controller.launch(window)
 	end)
 end
 

@@ -120,7 +120,9 @@ function M.list()
 			local ok, project = pcall(require, module_name)
 
 			if not ok then
-				error("Failed to load workspace project " .. module_name .. " from " .. file .. ": " .. tostring(project))
+				error(
+					"Failed to load workspace project " .. module_name .. " from " .. file .. ": " .. tostring(project)
+				)
 			end
 
 			project = ensure_table(project, module_name)

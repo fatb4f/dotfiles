@@ -67,7 +67,8 @@ local function validate(session)
 		runtime_dir = runtime_dir,
 		socket_dir = runtime_dir .. "/nvim",
 		socket = expected_socket,
-	}, nil
+	},
+		nil
 end
 
 local function nvim_alive(contract)
@@ -94,25 +95,6 @@ local function ensure_socket_dir(contract)
 	return true, nil
 end
 
-local function shell_quote(value)
-	return "'" .. tostring(value):gsub("'", "'\\''") .. "'"
-end
-
-local function editor_command(contract)
-	return table.concat({
-		"exec",
-		shell_quote(contract.editor),
-		"--listen",
-		shell_quote(contract.socket),
-	}, " ") .. "\n"
-end
-
-local function pane_runs_shell(pane)
-	local process = pane:get_foreground_process_name() or ""
-	local name = process:match("([^/]+)$") or process
-	return name == "bash" or name == "fish" or name == "nu" or name == "zsh"
-end
-
 local function focus_cached_editor(contract)
 	local editor = runtime.pane(contract.id, "editor")
 	if not editor then
@@ -123,7 +105,21 @@ local function focus_cached_editor(contract)
 	return true
 end
 
-function M.launch(window, pane)
+local function spawn_editor(window, contract)
+	local mux_window = window:mux_window()
+	local spawn_ok, tab_or_err, editor = pcall(mux_window.spawn_tab, mux_window, {
+		cwd = contract.cwd,
+		args = { contract.editor, "--listen", contract.socket },
+		set_environment_variables = contract.env,
+	})
+	if not spawn_ok then
+		return nil, tab_or_err
+	end
+
+	return editor, nil
+end
+
+function M.launch(window)
 	local workspace = window:active_workspace()
 	local contract, err = validate(runtime.session_for_workspace(workspace))
 	if not contract then
@@ -152,32 +148,28 @@ function M.launch(window, pane)
 		return
 	end
 
-	local editor = runtime.pane(contract.id, "editor") or pane
-	local explorer = runtime.pane(contract.id, "explorer")
-
-	if not pane_runs_shell(editor) then
-		notify(window, "IDE launch", "Launch the IDE from a project shell pane")
+	local editor, spawn_err = spawn_editor(window, contract)
+	if not editor then
+		notify(window, "IDE launch", "Unable to launch Neovim: " .. tostring(spawn_err))
 		return
 	end
 
-	if not explorer then
-		local split_ok, split_result = pcall(editor.split, editor, {
-			direction = "Left",
-			size = 0.2,
-			cwd = contract.root,
-			args = { "xplr", contract.root },
-			set_environment_variables = contract.env,
-		})
-		if not split_ok then
-			notify(window, "IDE launch", "Unable to launch Xplr: " .. tostring(split_result))
-			return
-		end
-		explorer = split_result
-		runtime.remember_pane(contract.id, "explorer", explorer)
+	runtime.remember_pane(contract.id, "editor", editor)
+
+	local split_ok, explorer = pcall(editor.split, editor, {
+		direction = "Left",
+		size = 0.2,
+		cwd = contract.root,
+		args = { "xplr", contract.root },
+		set_environment_variables = contract.env,
+	})
+	if not split_ok then
+		notify(window, "IDE launch", "Neovim launched, but Xplr failed: " .. tostring(explorer))
+		editor:activate()
+		return
 	end
 
-	runtime.remember_pane(contract.id, "editor", editor)
-	editor:send_text(editor_command(contract))
+	runtime.remember_pane(contract.id, "explorer", explorer)
 	editor:activate()
 end
 
