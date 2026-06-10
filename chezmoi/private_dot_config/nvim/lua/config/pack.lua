@@ -9,9 +9,6 @@ vim.pack.add({
   -- this only manages parser supply.
   { src = "https://github.com/nvim-treesitter/nvim-treesitter" },
 
-  -- Optional: keep only if external formatter orchestration beats hand-rolled autocmds.
-  { src = "https://github.com/stevearc/conform.nvim" },
-
-  -- Optional: keep only for non-LSP lint producers like shellcheck.
-  { src = "https://github.com/mfussenegger/nvim-lint" },
+  -- Cross-boundary Neovim window and WezTerm pane navigation.
+  { src = "https://github.com/mrjones2014/smart-splits.nvim" },
 })

@@ -2,6 +2,7 @@ local wezterm = require("wezterm")
 
 local sessionizer = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer.wezterm")
 local projects = require("modules.workspaces.projects")
+local runtime = require("modules.workspaces.runtime")
 
 local M = {}
 
@@ -53,6 +54,7 @@ end
 
 local function session_env(project)
 	local env = {}
+	local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
 
 	if type(project.env) == "table" then
 		for key, value in pairs(project.env) do
@@ -66,6 +68,9 @@ local function session_env(project)
 	env.TERM_PROJECT_ROOT = project.root or project.cwd
 	env.TERM_PROJECT_CWD = session_cwd(project)
 	env.TERM_EDITOR = project.editor or env.TERM_EDITOR or "nvim"
+	if type(runtime_dir) == "string" and runtime_dir ~= "" then
+		env.TERM_NVIM_SOCKET = string.format("%s/nvim/%s.sock", runtime_dir, project.id)
+	end
 
 	return env
 end
@@ -159,6 +164,8 @@ local function normalize_entries(entries)
 end
 
 local function switch_to_session(window, pane, session)
+	runtime.remember_session(session)
+
 	if workspace_exists(session.workspace) then
 		window:perform_action(
 			wezterm.action.SwitchToWorkspace({

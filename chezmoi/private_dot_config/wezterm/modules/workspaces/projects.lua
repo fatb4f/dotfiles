@@ -96,11 +96,11 @@ local function normalize(project)
 end
 
 local function sort_projects(a, b)
-	if a.id == wezterm.home_dir then
+	if a.workspace == wezterm.home_dir then
 		return true
 	end
 
-	if b.id == wezterm.home_dir then
+	if b.workspace == wezterm.home_dir then
 		return false
 	end
 

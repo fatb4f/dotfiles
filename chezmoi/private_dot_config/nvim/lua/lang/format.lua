@@ -9,12 +9,6 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 
     local lsp_formatters = {
       cue = true,
-      typescript = true,
-      typescriptreact = true,
-      javascript = true,
-      javascriptreact = true,
-      json = true,
-      jsonc = true,
     }
 
     if lsp_formatters[ft] then
@@ -26,35 +20,53 @@ vim.api.nvim_create_autocmd("BufWritePre", {
   end,
 })
 
--- lua/lang/format.lua continued
-
 local function format_with(cmd, bufnr)
   local file = vim.api.nvim_buf_get_name(bufnr)
   if file == "" then
     return
   end
 
-  vim.system(cmd, { text = true }, function(result)
-    if result.code ~= 0 then
-      vim.schedule(function()
-        vim.notify(result.stderr, vim.log.levels.ERROR)
-      end)
-    end
-  end)
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local input = table.concat(lines, "\n")
+  if vim.bo[bufnr].endofline then
+    input = input .. "\n"
+  end
+
+  local result = vim.system(cmd, {
+    stdin = input,
+    text = true,
+  }):wait()
+
+  if result.code ~= 0 then
+    vim.notify(result.stderr, vim.log.levels.ERROR)
+    return
+  end
+
+  local formatted = vim.split(result.stdout, "\n", { plain = true })
+  if formatted[#formatted] == "" then
+    table.remove(formatted)
+  end
+
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, formatted)
 end
 
-vim.api.nvim_create_autocmd("BufWritePost", {
+vim.api.nvim_create_autocmd("BufWritePre", {
   group = group,
   pattern = "*.lua",
   callback = function(ev)
-    format_with({ "stylua", vim.api.nvim_buf_get_name(ev.buf) }, ev.buf)
+    format_with({
+      "stylua",
+      "--stdin-filepath",
+      vim.api.nvim_buf_get_name(ev.buf),
+      "-",
+    }, ev.buf)
   end,
 })
 
-vim.api.nvim_create_autocmd("BufWritePost", {
+vim.api.nvim_create_autocmd("BufWritePre", {
   group = group,
   pattern = { "*.sh", "*.bash" },
   callback = function(ev)
-    format_with({ "shfmt", "-w", vim.api.nvim_buf_get_name(ev.buf) }, ev.buf)
+    format_with({ "shfmt" }, ev.buf)
   end,
 })
