@@ -13,16 +13,25 @@ local function is_dir(path)
 	return ok and entries ~= nil
 end
 
-local function normalized_dir(path)
-	if path == "/" then
-		return path
+local function canonical_dir(path)
+	if type(path) ~= "string" or path:sub(1, 1) ~= "/" or not is_dir(path) then
+		return nil
 	end
-	return path:gsub("/+$", "")
+
+	local success, stdout = wezterm.run_child_process({ "realpath", "--canonicalize-existing", path })
+	if not success then
+		return nil
+	end
+
+	local canonical = stdout:gsub("%s+$", "")
+	if canonical == "" or canonical:sub(1, 1) ~= "/" then
+		return nil
+	end
+
+	return canonical
 end
 
 local function is_within(root, path)
-	root = normalized_dir(root)
-	path = normalized_dir(path)
 	return path == root or path:sub(1, #root + 1) == root .. "/"
 end
 
@@ -35,15 +44,17 @@ local function validate(session)
 		return nil, "invalid TERM_PROJECT_ID"
 	end
 
-	if type(session.root) ~= "string" or session.root:sub(1, 1) ~= "/" or not is_dir(session.root) then
+	local root = canonical_dir(session.root)
+	if not root then
 		return nil, "TERM_PROJECT_ROOT must be an existing absolute directory"
 	end
 
-	if type(session.cwd) ~= "string" or session.cwd:sub(1, 1) ~= "/" or not is_dir(session.cwd) then
+	local cwd = canonical_dir(session.cwd)
+	if not cwd then
 		return nil, "TERM_PROJECT_CWD must be an existing absolute directory"
 	end
 
-	if not is_within(session.root, session.cwd) then
+	if not is_within(root, cwd) then
 		return nil, "TERM_PROJECT_CWD must be inside TERM_PROJECT_ROOT"
 	end
 
@@ -57,13 +68,20 @@ local function validate(session)
 		return nil, "TERM_NVIM_SOCKET does not match TERM_PROJECT_ID"
 	end
 
+	local env = {}
+	for key, value in pairs(session.env) do
+		env[key] = value
+	end
+	env.TERM_PROJECT_ROOT = root
+	env.TERM_PROJECT_CWD = cwd
+
 	return {
 		id = session.id,
-		root = normalized_dir(session.root),
-		cwd = normalized_dir(session.cwd),
+		root = root,
+		cwd = cwd,
 		workspace = session.workspace,
 		editor = session.editor or "nvim",
-		env = session.env,
+		env = env,
 		runtime_dir = runtime_dir,
 		socket_dir = runtime_dir .. "/nvim",
 		socket = expected_socket,
@@ -128,6 +146,8 @@ function M.launch(window)
 	end
 
 	if nvim_alive(contract) then
+		-- A live socket can outlast the mux pane cached when the editor was spawned.
+		-- Do not start a second editor; report the split-brain state for recovery.
 		if not focus_cached_editor(contract) then
 			notify(window, "IDE launch", "Neovim is alive, but its pane is not available in the runtime cache")
 		end
