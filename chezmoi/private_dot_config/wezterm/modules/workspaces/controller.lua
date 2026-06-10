@@ -1,5 +1,6 @@
 local wezterm = require("wezterm")
 
+local projects = require("modules.workspaces.projects")
 local runtime = require("modules.workspaces.runtime")
 
 local M = {}
@@ -33,6 +34,44 @@ end
 
 local function is_within(root, path)
 	return path == root or path:sub(1, #root + 1) == root .. "/"
+end
+
+local function pane_cwd(window)
+	local pane = window:active_pane()
+	if not pane then
+		return nil
+	end
+
+	local cwd = pane:get_current_working_dir()
+	if not cwd then
+		return nil
+	end
+
+	local has_file_path, file_path = pcall(function()
+		return cwd.file_path
+	end)
+	if has_file_path and type(file_path) == "string" then
+		return file_path
+	end
+
+	return tostring(cwd):match("^file://[^/]*(/.*)$")
+end
+
+local function active_session(window, workspace)
+	local cached = runtime.session_for_workspace(workspace)
+	local cwd = pane_cwd(window)
+	local detected = cwd and projects.session_for_path(cwd) or nil
+
+	if not detected then
+		local canonical_cwd = canonical_dir(cwd)
+		detected = canonical_cwd and projects.session_for_path(canonical_cwd) or nil
+	end
+
+	if detected and (not cached or detected.id ~= cached.id) then
+		return detected
+	end
+
+	return cached
 end
 
 local function validate(session)
@@ -91,6 +130,8 @@ end
 
 local function nvim_alive(contract)
 	local success = wezterm.run_child_process({
+		"timeout",
+		"0.35",
 		contract.editor,
 		"--server",
 		contract.socket,
@@ -139,7 +180,7 @@ end
 
 function M.launch(window)
 	local workspace = window:active_workspace()
-	local contract, err = validate(runtime.session_for_workspace(workspace))
+	local contract, err = validate(active_session(window, workspace))
 	if not contract then
 		notify(window, "IDE launch", err)
 		return

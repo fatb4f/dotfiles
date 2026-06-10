@@ -1,6 +1,7 @@
 # Workspace IDE Manual Verification
 
 - [ ] New workspace launch: select a configured project, run `term-ide-launch`, and confirm Neovim opens with Xplr split on the left.
+- [ ] Manual project entry: from another workspace, `cd` into a configured project, run `term-ide-launch`, and confirm the project Neovim/Xplr topology opens without first invoking sessionizer.
 - [ ] Repeated IDE launch: run `term-ide-launch` again and confirm the existing Neovim pane receives focus without spawning another editor.
 - [ ] Stale socket recovery: leave a stale `TERM_NVIM_SOCKET`, run `term-ide-launch`, and confirm the socket is removed and Neovim starts.
 - [ ] Live socket with cached pane: with Neovim running and its editor pane cached, run `term-ide-launch` and confirm that pane receives focus.

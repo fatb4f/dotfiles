@@ -4,6 +4,14 @@ local M = {}
 
 local projects_dir = wezterm.config_dir .. "/modules/projects"
 
+local function adapter(project)
+	if type(project.adapters) ~= "table" or type(project.adapters.wezterm) ~= "table" then
+		return {}
+	end
+
+	return project.adapters.wezterm
+end
+
 local function expand_home(path)
 	if type(path) ~= "string" then
 		return path
@@ -95,6 +103,55 @@ local function normalize(project)
 	return project
 end
 
+local function session_workspace(project)
+	return adapter(project).workspace or project.workspace or project.id
+end
+
+local function session_cwd(project)
+	return adapter(project).cwd or project.cwd or project.root
+end
+
+local function session_env(project)
+	local env = {}
+	local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
+
+	for key, value in pairs(project.env) do
+		if type(key) == "string" and type(value) == "string" then
+			env[key] = value
+		end
+	end
+
+	env.TERM_PROJECT_ID = project.id
+	env.TERM_PROJECT_ROOT = project.root or project.cwd
+	env.TERM_PROJECT_CWD = session_cwd(project)
+	env.TERM_EDITOR = project.editor or env.TERM_EDITOR or "nvim"
+	if type(runtime_dir) == "string" and runtime_dir ~= "" then
+		env.TERM_NVIM_SOCKET = string.format("%s/nvim/%s.sock", runtime_dir, project.id)
+	end
+
+	return env
+end
+
+local function normalize_session(project)
+	return {
+		id = project.id,
+		label = project.label,
+		kind = project.kind or "project",
+		intent = project.intent,
+		root = project.root or project.cwd,
+		workspace = session_workspace(project),
+		cwd = session_cwd(project),
+		editor = project.editor or "nvim",
+		env = session_env(project),
+		commands = project.commands or {},
+		raw = project,
+	}
+end
+
+local function is_within(root, path)
+	return path == root or path:sub(1, #root + 1) == root .. "/"
+end
+
 local function sort_projects(a, b)
 	if a.workspace == wezterm.home_dir then
 		return true
@@ -136,6 +193,51 @@ function M.list()
 	table.sort(projects, sort_projects)
 
 	return projects
+end
+
+function M.sessions()
+	local model = {
+		version = "workspace.projects.v2",
+		sessions = {},
+		sessions_by_workspace = {},
+		order = {},
+	}
+
+	for _, project in ipairs(M.list()) do
+		local session = normalize_session(project)
+
+		if model.sessions[session.id] then
+			error("Duplicate workspace project id: " .. session.id)
+		end
+
+		if model.sessions_by_workspace[session.workspace] then
+			error("Duplicate workspace project workspace: " .. session.workspace)
+		end
+
+		model.sessions[session.id] = session
+		model.sessions_by_workspace[session.workspace] = session
+		table.insert(model.order, session.id)
+	end
+
+	return model
+end
+
+function M.session_for_path(path)
+	if type(path) ~= "string" or path == "" then
+		return nil
+	end
+
+	local matched = nil
+
+	for _, session in pairs(M.sessions().sessions) do
+		if session.root ~= wezterm.home_dir and is_within(session.root, path) then
+			if not matched or #session.root > #matched.root then
+				matched = session
+			end
+		end
+	end
+
+	return matched
 end
 
 function M.by_id()
