@@ -7,7 +7,7 @@
                         "type": "command",
                         "command": "/home/_404/src/contract.cuemod/bin/dotfiles-agent-context-hook",
                         "timeout": 10,
-                        "statusMessage": "Resolving dotfiles capability context"
+                        "statusMessage": "Routing dotfiles capability context"
                     }
                 ]
             }
