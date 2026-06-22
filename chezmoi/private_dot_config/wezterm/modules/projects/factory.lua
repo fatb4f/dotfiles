@@ -3,9 +3,12 @@ return {
 	label = "factory",
 	workspace = "factory",
 	cwd = "~/src/factory",
+	root = "~/src/factory",
+
 	env = {
 		FACTORY_ROOT = "~/src/factory",
 	},
+
 	commands = {
 		{ name = "edit", cmd = "nvim" },
 		{ name = "check", cmd = "just check" },
