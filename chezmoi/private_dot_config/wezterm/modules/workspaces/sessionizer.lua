@@ -36,7 +36,8 @@ local function load_sessions()
 	return projects.sessions()
 end
 
-local function session_entries(model)
+local function session_entries()
+	local model = load_sessions()
 	local entries = {}
 
 	for _, id in ipairs(model.order) do
@@ -133,8 +134,6 @@ local function normalized_callback(window, pane, id, label)
 end
 
 local function schema()
-	local model = load_sessions()
-
 	return {
 		options = {
 			title = "Session",
@@ -147,7 +146,7 @@ local function schema()
 			filter_default = true,
 		}),
 
-		session_entries(model),
+		session_entries,
 
 		processing = normalize_entries,
 	}
