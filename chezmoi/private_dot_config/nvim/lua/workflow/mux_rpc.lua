@@ -8,9 +8,14 @@ local directions = {
 }
 
 local function smart_mux()
-	local ok, mux = pcall(require, "smart-splits.mux")
+	local ok, mux_api = pcall(require, "smart-splits.mux")
 	if not ok then
-		return nil, "smart-splits.mux is unavailable"
+		return nil, "smart-splits.mux API is unavailable"
+	end
+
+	local mux = mux_api.get()
+	if not mux or not mux.is_in_session() then
+		return nil, "smart-splits mux backend is unavailable"
 	end
 
 	return mux, nil
@@ -26,7 +31,7 @@ local function focus(direction)
 		return false, err
 	end
 
-	if not mux.move_pane(direction, false) then
+	if not mux.next_pane(direction) then
 		return false, "smart-splits mux focus failed: " .. direction
 	end
 
