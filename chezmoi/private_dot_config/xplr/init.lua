@@ -2,6 +2,35 @@ local xplr = xplr
 
 local project_root = os.getenv("TERM_PROJECT_ROOT")
 
+local function rpc_binding(help, op, field, value)
+	return {
+		help = help,
+		messages = {
+			{
+				BashExecSilently0 = string.format(
+					[===[
+        payload=$(
+          TERM_XPLR_OP=%q TERM_XPLR_FIELD=%q TERM_XPLR_VALUE=%q python3 - <<'PY'
+import json
+import os
+
+op = os.environ["TERM_XPLR_OP"]
+field = os.environ["TERM_XPLR_FIELD"]
+value = os.environ["TERM_XPLR_VALUE"]
+print(json.dumps({"op": op, field: value}, separators=(",", ":")))
+PY
+        ) || exit
+        printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%%s\a' "$(printf '%%s' "$payload" | base64 | tr -d '\n')"
+      ]===],
+					op,
+					field,
+					value
+				),
+			},
+		},
+	}
+end
+
 xplr.config.general.read_only = true
 xplr.config.general.show_hidden = false
 xplr.config.general.enable_mouse = false
@@ -24,10 +53,16 @@ xplr.config.modes.builtin.default.key_bindings.on_key["enter"] = {
 			BashExecSilently0 = [===[
         if [ -d "${XPLR_FOCUS_PATH:?}" ]; then
           "$XPLR" -m Enter
-        elif nvim --server "${TERM_NVIM_SOCKET:?}" --remote "${XPLR_FOCUS_PATH:?}"; then
-          "$XPLR" -m 'LogSuccess: %q' "opened ${XPLR_FOCUS_PATH}"
         else
-          "$XPLR" -m 'LogError: %q' "Neovim session unavailable: ${TERM_NVIM_SOCKET:-unset}"
+          payload=$(
+            TERM_XPLR_PATH="${XPLR_FOCUS_PATH:?}" python3 - <<'PY'
+import json
+import os
+
+print(json.dumps({"op": "open", "path": os.environ["TERM_XPLR_PATH"]}, separators=(",", ":")))
+PY
+          ) || exit
+          printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%s\a' "$(printf '%s' "$payload" | base64 | tr -d '\n')"
         fi
       ]===],
 		},
@@ -36,6 +71,10 @@ xplr.config.modes.builtin.default.key_bindings.on_key["enter"] = {
 
 xplr.config.modes.builtin.default.key_bindings.on_key["right"] =
 	xplr.config.modes.builtin.default.key_bindings.on_key["enter"]
+xplr.config.modes.builtin.default.key_bindings.on_key["H"] = rpc_binding("hide tree", "layout", "kind", "hide")
+xplr.config.modes.builtin.default.key_bindings.on_key["R"] = rpc_binding("reveal tree", "layout", "kind", "reveal")
+xplr.config.modes.builtin.default.key_bindings.on_key["N"] = rpc_binding("narrow tree", "layout", "kind", "narrow")
+xplr.config.modes.builtin.default.key_bindings.on_key["W"] = rpc_binding("widen tree", "layout", "kind", "wide")
 
 local on_load = {}
 if project_root and project_root:sub(1, 1) == "/" then

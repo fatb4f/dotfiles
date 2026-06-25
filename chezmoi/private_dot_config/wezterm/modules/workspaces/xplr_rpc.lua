@@ -1,0 +1,218 @@
+local wezterm = require("wezterm")
+
+local projects = require("modules.workspaces.projects")
+local runtime = require("modules.workspaces.runtime")
+
+local M = {}
+
+local layout_kinds = {
+	hide = true,
+	reveal = true,
+	narrow = true,
+	wide = true,
+}
+
+local function notify(window, message)
+	window:toast_notification("Xplr RPC", message, nil, 5000)
+end
+
+local function is_dir(path)
+	local ok, entries = pcall(wezterm.read_dir, path)
+	return ok and entries ~= nil
+end
+
+local function canonical_path(path)
+	if type(path) ~= "string" or path:sub(1, 1) ~= "/" then
+		return nil
+	end
+
+	local success, stdout = wezterm.run_child_process({ "realpath", "--canonicalize-existing", path })
+	if not success then
+		return nil
+	end
+
+	local canonical = stdout:gsub("%s+$", "")
+	if canonical == "" or canonical:sub(1, 1) ~= "/" then
+		return nil
+	end
+
+	return canonical
+end
+
+local function is_within(root, path)
+	return path == root or path:sub(1, #root + 1) == root .. "/"
+end
+
+local function path_is_socket(path)
+	return wezterm.run_child_process({ "test", "-S", path })
+end
+
+local function pane_cwd(pane)
+	if not pane then
+		return nil
+	end
+
+	local cwd = pane:get_current_working_dir()
+	if not cwd then
+		return nil
+	end
+
+	local has_file_path, file_path = pcall(function()
+		return cwd.file_path
+	end)
+	if has_file_path and type(file_path) == "string" then
+		return file_path
+	end
+
+	return tostring(cwd):match("^file://[^/]*(/.*)$")
+end
+
+local function active_session(window, pane)
+	local workspace = window:active_workspace()
+	local cached = runtime.session_for_workspace(workspace)
+	local cwd = pane_cwd(pane)
+	local detected = cwd and projects.session_for_path(cwd) or nil
+
+	if not detected then
+		local canonical_cwd = canonical_path(cwd)
+		detected = canonical_cwd and projects.session_for_path(canonical_cwd) or nil
+	end
+
+	if detected and (not cached or detected.id ~= cached.id) then
+		return detected
+	end
+
+	return cached
+end
+
+local function contract_for(window, pane)
+	local session = active_session(window, pane)
+	if type(session) ~= "table" then
+		return nil, "active workspace is not a configured project session"
+	end
+
+	local root = canonical_path(session.root)
+	if not root or not is_dir(root) then
+		return nil, "TERM_PROJECT_ROOT must be an existing absolute directory"
+	end
+
+	if type(session.env) ~= "table" or type(session.env.TERM_NVIM_SOCKET) ~= "string" then
+		return nil, "TERM_NVIM_SOCKET is not configured"
+	end
+
+	if not path_is_socket(session.env.TERM_NVIM_SOCKET) then
+		return nil, "Neovim socket is unavailable: " .. session.env.TERM_NVIM_SOCKET
+	end
+
+	return {
+		editor = session.editor or "nvim",
+		root = root,
+		socket = session.env.TERM_NVIM_SOCKET,
+	}
+end
+
+local function lua_quote(value)
+	return string.format("%q", tostring(value))
+end
+
+local function nvim_dispatch(contract, op, value)
+	local expr = string.format("v:lua.TermXplrMuxRpc(%s, %s)", lua_quote(op), lua_quote(value))
+	return wezterm.run_child_process({
+		contract.editor,
+		"--server",
+		contract.socket,
+		"--remote-expr",
+		expr,
+	})
+end
+
+local function decode_payload(value)
+	if type(value) ~= "string" or value == "" then
+		return nil, "empty TERM_XPLR_RPC payload"
+	end
+
+	local ok, payload = pcall(wezterm.json_parse, value)
+	if not ok or type(payload) ~= "table" then
+		return nil, "TERM_XPLR_RPC payload must be JSON"
+	end
+
+	if payload.op ~= "open" and payload.op ~= "layout" then
+		return nil, "unknown xplr operation"
+	end
+
+	return payload, nil
+end
+
+local function validate_open(contract, payload)
+	local path = canonical_path(payload.path)
+	if not path then
+		return nil, "open path must be an existing absolute path"
+	end
+
+	if not is_within(contract.root, path) then
+		return nil, "open path is outside TERM_PROJECT_ROOT"
+	end
+
+	return path, nil
+end
+
+local function validate_layout(payload)
+	if not layout_kinds[payload.kind] then
+		return nil, "unknown explorer layout kind"
+	end
+
+	return payload.kind, nil
+end
+
+function M.dispatch(window, pane, payload)
+	local contract, contract_err = contract_for(window, pane)
+	if not contract then
+		notify(window, contract_err)
+		return false
+	end
+
+	local value, validation_err
+	if payload.op == "open" then
+		value, validation_err = validate_open(contract, payload)
+	elseif payload.op == "layout" then
+		value, validation_err = validate_layout(payload)
+	else
+		validation_err = "unknown xplr operation"
+	end
+
+	if not value then
+		notify(window, validation_err)
+		return false
+	end
+
+	local success, _, stderr = nvim_dispatch(contract, payload.op, value)
+	if not success then
+		notify(window, "Neovim RPC failed: " .. tostring(stderr))
+		return false
+	end
+
+	return true
+end
+
+function M.dispatch_layout(window, pane, kind)
+	return M.dispatch(window, pane, {
+		op = "layout",
+		kind = kind,
+	})
+end
+
+function M.handle_user_var(window, pane, name, value)
+	if name ~= "TERM_XPLR_RPC" then
+		return
+	end
+
+	local payload, err = decode_payload(value)
+	if not payload then
+		notify(window, err)
+		return
+	end
+
+	M.dispatch(window, pane, payload)
+end
+
+return M
