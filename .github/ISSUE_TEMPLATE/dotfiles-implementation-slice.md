@@ -53,7 +53,7 @@ Issue-local check adapters bind concrete proof targets internally.
 ## Manifest Import
 
 ```cue
-import impl "github.com/fatb4f/dotfiles/.github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
+import impl "github.com/fatb4f/dotfiles/github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
 ```
 
 ## Implementation Workflow

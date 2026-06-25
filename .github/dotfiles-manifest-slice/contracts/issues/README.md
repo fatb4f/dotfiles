@@ -23,5 +23,5 @@ Rules:
 Import path for manifests:
 
 ```cue
-import impl "github.com/fatb4f/dotfiles/.github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
+import impl "github.com/fatb4f/dotfiles/github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
 ```

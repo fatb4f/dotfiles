@@ -4,6 +4,7 @@ package workflow
 
 #Named: {
 	name: #NonEmptyString
+	...
 }
 
 #DotfilesPrimitiveSpec: #Named & {
@@ -11,18 +12,21 @@ package workflow
 	requiredFields: [...#NonEmptyString]
 	constraints: [...#NonEmptyString]
 	closed: bool | *true
+	...
 }
 
 #ObservedSurfaceSpec: #Named & {
 	target: #NonEmptyString
 	paths: [...#NonEmptyString]
 	evidence: #NonEmptyString
+	...
 }
 
 #AdmissibleSurfaceSpec: #Named & {
 	target: #NonEmptyString
 	allows: [...#NonEmptyString]
 	forbids: [...#NonEmptyString]
+	...
 }
 
 #Predicate: {
@@ -32,6 +36,7 @@ package workflow
 
 #PredicateSetSpec: #Named & {
 	predicates: [...#Predicate]
+	...
 }
 
 #PromotionCandidateSpec: #Named & {
@@ -39,6 +44,7 @@ package workflow
 	to: #NonEmptyString
 	intent: [...#NonEmptyString]
 	nonGoals: [...#NonEmptyString]
+	...
 }
 
 #SurfaceSetSpec: {
@@ -48,17 +54,20 @@ package workflow
 	fixtures: [...#NonEmptyString]
 	checks: [...#NonEmptyString]
 	publicExports: [...#NonEmptyString]
+	...
 }
 
 #NegativeFixtureSpec: #Named & {
 	input: _
 	expect: "bottom"
 	reason: #NonEmptyString
+	...
 }
 
 #BottomCheckPlanSpec: #Named & {
 	fixture: #NonEmptyString
 	checkSurface: #NonEmptyString
+	...
 }
 
 #BottomCheckProofSpec: {
@@ -86,10 +95,12 @@ package workflow
 
 #ValidationPlanSpec: #Named & {
 	commands: [...#NonEmptyString]
+	...
 }
 
 #CompletionReportSpec: #Named & {
 	sections: [...#NonEmptyString]
+	...
 }
 
 #MakeDotfilesPrimitive: {
