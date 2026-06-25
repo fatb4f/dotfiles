@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "cue:lsp": "cue lsp serve"
+  }
+}

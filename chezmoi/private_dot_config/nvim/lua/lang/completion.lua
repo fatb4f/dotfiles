@@ -2,6 +2,25 @@
 
 vim.opt.completeopt = { "menuone", "noselect", "popup" }
 
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+
+capabilities.textDocument.completion.completionItem.snippetSupport = true
+capabilities.textDocument.completion.completionItem.documentationFormat = {
+	"markdown",
+	"plaintext",
+}
+capabilities.textDocument.completion.completionItem.resolveSupport = {
+	properties = {
+		"documentation",
+		"detail",
+		"additionalTextEdits",
+	},
+}
+
+vim.lsp.config("*", {
+	capabilities = capabilities,
+})
+
 vim.keymap.set({ "i", "s" }, "<tab>", function()
 	if vim.snippet.active({ direction = 1 }) then
 		return "<cmd>lua vim.snippet.jump(1)<cr>"

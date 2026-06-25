@@ -1,10 +1,9 @@
 ---@type vim.lsp.Config
 return {
-	cmd = { "cue", "lsp", "serve" },
+	cmd = require("lang.process").bun_run("cue:lsp"),
 	filetypes = { "cue" },
 	root_markers = {
 		"cue.mod",
 		".git",
 	},
-	workspace_required = true,
 }
