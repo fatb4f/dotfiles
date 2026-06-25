@@ -26,7 +26,11 @@ local function focus(direction)
 		return false, err
 	end
 
-	return mux.move_pane(direction, false), nil
+	if not mux.move_pane(direction, false) then
+		return false, "smart-splits mux focus failed: " .. direction
+	end
+
+	return true, nil
 end
 
 local function resize(direction, amount)
@@ -39,23 +43,39 @@ local function resize(direction, amount)
 		return false, err
 	end
 
-	return mux.resize_pane(direction, amount), nil
+	if not mux.resize_pane(direction, amount) then
+		return false, "smart-splits mux resize failed: " .. direction
+	end
+
+	return true, nil
 end
 
 local layouts = {
 	hide = function()
-		focus("right")
+		local ok, err = focus("right")
+		if not ok then
+			return false, err
+		end
+
 		return resize("left", 80)
 	end,
 	reveal = function()
 		return focus("left")
 	end,
 	narrow = function()
-		focus("right")
+		local ok, err = focus("right")
+		if not ok then
+			return false, err
+		end
+
 		return resize("left", 8)
 	end,
 	wide = function()
-		focus("left")
+		local ok, err = focus("left")
+		if not ok then
+			return false, err
+		end
+
 		return resize("right", 8)
 	end,
 }
@@ -66,8 +86,7 @@ function M.open(path)
 	end
 
 	vim.cmd.edit(vim.fn.fnameescape(path))
-	focus("right")
-	return true, nil
+	return focus("right")
 end
 
 function M.layout(kind)

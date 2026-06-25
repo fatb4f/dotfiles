@@ -210,7 +210,9 @@ _validation: impl.#MakeValidationPlan & {
 			"cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/43 -e normalizedDotfilesIssueManifest",
 			"cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/43 -e dotfilesValidationPlan",
 			"cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/43 -e dotfilesCompletionReportContract",
-			"cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.<name>'",
+			"cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.outside-project-root-rejected'",
+			"cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.unknown-layout-kind-rejected'",
+			"cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.missing-nvim-socket-rejected'",
 			"cd .github && ! rg '[t]arget:\\s*_|[i]nput:\\s*_|[e]xpression:|[i]sInvalid: true|[o]peratorTruthFlag|[i]nline constructor|[g]enerated.*authority' ./dotfiles-manifest-slice/contracts/issues/43",
 		]
 	}

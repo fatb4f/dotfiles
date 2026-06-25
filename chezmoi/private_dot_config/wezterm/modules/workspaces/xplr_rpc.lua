@@ -126,6 +126,11 @@ local function nvim_dispatch(contract, op, value)
 	})
 end
 
+local function nvim_accepted(stdout)
+	local returned = tostring(stdout or ""):gsub("%s+$", "")
+	return returned == "1" or returned == "true" or returned == "v:true"
+end
+
 local function decode_payload(value)
 	if type(value) ~= "string" or value == "" then
 		return nil, "empty TERM_XPLR_RPC payload"
@@ -185,9 +190,14 @@ function M.dispatch(window, pane, payload)
 		return false
 	end
 
-	local success, _, stderr = nvim_dispatch(contract, payload.op, value)
+	local success, stdout, stderr = nvim_dispatch(contract, payload.op, value)
 	if not success then
 		notify(window, "Neovim RPC failed: " .. tostring(stderr))
+		return false
+	end
+
+	if not nvim_accepted(stdout) then
+		notify(window, "Neovim RPC rejected operation: " .. tostring(stdout))
 		return false
 	end
 
