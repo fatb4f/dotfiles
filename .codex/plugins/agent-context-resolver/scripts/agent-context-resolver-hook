@@ -19,6 +19,7 @@ prompt=$(jq -er 'select(.hook_event_name == "UserPromptSubmit") | .prompt' "$inp
 classification=$(
 	jq -cn \
 		--arg prompt "$prompt" \
+		--arg verbose "${AGENT_CONTEXT_VERBOSE:-0}" \
 		--slurpfile turnStart "$generated_dir/turn_start_fragments.json" \
 		--slurpfile fragmentInventory "$generated_dir/fragment_inventory.json" \
 		--slurpfile promptRoutes "$generated_dir/prompt_routes.json" \
@@ -49,7 +50,7 @@ classification=$(
 					| $selected
 					| index($fragment) != null
 				] | all)
-			] | sort_by([.sequence, -(.priority), .id])) as $routes |
+			] | sort_by(.sequence, -(.priority // 0), .id)) as $routes |
 			if ($routes | length) == 0 then
 				{}
 			else
@@ -60,98 +61,139 @@ classification=$(
 					| . as $provider
 					| select($selectedProviderIDs | index($provider.id) != null)
 				]) as $selectedProviders |
+				($matched | sort_by(-(.priority // 0), .id) | .[0].id) as $intent |
+				("prompt-" + ($prompt | @base64 | gsub("[^A-Za-z0-9]"; "") | .[0:20])) as $turnID |
+				($selectedProviders | map({id, kind, protocol, authority, capabilities, runtime, upstream, limits} | with_entries(select(.value != null)))) as $providerSummaries |
+				($routes | map({
+					id,
+					kind,
+					priority,
+					sequence,
+					dependsOn: (.dependsOn // []),
+					inputFragments: (.inputFragments // []),
+					objective: .task.objective,
+					constraints: (.task.constraints // []),
+					files: (.task.files // []),
+					commands: (.task.commands // []),
+					providerIDs: (.task.providerIDs // []),
+					gates: (.gates // []),
+					outputSchema
+				})) as $routeSummaries |
 				{
-					schema: "agent.route-controller-packet.v1",
-					repo: "fatb4f/dotfiles",
-					availableFragmentIDs: $available,
-					selectedFragments: $selected,
-					compactHints: [$matched[].hint?] | unique,
-					selectedProviders: $selectedProviders,
-					evidence: [$matched[] | {kind: "prompt_route", value: .id, source: "user_prompt"}],
-					controller: {
-						schema: "agent.route-plan.v1",
-						plannerKind: "bundled_dotfiles_plugin",
-						authority: "resolver_projection",
-						turnID: ("prompt-" + ($prompt | @base64 | gsub("[^A-Za-z0-9]"; "") | .[0:20])),
-						intent: ($matched | sort_by([-(.priority), .id]) | .[0].id),
+					full: {
+						schema: "agent.route-controller-packet.v1",
+						repo: "fatb4f/dotfiles",
 						availableFragmentIDs: $available,
-						availableRouteIDs: [$routeInventory[0].routes[].id],
 						selectedFragments: $selected,
-						providers: $selectedProviders,
-						routes: $routes,
-						propagation: {
-							mode: "route-local",
-							root: {
-								includes: {
-									intent: ($matched | sort_by([-(.priority), .id]) | .[0].id),
-									selectedFragments: $selected,
-									acceptedRouteResults: []
+						compactHints: [$matched[].hint?] | unique,
+						selectedProviders: $selectedProviders,
+						evidence: [$matched[] | {kind: "prompt_route", value: .id, source: "user_prompt"}],
+						controller: {
+							schema: "agent.route-plan.v1",
+							plannerKind: "bundled_dotfiles_plugin",
+							authority: "resolver_projection",
+							turnID: $turnID,
+							intent: $intent,
+							availableFragmentIDs: $available,
+							availableRouteIDs: [$routeInventory[0].routes[].id],
+							selectedFragments: $selected,
+							providers: $selectedProviders,
+							routes: $routes,
+							propagation: {
+								mode: "route-local",
+								root: {
+									includes: {intent: $intent, selectedFragments: $selected, acceptedRouteResults: []},
+									excludes: ["raw route logs", "unvalidated route claims", "runtime implementation details"]
 								},
-								excludes: ["raw route logs", "unvalidated route claims", "runtime implementation details"]
+								perRoute: (
+									reduce $routes[] as $route ({};
+										.[$route.id] = {
+											includes: {
+												objective: $route.task.objective,
+												acceptedFacts: [],
+												selectedFragments: ($route.inputFragments // []),
+												files: ($route.task.files // []),
+												validationCommands: ($route.task.commands // [])
+											},
+											excludes: ["full transcript", "unselected fragments", "raw registry", "unbounded tool logs", "irrelevant route outputs"],
+											return: {schema: $route.outputSchema, maxSummaryTokens: 800, evidenceRequired: true}
+										}
+									)
+								),
+								denyFullTranscript: true,
+								denyRawRegistryDump: true,
+								denyUnselectedFragments: true,
+								requireStructuredResult: true
 							},
-							perRoute: (
-								reduce $routes[] as $route ({};
-									.[$route.id] = {
-										includes: {
-											objective: $route.task.objective,
-											acceptedFacts: [],
-											selectedFragments: ($route.inputFragments // []),
-											files: ($route.task.files // []),
-											validationCommands: ($route.task.commands // [])
-										},
-										excludes: ["full transcript", "unselected fragments", "raw registry", "unbounded tool logs", "irrelevant route outputs"],
-										return: {schema: $route.outputSchema, maxSummaryTokens: 800, evidenceRequired: true}
-									}
-								)
-							),
-							denyFullTranscript: true,
-							denyRawRegistryDump: true,
-							denyUnselectedFragments: true,
-							requireStructuredResult: true
-						},
-						gates: [$routeInventory[0].gates[] | . as $gate | select($gateIDs | index($gate.id) != null)],
-						expectedMerge: {
-							mode: "fail_closed",
-							requireStructuredResults: true,
-							requireEvidenceForClaims: true,
-							conflictPolicy: "root_decides",
-							maxMergedSummaryTokens: 1200,
-							finalAuthority: "root_codex",
-							routeResultsAreAuthority: false
-						},
-						runtime: {
-							mode: "requires-agent-runtime",
-							execution: {
-								allowed: false,
-								requiresMCPAdapter: false,
-								requiresRuntimeRegistry: false,
-								backend: "codex-cli"
+							gates: [$routeInventory[0].gates[] | . as $gate | select($gateIDs | index($gate.id) != null)],
+							expectedMerge: {
+								mode: "fail_closed",
+								requireStructuredResults: true,
+								requireEvidenceForClaims: true,
+								conflictPolicy: "root_decides",
+								maxMergedSummaryTokens: 1200,
+								finalAuthority: "root_codex",
+								routeResultsAreAuthority: false
 							},
+							runtime: {
+								mode: "requires-agent-runtime",
+								execution: {allowed: false, requiresMCPAdapter: false, requiresRuntimeRegistry: false, backend: "codex-cli"},
+								deny: {
+									directSDKSpawn: true,
+									rawTranscriptForwarding: true,
+									rawRegistryDump: true,
+									unselectedFragments: true,
+									globalMutation: true,
+									externalFactoryRootLookup: true,
+									externalContractCuemodLookup: true
+								},
+								expectedResult: {schema: "agent.route-result.v1"}
+							},
+							budget: {maxInputTokens: 100000, maxFiles: 8, maxCommands: 12}
+						},
+						generatedFrom: {
+							turnStart: ".codex/plugins/agent-context-resolver/generated/turn_start_fragments.json",
+							fragmentInventory: ".codex/plugins/agent-context-resolver/generated/fragment_inventory.json",
+							promptRoutes: ".codex/plugins/agent-context-resolver/generated/prompt_routes.json",
+							routeInventory: ".codex/plugins/agent-context-resolver/generated/route_inventory.json",
+							providerInventory: ".codex/plugins/agent-context-resolver/generated/provider_inventory.json"
+						},
+						resolver: {command: "sh .codex/plugins/agent-context-resolver/scripts/resolve-agent-context", skill: ".codex/plugins/agent-context-resolver/SKILL.md"}
+					},
+					compact: {
+						schema: "agent.route-controller-packet.v1",
+						repo: "fatb4f/dotfiles",
+						intent: $intent,
+						turnID: $turnID,
+						selectedFragments: $selected,
+						compactHints: [$matched[].hint?] | unique,
+						selectedProviderIDs: $selectedProviderIDs,
+						providerSummaries: $providerSummaries,
+						evidence: [$matched[] | {kind: "prompt_route", value: .id, source: "user_prompt"}],
+						controller: {
+							schema: "agent.route-plan.v1",
+							plannerKind: "bundled_dotfiles_plugin.compact",
+							authority: "resolver_projection",
+							intent: $intent,
+							selectedFragments: $selected,
+							selectedProviderIDs: $selectedProviderIDs,
+							routes: $routeSummaries,
 							deny: {
-								directSDKSpawn: true,
-								rawTranscriptForwarding: true,
+								fullTranscript: true,
 								rawRegistryDump: true,
 								unselectedFragments: true,
-								globalMutation: true,
+								providerExecution: true,
 								externalFactoryRootLookup: true,
-								externalContractCuemodLookup: true
+								externalContractCuemodLookup: true,
+								globalMutation: true
 							},
-							expectedResult: {schema: "agent.route-result.v1"}
+							budget: {maxInputTokens: 100000, maxFiles: 8, maxCommands: 12},
+							expectedResult: {schema: "agent.route-result.v1", evidenceRequired: true, maxSummaryTokens: 800}
 						},
-						budget: {maxInputTokens: 100000, maxFiles: 8, maxCommands: 12}
-					},
-					generatedFrom: {
-						turnStart: ".codex/plugins/agent-context-resolver/generated/turn_start_fragments.json",
-						fragmentInventory: ".codex/plugins/agent-context-resolver/generated/fragment_inventory.json",
-						promptRoutes: ".codex/plugins/agent-context-resolver/generated/prompt_routes.json",
-						routeInventory: ".codex/plugins/agent-context-resolver/generated/route_inventory.json",
-						providerInventory: ".codex/plugins/agent-context-resolver/generated/provider_inventory.json"
-					},
-					resolver: {
-						command: "sh .codex/plugins/agent-context-resolver/scripts/resolve-agent-context",
-						skill: ".codex/plugins/agent-context-resolver/SKILL.md"
+						resolver: {command: "sh .codex/plugins/agent-context-resolver/scripts/resolve-agent-context", skill: ".codex/plugins/agent-context-resolver/SKILL.md"},
+						verbose: {env: "AGENT_CONTEXT_VERBOSE=1", emits: "full route controller packet"}
 					}
-				}
+				} | if $verbose == "1" then .full else .compact end
 			end
 		end'
 )
