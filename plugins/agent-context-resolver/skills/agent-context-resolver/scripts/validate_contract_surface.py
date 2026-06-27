@@ -11,7 +11,7 @@ import json
 from pathlib import Path
 import sys
 
-ROOT = Path(__file__).resolve().parents[4]
+ROOT = Path(__file__).resolve().parents[5]
 PLUGIN_ROOT = ROOT / "plugins" / "agent-context-resolver"
 MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 MANIFEST = PLUGIN_ROOT / ".codex-plugin" / "plugin.json"
