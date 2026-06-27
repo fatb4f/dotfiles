@@ -5,7 +5,7 @@ description: Resolve bundled dotfiles repository context and compile bounded rou
 
 # Dotfiles Agent Context Resolver
 
-This plugin is self-contained at runtime. It uses bundled JSON projections plus `sh` and `jq`.
+This plugin is self-contained at hook runtime. It uses bundled JSON projections plus `sh` and `jq`.
 
 ## Runtime rules
 
@@ -13,9 +13,19 @@ This plugin is self-contained at runtime. It uses bundled JSON projections plus 
 2. Use `selectedFragments` as the admitted fragment subset for the turn.
 3. Use `controller.routes` as route summaries for default/compact mode.
 4. Inspect only route-declared files unless the user explicitly expands scope.
-5. Providers in `provider_inventory.json` are declarations only; do not execute MCP, LSP, A2A, SDK, or external repo lookups from the hook.
-6. Do not resume large Codex sessions. Start fresh from the emitted route packet.
-7. Return structured validation evidence and stop after the selected task.
+5. The hook must not execute MCP, LSP, A2A, SDK, or external repo lookups.
+6. LSP providers marked `callable: true` are reachable only through an MCP executor outside the hook and must return structured route-local evidence.
+7. Do not resume large Codex sessions. Start fresh from the emitted route packet.
+8. Return structured validation evidence and stop after the selected task.
+
+## LSP over MCP
+
+The bundled provider inventory and schema map declare:
+
+- `df:provider/lua-lsp` as an MCP-callable Lua implementation evidence provider.
+- `df:provider/cue-lsp` as an MCP-callable CUE graph evidence provider.
+
+Provider output is not implied prompt context and is not source authority. It must be wrapped as evidence and kept inside the selected route boundary.
 
 ## Output modes
 
