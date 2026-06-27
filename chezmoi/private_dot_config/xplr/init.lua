@@ -1,3 +1,5 @@
+version = "1.1.0"
+
 local xplr = xplr
 
 local project_root = os.getenv("TERM_PROJECT_ROOT")
@@ -35,6 +37,9 @@ xplr.config.general.read_only = true
 xplr.config.general.show_hidden = false
 xplr.config.general.enable_mouse = false
 xplr.config.general.hide_remaps_in_help_menu = true
+xplr.config.general.initial_layout = "compact"
+
+xplr.config.layouts.builtin.compact = "Table"
 
 xplr.config.general.table.header.cols = {
 	{ format = " project tree" },
