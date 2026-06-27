@@ -3,10 +3,12 @@
   "repo": "fatb4f/dotfiles",
   "generatedFrom": "dotfiles-bundled-agent-context-resolver",
   "runtime": {
-    "providersExecutable": false,
+    "providersExecutable": true,
     "hookExecutesProviders": false,
     "externalReposRequired": false,
-    "cueAtRuntime": false
+    "cueAtRuntime": false,
+    "providerOutputIsContext": false,
+    "providerOutputIsAuthority": false
   },
   "providerCatalogue": ".codex/plugins/agent-context-resolver/generated/provider_inventory.json",
   "providers": [
@@ -32,9 +34,45 @@
       ]
     },
     {
+      "id": "df:provider/cue-lsp",
+      "surface": "cue-graph",
+      "callable": true,
+      "authority": "cue-graph",
+      "capabilities": [
+        "definition",
+        "references",
+        "hover",
+        "diagnostics",
+        "documentSymbols",
+        "workspaceSymbols",
+        "validate",
+        "evidence"
+      ],
+      "mcp": {
+        "serverID": "df:mcp/cue-lsp",
+        "transport": "stdio",
+        "adapter": "lsp-over-mcp",
+        "toolPrefix": "cue_lsp",
+        "tools": {
+          "definition": "cue_lsp.definition",
+          "references": "cue_lsp.references",
+          "hover": "cue_lsp.hover",
+          "diagnostics": "cue_lsp.diagnostics",
+          "documentSymbols": "cue_lsp.document_symbols",
+          "workspaceSymbols": "cue_lsp.workspace_symbols",
+          "validate": "cue_lsp.validate",
+          "evidence": "cue_lsp.evidence"
+        }
+      },
+      "mapsTo": [
+        "dotfiles.cue-validation",
+        "dotfiles.manifest-slice"
+      ]
+    },
+    {
       "id": "df:provider/lua-lsp",
       "surface": "lua-implementation",
-      "callable": false,
+      "callable": true,
       "authority": "lua-implementation",
       "capabilities": [
         "definition",
@@ -45,9 +83,26 @@
         "workspaceSymbols",
         "evidence"
       ],
+      "mcp": {
+        "serverID": "df:mcp/lua-lsp",
+        "transport": "stdio",
+        "adapter": "lsp-over-mcp",
+        "toolPrefix": "lua_lsp",
+        "tools": {
+          "definition": "lua_lsp.definition",
+          "references": "lua_lsp.references",
+          "hover": "lua_lsp.hover",
+          "diagnostics": "lua_lsp.diagnostics",
+          "documentSymbols": "lua_lsp.document_symbols",
+          "workspaceSymbols": "lua_lsp.workspace_symbols",
+          "evidence": "lua_lsp.evidence"
+        }
+      },
       "mapsTo": [
         "dotfiles.workspace-ide.plan",
-        "dotfiles.nvim-workflow.inspect"
+        "dotfiles.nvim-workflow.inspect",
+        "dotfiles.wezterm-lua",
+        "dotfiles.xplr-sidebar"
       ]
     },
     {
@@ -107,14 +162,23 @@
         ".github/dotfiles-manifest-slice/contracts/**"
       ],
       "providerIDs": [
+        "df:provider/cue-lsp",
         "df:provider/codex-cli",
         "df:provider/cue-rg"
       ]
     }
   },
+  "mcpExecutionPolicy": {
+    "providersReachable": true,
+    "hookMayExecuteProviders": false,
+    "rawProviderOutputIsContext": false,
+    "rawProviderOutputIsAuthority": false,
+    "requiresEvidenceWrapper": true,
+    "routeDeclaredFilesOnly": true
+  },
   "notes": [
-    "This map unblocks semantic provider discovery as declaration metadata only.",
-    "callable=false is intentional until MCP/LSP provider execution is implemented.",
-    "The Codex hook must not execute providers or inject raw provider output."
+    "LSP providers are reachable over MCP as callable provider surfaces.",
+    "The Codex hook still must not execute providers or inject raw provider output.",
+    "Provider output must return as structured evidence for route-local use."
   ]
 }
