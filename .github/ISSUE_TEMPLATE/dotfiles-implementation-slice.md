@@ -1,104 +1,70 @@
 ---
-name: Dotfiles manifest slice
-about: Implement a bounded dotfiles slice from a repo-local GitHub workflow bundle.
+name: Dotfiles implementation slice
+about: Compact bounded implementation contract for Codex.
 title: "dotfiles: "
+labels: dotfiles, contract
 ---
 
-# Dotfiles Manifest Slice
+# Dotfiles Implementation Slice
 
-## Tracking
-
-```text
-Parent:
-Depends on:
-Blocks:
-Manifest path:
-```
-
-## Goal
-
-```text
-Implement:
-  -
-
-Do not implement:
-  -
-```
-
-## Dotfiles Workflow Authority
-
-Use the repo-local workflow bundle under `.github/dotfiles-manifest-slice`.
-
-Issue bodies should carry a compact manifest or a path to:
-
-```text
-.github/dotfiles-manifest-slice/contracts/issues/<issue-number>/manifest.cue
-```
-
-Workflow definitions live at:
-
-```text
-.github/dotfiles-manifest-slice/contracts/dotfiles/workflow
-```
-
-Manifests must contain constructor calls only.
-Do not import `factory`.
-Do not import `contract.cuemod`.
-Do not embed constructor bodies in issue text.
-Do not invent alternate shapes.
-Do not encode CUE checks as string metadata.
-Manifests may carry bottom-check plans only; executable bottom-check proofs live in check packages.
-Issue-local check adapters bind concrete proof targets internally.
-
-## Manifest Import
+Use the issue body as the compact implementation contract. Do not create an issue-local manifest or check package unless this issue explicitly asks for one.
 
 ```cue
-import impl "github.com/fatb4f/dotfiles/github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
+issue: {
+	id:    "dotfiles.<slice-id>"
+	repo:  "fatb4f/dotfiles"
+	title: "<issue title>"
+
+	intent: "<one sentence describing the intended state transition>"
+
+	authority: {
+		owns: [
+			"<owned surface>",
+		]
+		doesNotOwn: [
+			"generated artifacts",
+			"runtime state",
+			"external workflow authority",
+		]
+	}
+
+	targets: [
+		"<repo path>",
+	]
+
+	implement: [
+		"<required change>",
+	]
+
+	doNotImplement: [
+		"<forbidden change>",
+	]
+
+	validation: commands: [
+		"<command>",
+	]
+
+	acceptance: [
+		"<observable completion condition>",
+	]
+}
 ```
 
-## Implementation Workflow
+## Workflow
 
-```text
-1.  #MakeDotfilesPrimitive     -> _primitives
-2.  #MakeObservedSurface       -> _observed
-3.  #MakeAdmissibleSurface     -> _admissible
-4.  #MakePredicateSet          -> _predicates
-5.  #MakePromotionCandidate    -> _promotion
-6.  #MakeSurfaceSet            -> _surfaces
-7.  #MakeNegativeFixture       -> _negativeFixtures
-8.  #MakeBottomCheckPlan       -> _bottomCheckPlans
-9.  #MakeBottomCheckProof      -> checks/_negativeBottomChecks
-10. #MakeValidationPlan        -> _validation
-11. #MakeCompletionReport      -> _completion
-```
+1. Read this issue body.
+2. Treat the issue body as the contract seed.
+3. Apply bounded repo changes only under declared targets.
+4. Keep generated/runtime artifacts as evidence only.
+5. Run the declared validation commands.
+6. Report summary, changed surfaces, validation, and remaining risks.
 
-## Validation
+## Forbidden attractors
 
-```bash
-cue vet ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number>
-cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number> -e normalizedDotfilesIssueManifest
-cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number> -e dotfilesValidationPlan
-cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number> -e dotfilesCompletionReportContract
-```
-
-## Completion Report
-
-```text
-Summary:
-  - workflow files:
-  - manifest workflow:
-  - target surfaces:
-  - materialized config changes:
-  - public eval surfaces:
-  - negative checks:
-  - evidence:
-  - forbidden attractors avoided:
-
-Validation:
-  - cue vet:
-  - constructor exports:
-  - negative bottom checks:
-  - forbidden-attractor search:
-```
-
-Stop once the declared dotfiles surfaces export and the loaded negative checks bottom.
+- issue-local manifest scaffolding by default
+- issue-local check package scaffolding by default
+- generated artifacts as authority
+- runtime state as authority
+- stringified CUE expressions as proof
+- boolean invalidity flags
+- alternate tracking surfaces
