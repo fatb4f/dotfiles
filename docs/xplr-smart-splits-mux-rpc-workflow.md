@@ -74,6 +74,32 @@ cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks 
 cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.missing-nvim-socket-rejected'
 ```
 
+Issue #45 boundary gate validation:
+
+```bash
+cd .github && cue vet ./dotfiles-manifest-slice/contracts/issues/45
+cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/45 -e normalizedDotfilesIssueManifest
+cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/45 -e dotfilesValidationPlan
+cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/45 -e dotfilesCompletionReportContract
+cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/45/checks -e '_negativeBottomChecks.neovim-topology-owner-rejected'
+cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/45/checks -e '_negativeBottomChecks.xplr-direct-pane-bridge-rejected'
+cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/45/checks -e '_negativeBottomChecks.generated-decision-source-rejected'
+cd .github && ! rg '[Nn]eovim project picker|[w]orkspace/session topology authority|x[p]lr.*smart-splits|[g]enerated.*authority' ./dotfiles-manifest-slice/contracts/issues/45
+```
+
+## Issue #45 Neovim QoL boundary gate
+
+Neovim quality-of-life additions may expose editor-local discovery for buffers, diagnostics, quickfix, symbols, commands, keymaps, and invocation-only commands that call back into the WezTerm/sessionizer workflow.
+
+They must not select, rank, persist, or own project/session topology. Project launch, workspace identity, and workspace switching remain WezTerm responsibilities.
+
+| Boundary | Accept | Reject |
+|---|---|---|
+| Neovim picker surface | Editor-local discovery, current-buffer actions, quickfix, diagnostics, symbols, commands, keymaps | Project/session selection, workspace ranking, workspace persistence |
+| WezTerm/sessionizer bridge | Invocation-only command handoff | Neovim-owned project launch or topology model |
+| xplr tree UI | Focused path selection and bounded open/layout intent | Direct pane mechanics integration |
+| Runtime and generated projections | Evidence for validation | Persistent decision source |
+
 ## File/change matrix
 
 | File | Role in workflow | Change class |
@@ -110,6 +136,7 @@ cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks 
 | Treat runtime cache as persistent authority | It is evidence/routing state only |
 | Encode CUE checks as string metadata | Checks must live in issue-local CUE check package |
 | Use generated artifacts as authority | Repo-local workflow and materialized configs are authority surfaces |
+| Promote Neovim QoL discovery into project/session topology | Duplicates the WezTerm/sessionizer boundary |
 
 ## Runtime smoke sequence
 
