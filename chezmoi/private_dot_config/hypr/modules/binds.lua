@@ -40,14 +40,12 @@ hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd(session_osd .. "brightness-up"))
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(session_osd .. "brightness-down"))
 
 -- XF86 audio
-hl.bind(
-	"XF86AudioRaiseVolume",
-	hl.dsp.exec_cmd(session_osd .. "volume-up"),
-	{ locked = true, repeatable = true }
-)
-hl.bind(
-	"XF86AudioLowerVolume",
-	hl.dsp.exec_cmd(session_osd .. "volume-down"),
-	{ locked = true, repeatable = true }
-)
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(session_osd .. "volume-up"), { locked = true, repeatable = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(session_osd .. "volume-down"), { locked = true, repeatable = true })
 hl.bind("XF86AudioMute", hl.dsp.exec_cmd(session_osd .. "volume-toggle"), { locked = true })
+
+-- screenshots
+-- Chromebook Show Windows key resolves as XF86LaunchA on this host.
+-- Clipboard-only: no screenshot file is written.
+hl.bind("SUPER + C", hl.dsp.exec_cmd("hyprshot -m region"))
+hl.bind("SUPER + SHIFT + XF86LaunchA", hl.dsp.exec_cmd("hyprshot -m window --clipboard-only"))
