@@ -57,8 +57,15 @@ local function pane_cwd(window)
 	return tostring(cwd):match("^file://[^/]*(/.*)$")
 end
 
+local function configured_session_for_workspace(workspace)
+	if type(workspace) ~= "string" or workspace == "" then
+		return nil
+	end
+
+	return projects.sessions().sessions_by_workspace[workspace]
+end
+
 local function active_session(window, workspace)
-	local cached = runtime.session_for_workspace(workspace)
 	local cwd = pane_cwd(window)
 	local detected = cwd and projects.session_for_path(cwd) or nil
 
@@ -67,11 +74,11 @@ local function active_session(window, workspace)
 		detected = canonical_cwd and projects.session_for_path(canonical_cwd) or nil
 	end
 
-	if detected and (not cached or detected.id ~= cached.id) then
+	if detected then
 		return detected
 	end
 
-	return cached
+	return configured_session_for_workspace(workspace)
 end
 
 local function validate(session)
@@ -180,11 +187,14 @@ end
 
 function M.launch(window)
 	local workspace = window:active_workspace()
-	local contract, err = validate(active_session(window, workspace))
+	local session = active_session(window, workspace)
+	local contract, err = validate(session)
 	if not contract then
 		notify(window, "IDE launch", err)
 		return
 	end
+
+	runtime.remember_session(session)
 
 	if nvim_alive(contract) then
 		-- A live socket can outlast the mux pane cached when the editor was spawned.
