@@ -231,7 +231,7 @@ function M.launch(window)
 		direction = "Left",
 		size = 0.2,
 		cwd = contract.root,
-		args = { "xplr", contract.root },
+		args = { "xplr", "--config", wezterm.home_dir .. "/.config/xplr/init.lua", contract.root },
 		set_environment_variables = contract.env,
 	})
 	if not split_ok then

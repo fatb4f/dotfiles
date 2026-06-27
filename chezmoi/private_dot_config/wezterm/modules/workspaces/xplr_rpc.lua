@@ -138,6 +138,19 @@ local function decode_payload(value)
 
 	local ok, payload = pcall(wezterm.json_parse, value)
 	if not ok or type(payload) ~= "table" then
+		local decoded_ok, stdout = wezterm.run_child_process({
+			"bash",
+			"-lc",
+			"printf '%s' \"$1\" | base64 --decode",
+			"bash",
+			value,
+		})
+		if decoded_ok and type(stdout) == "string" and stdout ~= "" then
+			ok, payload = pcall(wezterm.json_parse, stdout)
+		end
+	end
+
+	if not ok or type(payload) ~= "table" then
 		return nil, "TERM_XPLR_RPC payload must be JSON"
 	end
 
