@@ -1,0 +1,34 @@
+{
+  "schema": "factory.plugin-bundle.code-intel.manifest.v1",
+  "id": "dotfiles-code-intel",
+  "version": "0.1.0",
+  "generated": true,
+  "authority": false,
+  "targetRepo": "github.com/fatb4f/dotfiles",
+  "materializedRoot": ".codex/plugins/code-intel",
+  "source": {
+    "repo": "github.com/fatb4f/factory",
+    "contractRoot": "contracts/plugin-bundle/code-intel/instances/dotfiles",
+    "sourceRoot": "contracts/plugin-bundle/code-intel/instances/dotfiles/src"
+  },
+  "contracts": [
+    "contracts/code-intel/lua-first-workflow.cue",
+    "contracts/code-intel/checks.cue"
+  ],
+  "providers": [
+    "mcp-tool-registry",
+    "mcp-context-projection",
+    "cue-lsp",
+    "lua-language-server",
+    "wezterm-types",
+    "nvim-vim-types",
+    "lua-first-workflow"
+  ],
+  "denies": [
+    "MCP output treated as authority",
+    "LSP diagnostics treated as authority",
+    "generated type stubs treated as source authority",
+    "generated Lua workflow artifacts treated as authority",
+    "agent-context-resolver contracts embedded in code-intel"
+  ]
+}
