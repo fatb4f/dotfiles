@@ -57,10 +57,18 @@ fatb4f/factory
   contracts/issues/44/normalized.cue
   contracts/issues/44/validation.cue
   contracts/issues/44/checks/checks.cue
-  contracts/agent-context-resolver/implementation_slice_materializer.cue
-  contracts/agent-context-resolver/implementation_slice_eval_projection.cue
-  contracts/agent-context-resolver/implementation_slice_runner_result.cue
-  contracts/agent-context-resolver/implementation_slice_constructor_inventory.cue
+  contracts/plugin-bundle/agent-context-resolver/src/implementation_slice_materializer.cue
+  contracts/plugin-bundle/agent-context-resolver/src/implementation_slice_eval_projection.cue
+  contracts/plugin-bundle/agent-context-resolver/src/implementation_slice_runner_result.cue
+  contracts/plugin-bundle/agent-context-resolver/src/implementation_slice_constructor_inventory.cue
+```
+
+Bundled materialized source:
+
+```text
+.codex/plugins/agent-context-resolver/contracts/agent-context-resolver
+.codex/plugins/agent-context-resolver/contracts/meta/impl
+.codex/plugins/agent-context-resolver/cue.mod/module.cue
 ```
 
 Contract boundary:
@@ -68,8 +76,8 @@ Contract boundary:
 - `contracts/issues/44/manifest.cue` defines the reference materializer issue contract.
 - `contracts/issues/44/normalized.cue` exposes the public contract, resolver exports, validation plan, and completion report.
 - `contracts/issues/44/checks/checks.cue` contains executable negative bottom-check proofs.
-- `contracts/agent-context-resolver/*implementation_slice*` owns the resolver-local materializer, eval projection, runner plan, feedback shape, and runner-result classification.
-- `contracts/meta/impl` is constructor authority.
+- The bundled `.codex/plugins/agent-context-resolver/contracts/agent-context-resolver/*implementation_slice*` files carry the resolver-local materializer, eval projection, runner plan, feedback shape, and runner-result classification.
+- The bundled `.codex/plugins/agent-context-resolver/contracts/meta/impl` tree carries constructor authority required by the materialized plugin.
 - GitHub issue bodies are transport only.
 - Shell, GitHub API, generated evidence, and adapter output are evidence only.
 
@@ -101,24 +109,25 @@ Required public surfaces:
 Required validation:
 
 ```bash
-cue vet ./contracts/issues/44
-cue export ./contracts/issues/44 -e publicContract
-cue export ./contracts/issues/44 -e validationPlan
-cue export ./contracts/issues/44 -e completionReportContract
+cd .codex/plugins/agent-context-resolver
 cue vet ./contracts/agent-context-resolver
 cue export ./contracts/agent-context-resolver -e implementationSliceIssueBaseline
 cue export ./contracts/agent-context-resolver -e implementationSliceMaterializationReport
 cue export ./contracts/agent-context-resolver -e implementationSliceEvalPlan
 cue export ./contracts/agent-context-resolver -e implementationSliceRunnerPlan
-! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.routeOnlyPacket'
-! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.missingContractPath'
-! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.staticEvalPlan'
-! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.missingNegativeCheckExpression'
-! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.anyNonzeroAsPass'
+cue vet ./contracts/meta/impl
+cue export ./contracts/meta/impl -e constructorLibraryBaseline
+! cue export ./contracts/agent-context-resolver/checks -e '_negativeBottomChecks.routeOnlyPacket'
+! cue export ./contracts/agent-context-resolver/checks -e '_negativeBottomChecks.missingContractPath'
+! cue export ./contracts/agent-context-resolver/checks -e '_negativeBottomChecks.staticEvalPlan'
+! cue export ./contracts/agent-context-resolver/checks -e '_negativeBottomChecks.missingNegativeCheckExpression'
+! cue export ./contracts/agent-context-resolver/checks -e '_negativeBottomChecks.anyNonzeroAsPass'
 ```
 
 Forbidden attractors:
 
+- external factory root lookup at runtime
+- external contract.cuemod root lookup at runtime
 - route-only packets treated as full materialization candidates
 - missing `contract.path` accepted as parsed issue contract
 - static eval plans detached from loaded issue manifests
