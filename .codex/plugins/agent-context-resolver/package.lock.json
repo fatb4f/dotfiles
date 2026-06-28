@@ -1,0 +1,14 @@
+{
+  "schema": "codex.plugin.package-lock.v1",
+  "id": "dotfiles-agent-context-resolver-plugin-bundle-v1",
+  "root": ".codex/plugins/agent-context-resolver",
+  "idempotent": true,
+  "authority": false,
+  "fileCount": 31,
+  "invariants": {
+    "sameInputsSamePackage": true,
+    "packageContentsOnly": true,
+    "runtimeGenerationRequired": false,
+    "externalAuthorityRequired": false
+  }
+}
