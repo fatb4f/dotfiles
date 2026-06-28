@@ -1,0 +1,47 @@
+{
+  "schema": "factory.plugin-bundle.code-intel.mcp.context-projection.v1",
+  "generated": true,
+  "authority": false,
+  "fragments": [
+    {
+      "id": "dotfiles.lua.entrypoints",
+      "paths": [
+        "generated/workflows/lua-first/entrypoints.json"
+      ],
+      "providers": [
+        "lua-language-server"
+      ],
+      "authority": false
+    },
+    {
+      "id": "dotfiles.lua.type-overlays",
+      "paths": [
+        "generated/types/nvim/vim.lua",
+        "generated/types/wezterm/wezterm.lua",
+        "generated/types/wezterm/events.lua",
+        "generated/types/wezterm/config-builder.lua"
+      ],
+      "providers": [
+        "nvim-vim-types",
+        "wezterm-types"
+      ],
+      "authority": false
+    },
+    {
+      "id": "dotfiles.cue.contracts",
+      "paths": [
+        "contracts/code-intel/lua-first-workflow.cue",
+        "contracts/code-intel/checks.cue"
+      ],
+      "providers": [
+        "cue-lsp"
+      ],
+      "authority": true
+    }
+  ],
+  "projectionRules": [
+    "Prefer Lua entrypoints before generic dotfiles search.",
+    "Attach type overlays as evidence-only libraries.",
+    "Never promote MCP/LSP/provider output to mutation authority."
+  ]
+}
