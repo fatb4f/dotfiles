@@ -1,22 +1,24 @@
 ---
 name: dotfiles-agent-context-resolver
-description: Resolve bundled repository context from packaged plugin state only.
+description: Resolve bundled repository context from an idempotent generated package.
 ---
 
 # Dotfiles Agent Context Resolver
 
-This plugin is a sealed bundle. The installed plugin root is the complete contract and runtime boundary.
+This plugin is a generated, idempotent package. The materialized package root is the complete contract and runtime boundary.
 
 ## Authority boundary
 
-The bundle uses only packaged local files:
+The package uses only materialized local files:
 
 - `.codex/plugins/agent-context-resolver/generated/`
 - `.codex/plugins/agent-context-resolver/contracts/agent-context-resolver/`
 - `.codex/plugins/agent-context-resolver/contracts/meta/impl/`
+- `.codex/plugins/agent-context-resolver/package.json`
+- `.codex/plugins/agent-context-resolver/package.lock.json`
 - `.codex/plugins/agent-context-resolver/cue.mod/module.cue`
 
-Generated data, hook output, command output, adapter output, API output, and marketplace metadata are evidence only.
+Generated data, hook output, command output, adapter output, API output, and distribution metadata are evidence only.
 
 ## Runtime rules
 
@@ -42,7 +44,7 @@ Run the resolver from the host repository root:
 - `implementationSliceFeedbackShape`
 - `implementationSliceConstructorInventory`
 
-## Validation from installed plugin root
+## Validation from package root
 
 - `cue vet ./contracts/agent-context-resolver`
 - `cue export ./contracts/agent-context-resolver -e implementationSliceIssueBaseline`
