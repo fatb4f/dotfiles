@@ -1,0 +1,26 @@
+{
+  "schema": "codex.plugin.idempotent-package.v1",
+  "id": "dotfiles-agent-context-resolver-plugin-bundle-v1",
+  "kind": "generated-plugin-bundle-package",
+  "root": ".codex/plugins/agent-context-resolver",
+  "idempotent": true,
+  "lock": "package.lock.json",
+  "install": {
+    "mode": "copy-package-tree",
+    "overwrite": "replace-generated"
+  },
+  "runtime": {
+    "requires": ["sh", "jq"],
+    "externalRepos": false,
+    "cueAtRuntime": false
+  },
+  "entrypoints": {
+    "hook": "scripts/agent-context-resolver-hook",
+    "cli": "scripts/resolve-agent-context"
+  },
+  "authority": {
+    "packageContentsOnly": true,
+    "generatedOutputAuthority": false,
+    "externalAuthorityRequired": false
+  }
+}
