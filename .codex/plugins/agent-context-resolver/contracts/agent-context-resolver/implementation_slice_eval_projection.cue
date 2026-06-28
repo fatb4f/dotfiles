@@ -72,8 +72,12 @@ package agentcontextresolver
 		sourceIssueRef: _materialization.parsedRef
 		loadedIssueRef: _materialization.loadedRef
 		commands: [
-			for c in obligations.positive {{id: c.id, argv: c.argv, expect: "pass"}},
-			for c in obligations.negative {{id: c.id, argv: c.argv, expect: "fail", reasonClass: c.reasonClass, selector: c.selector}},
+			for c in obligations.positive {
+				{id: c.id, argv: c.argv, expect: "pass"}
+			},
+			for c in obligations.negative {
+				{id: c.id, argv: c.argv, expect: "fail", reasonClass: c.reasonClass, selector: c.selector}
+			},
 		]
 	}
 	runnerPlan: #ImplementationSliceRunnerPlan & {
@@ -81,7 +85,17 @@ package agentcontextresolver
 		sourceEvalPlan: evalPlan
 		commands: [
 			for c in evalPlan.commands {
-				{id: c.id, sourceEvalID: c.id, command: c.argv, expect: c.expect, if c.expect == "fail" {reasonClass: c.reasonClass, stderrMustContain: ["_|_"], selector: c.selector}}
+				{
+					id: c.id
+					sourceEvalID: c.id
+					command: c.argv
+					expect: c.expect
+					if c.expect == "fail" {
+						reasonClass: c.reasonClass
+						stderrMustContain: ["_|_"]
+						selector: c.selector
+					}
+				}
 			},
 		]
 	}
