@@ -1,0 +1,40 @@
+{
+  "schema": "factory.plugin-bundle.code-intel.lua-first.entrypoints.v1",
+  "generated": true,
+  "authority": false,
+  "entrypoints": [
+    {
+      "id": "nvim-init",
+      "language": "lua",
+      "path": ".config/nvim/init.lua",
+      "domain": "nvim",
+      "provider": "lua-language-server",
+      "typeOverlays": [
+        "nvim-vim-types"
+      ],
+      "authority": "dotfiles-source"
+    },
+    {
+      "id": "nvim-lua-modules",
+      "language": "lua",
+      "path": ".config/nvim/lua",
+      "domain": "nvim",
+      "provider": "lua-language-server",
+      "typeOverlays": [
+        "nvim-vim-types"
+      ],
+      "authority": "dotfiles-source"
+    },
+    {
+      "id": "wezterm-config",
+      "language": "lua",
+      "path": ".config/wezterm/wezterm.lua",
+      "domain": "wezterm",
+      "provider": "lua-language-server",
+      "typeOverlays": [
+        "wezterm-types"
+      ],
+      "authority": "dotfiles-source"
+    }
+  ]
+}
