@@ -18,9 +18,7 @@
     "turnStartFragments": ".codex/plugins/agent-context-resolver/generated/turn_start_fragments.json",
     "promptRoutes": ".codex/plugins/agent-context-resolver/generated/prompt_routes.json",
     "routeInventory": ".codex/plugins/agent-context-resolver/generated/route_inventory.json",
-    "fragmentInventory": ".codex/plugins/agent-context-resolver/generated/fragment_inventory.json",
-    "providerInventory": ".codex/plugins/agent-context-resolver/generated/provider_inventory.json",
-    "schemaMap": ".codex/plugins/agent-context-resolver/generated/dotfiles.schema-map.json"
+    "fragmentInventory": ".codex/plugins/agent-context-resolver/generated/fragment_inventory.json"
   },
   "denies": [
     "external factory root lookup",

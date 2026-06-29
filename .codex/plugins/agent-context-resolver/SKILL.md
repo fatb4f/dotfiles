@@ -1,41 +1,48 @@
 ---
 name: dotfiles-agent-context-resolver
-description: Resolve bundled repository context from an idempotent generated package.
+description: Resolve bundled repository context, compile bounded route plans, and materialize implementation-slice issue contracts.
 ---
 
-# Dotfiles Agent Context Resolver
+# Agent Context Resolution
 
-This plugin is a generated, idempotent package. The materialized package root is the complete contract and runtime boundary.
+The `UserPromptSubmit` hook provides a bounded route controller packet, not task authority.
 
-## Authority boundary
+1. Run `.codex/plugins/agent-context-resolver/scripts/resolve-agent-context --prompt "<prompt>"`.
+2. Treat `selectedFragments` as a subset of `availableFragmentIDs`.
+3. Treat `controller.routes` as a subset of `controller.availableRouteIDs`.
+4. Resolve selected fragment metadata through `.codex/plugins/agent-context-resolver/generated/fragment_inventory.json`.
+5. Inspect the declared `sourcePath` and obey repository instruction boundaries before editing.
+6. Never execute projected routes directly or treat derived JSON and MCP/tool output as source authority.
+7. Regenerate resolver-local Codex projection and JSON outputs from their CUE sources after changes.
 
-The package uses only materialized local files:
+## Implementation-slice issue materializer
 
-- `.codex/plugins/agent-context-resolver/generated/`
-- `.codex/plugins/agent-context-resolver/contracts/agent-context-resolver/`
-- `.codex/plugins/agent-context-resolver/contracts/meta/impl/`
-- `.codex/plugins/agent-context-resolver/package.json`
-- `.codex/plugins/agent-context-resolver/package.lock.json`
-- `.codex/plugins/agent-context-resolver/cue.mod/module.cue`
+Use `contracts/issues/44` as the canonical workflow reference for implementation-slice issue materialization.
 
-Generated data, hook output, command output, adapter output, API output, and distribution metadata are evidence only.
+Contract boundary:
 
-## Runtime rules
+- `contracts/issues/44/manifest.cue` defines the reference materializer issue contract.
+- `contracts/issues/44/normalized.cue` exposes the public contract, resolver exports, validation plan, and completion report.
+- `contracts/issues/44/checks/checks.cue` contains executable negative bottom-check proofs.
+- `contracts/plugin-bundle/agent-context-resolver/src/*implementation_slice*` owns the resolver-local materializer, eval projection, runner plan, feedback shape, and runner-result classification.
+- `contracts/meta/impl` is constructor authority.
+- GitHub issue bodies are transport only.
+- Shell, GitHub API, generated evidence, and adapter output are evidence only.
 
-1. Treat hook output as bounded context, not task authority.
-2. Use `selectedFragments` as the admitted fragment subset for the turn.
-3. Use `controller.routes` as route summaries for default mode.
-4. Inspect only route-declared files unless the user expands scope.
-5. Treat provider inventory as declarations only.
-6. Return structured validation evidence and stop after the selected task.
+Materialization flow:
 
-## CLI
+1. Observe the raw implementation-slice issue body.
+2. Parse it into `#ParsedImplementationSliceIssue`.
+3. Load the issue-local CUE manifest and public exports.
+4. Build an admissible `#IssueMaterializationCandidate`.
+5. Derive eval obligations from the loaded issue.
+6. Derive the eval plan from the obligations.
+7. Derive the runner plan from the eval plan.
+8. Classify runner results as evidence, including expected failures.
+9. Evaluate issue-local negative fixtures through `_negativeBottomChecks`.
+10. Produce the completion report sections declared by the issue manifest.
 
-Run the resolver from the host repository root:
-
-`sh .codex/plugins/agent-context-resolver/scripts/resolve-agent-context --prompt "dotfiles wezterm xplr workspace ide"`
-
-## Packaged contract surfaces
+Required public surfaces:
 
 - `implementationSliceIssueBaseline`
 - `implementationSliceMaterializationReport`
@@ -43,15 +50,35 @@ Run the resolver from the host repository root:
 - `implementationSliceRunnerPlan`
 - `implementationSliceFeedbackShape`
 - `implementationSliceConstructorInventory`
+- `publicContract`
+- `validationPlan`
+- `completionReportContract`
 
-## Validation from package root
+Required validation:
 
-- `cue vet ./contracts/agent-context-resolver`
-- `cue export ./contracts/agent-context-resolver -e implementationSliceIssueBaseline`
-- `cue export ./contracts/agent-context-resolver -e implementationSliceMaterializationReport`
-- `cue export ./contracts/agent-context-resolver -e implementationSliceEvalPlan`
-- `cue export ./contracts/agent-context-resolver -e implementationSliceRunnerPlan`
-- `cue export ./contracts/agent-context-resolver -e implementationSliceFeedbackShape`
-- `cue export ./contracts/agent-context-resolver -e implementationSliceConstructorInventory`
-- `cue vet ./contracts/meta/impl`
-- `cue export ./contracts/meta/impl -e constructorLibraryBaseline`
+```bash
+cue vet ./contracts/issues/44
+cue export ./contracts/issues/44 -e publicContract
+cue export ./contracts/issues/44 -e validationPlan
+cue export ./contracts/issues/44 -e completionReportContract
+cue vet ./contracts/plugin-bundle/agent-context-resolver/src
+cue export ./contracts/plugin-bundle/agent-context-resolver/src -e implementationSliceIssueBaseline
+cue export ./contracts/plugin-bundle/agent-context-resolver/src -e implementationSliceMaterializationReport
+cue export ./contracts/plugin-bundle/agent-context-resolver/src -e implementationSliceEvalPlan
+cue export ./contracts/plugin-bundle/agent-context-resolver/src -e implementationSliceRunnerPlan
+! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.routeOnlyPacket'
+! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.missingContractPath'
+! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.staticEvalPlan'
+! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.missingNegativeCheckExpression'
+! cue export ./contracts/issues/44/checks -e '_negativeBottomChecks.anyNonzeroAsPass'
+```
+
+Forbidden attractors:
+
+- route-only packets treated as full materialization candidates
+- missing `contract.path` accepted as parsed issue contract
+- static eval plans detached from loaded issue manifests
+- missing negative check expressions accepted as proof
+- any nonzero runner exit classified as pass
+- generated artifacts or adapter outputs promoted to authority
+- GitHub issue bodies promoted beyond transport evidence

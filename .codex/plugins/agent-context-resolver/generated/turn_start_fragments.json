@@ -1,1 +1,125 @@
-{"generatedFrom":"dotfiles-bundled-agent-context-resolver","fragments":[{"id":"dotfiles.authority","sourcePath":".github/dotfiles-manifest-slice/contracts/issues","summary":"Dotfiles issue manifests, validation plans, completion report contracts, and bottom checks are the issue-slice authority.","authority":"cue-issue-slice","include":["issue manifest boundary","validation commands","negative bottom checks"],"exclude":["unbounded repo scan","generated output as authority"]},{"id":"dotfiles.manifest-slice","sourcePath":".github/dotfiles-manifest-slice/contracts/issues","summary":"Manifest slices encode allowed files, implementation boundaries, validation, and explicit forbidden work per issue.","authority":"cue-manifest-slice","include":["allowed files","forbidden work","completion report contract"],"exclude":["cross-issue mutation","implicit broad task expansion"]},{"id":"dotfiles.workspace-ide","sourcePath":".github/WORKSPACE_IDE_VERIFICATION.md","summary":"Workspace IDE topology is WezTerm session launch plus xplr project sidebar plus Neovim editor workflow.","authority":"bounded-workflow-doc","include":["WezTerm session topology","xplr project sidebar","Neovim socket workflow"],"exclude":["tree-view.xplr adoption","plugin manager adoption","xplr owning project/session authority"]},{"id":"dotfiles.wezterm-lua","sourcePath":"chezmoi/private_dot_config/wezterm","summary":"WezTerm owns workspace/session topology and pane orchestration. Lua implementation claims require bounded file evidence.","authority":"lua-implementation","include":["workspace controller","session topology","pane orchestration","tinty theme application"],"exclude":["raw module dump","implicit provider execution"]},{"id":"dotfiles.nvim-workflow","sourcePath":"chezmoi/private_dot_config/nvim/lua/workflow","summary":"Neovim owns buffers and socket RPC endpoint for xplr file opens; :bd! is the supported file close primitive.","authority":"lua-implementation","include":["TermXplrMuxRpc","buffer close semantics","smart-splits handoff"],"exclude":[":q! rewrite unless explicitly selected","full Neovim config audit"]},{"id":"dotfiles.xplr-sidebar","sourcePath":"chezmoi/private_dot_config/xplr/init.lua","summary":"xplr is a local project tree/sidebar and direct Neovim socket RPC emitter. It does not own pane/session authority.","authority":"lua-implementation","include":["h/j/k/l local navigation","l/Enter open","direct Neovim socket RPC"],"exclude":["write-capable file manager expansion","tree-view.xplr adoption"]},{"id":"dotfiles.cue-validation","sourcePath":".github/dotfiles-manifest-slice/contracts","summary":"CUE validation commands and bottom checks gate manifest-slice changes.","authority":"cue-graph","include":["cue vet","cue export","negative bottom checks"],"exclude":["skipping validation","moving validation authority to scripts"]},{"id":"providers.runtime-catalogue","sourcePath":".codex/plugins/agent-context-resolver/generated/provider_inventory.json","summary":"Provider inventory declares adapter capabilities for route planning only; providers are not executed by the bundled hook.","authority":"resolver-projection","include":["provider IDs","capabilities","authority planes"],"exclude":["provider execution","MCP spawn","SDK worker spawn"]}]}
+{
+  "generatedFrom": "registry.index.json",
+  "fragments": [
+    {
+      "id": "agent-context-resolver.authority",
+      "sourceContract": "agent-context-resolver",
+      "sourcePath": "contracts/plugin-bundle/agent-context-resolver/src/resolver.cue",
+      "role": "authority",
+      "surface": "turn_start",
+      "summary": "Authoritative resolver lifecycle and context selection boundary.",
+      "authorityRoot": "contracts/plugin-bundle/agent-context-resolver/src",
+      "contractPath": "contracts/plugin-bundle/agent-context-resolver/src/resolver.cue"
+    },
+    {
+      "id": "agent-runtime.authority",
+      "sourceContract": "agent-runtime",
+      "sourcePath": "contracts/agent-runtime/registry.cue",
+      "role": "authority",
+      "surface": "turn_start",
+      "summary": "Registered worker, route invocation, budget, lifecycle, adapter, and structured-result boundary.",
+      "authorityRoot": "contracts/agent-runtime",
+      "contractPath": "contracts/agent-runtime/registry.cue"
+    },
+    {
+      "id": "agent-skill.projection",
+      "sourceContract": "agent-skill",
+      "sourcePath": "contracts/agent-skill/skill.cue",
+      "role": "constraint",
+      "surface": "turn_start",
+      "summary": "Generated agent skill, hook, and script projection constraints.",
+      "authorityRoot": "contracts/agent-skill",
+      "contractPath": "contracts/agent-skill/skill.cue"
+    },
+    {
+      "id": "mcp.evidence-plane",
+      "sourceContract": "mcp",
+      "sourcePath": "contracts/protocols/mcp/mcp.cue",
+      "role": "constraint",
+      "surface": "turn_start",
+      "summary": "MCP provider, result, and evidence-plane constraints.",
+      "authorityRoot": "contracts/protocols/mcp",
+      "contractPath": "contracts/protocols/mcp/mcp.cue"
+    },
+    {
+      "id": "repo.contract-seed",
+      "sourceContract": "repo",
+      "sourcePath": "contracts/repo/contract_seed.cue",
+      "role": "authority",
+      "surface": "turn_start",
+      "summary": "Temporary shared contract atom seed for later vb-contract rebasing.",
+      "authorityRoot": "contracts/repo",
+      "contractPath": "contracts/repo/lifecycle.cue"
+    },
+    {
+      "id": "repo.lifecycle",
+      "sourceContract": "repo",
+      "sourcePath": "contracts/repo/lifecycle.cue",
+      "role": "constraint",
+      "surface": "turn_start",
+      "summary": "Repository source, generated, fixture, and lifecycle boundaries.",
+      "authorityRoot": "contracts/repo",
+      "contractPath": "contracts/repo/lifecycle.cue"
+    },
+    {
+      "id": "resolver.context-packet",
+      "sourceContract": "resolver",
+      "sourcePath": "contracts/context/packet/resolver.cue",
+      "role": "workflow",
+      "surface": "turn_start",
+      "summary": "Context packet selection and dependency projection workflow.",
+      "authorityRoot": "contracts/context/packet",
+      "contractPath": "contracts/context/packet/resolver.cue"
+    },
+    {
+      "id": "vb-contract.authority",
+      "sourceContract": "vb-contract",
+      "sourcePath": "contracts/repo/contract.cue",
+      "role": "authority",
+      "surface": "turn_start",
+      "summary": "Temporary virtual-branch contract root and registry contribution.",
+      "authorityRoot": "contracts/repo",
+      "contractPath": "contracts/repo/contract.cue"
+    },
+    {
+      "id": "vb-contract.component-seed",
+      "sourceContract": "vb-contract",
+      "sourcePath": "contracts/repo/component_seed.cue",
+      "role": "constraint",
+      "surface": "turn_start",
+      "summary": "Shared reusable component ownership, dependency, glue, and gate schema.",
+      "authorityRoot": "contracts/repo",
+      "contractPath": "contracts/repo/contract.cue"
+    },
+    {
+      "id": "vb-contract.contract-seed",
+      "sourceContract": "vb-contract",
+      "sourcePath": "contracts/repo/contract_seed.cue",
+      "role": "constraint",
+      "surface": "turn_start",
+      "summary": "Temporary contract, template, instance, and projection bootstrap seed.",
+      "authorityRoot": "contracts/repo",
+      "contractPath": "contracts/repo/contract.cue"
+    },
+    {
+      "id": "vb-contract.virtual-branch",
+      "sourceContract": "vb-contract",
+      "sourcePath": "contracts/repo/virtual_branch.cue",
+      "role": "constraint",
+      "surface": "turn_start",
+      "summary": "Shared reusable virtual-branch schema with separate temporary bootstrap instances.",
+      "authorityRoot": "contracts/repo",
+      "contractPath": "contracts/repo/contract.cue"
+    },
+    {
+      "id": "vcs.patch-stack",
+      "sourceContract": "vcs",
+      "sourcePath": "contracts/vcs/patch_stack_skill.cue",
+      "role": "workflow",
+      "surface": "turn_start",
+      "summary": "Patch stack ownership, ordering, and validation workflow.",
+      "authorityRoot": "contracts/vcs",
+      "contractPath": "contracts/vcs/patch_stack_skill.cue"
+    }
+  ]
+}

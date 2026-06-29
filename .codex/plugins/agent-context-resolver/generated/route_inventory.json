@@ -1,1 +1,290 @@
-{"generatedFrom":"dotfiles-bundled-agent-context-resolver","gates":[{"id":"registry-authority","class":"registry_authority","stage":"selection","appliesToKinds":["inspect","validate","generate","summarize"],"required":true},{"id":"route-local-propagation","class":"propagation_boundary","stage":"projection","appliesToKinds":["inspect","validate","generate","summarize"],"required":true},{"id":"runtime-deny","class":"runtime_denial","stage":"execution","appliesToKinds":["validate","generate"],"required":true},{"id":"structured-result","class":"structured_result","stage":"merge","appliesToKinds":["inspect","validate","generate","summarize"],"required":true}],"routes":[{"id":"dotfiles.issue.inspect","kind":"inspect","priority":100,"promptRouteIDs":["dotfiles-workspace-ide","dotfiles-manifest-slice","dotfiles-provider-catalogue","dotfiles-neovim-workflow"],"sequence":10,"dependsOn":[],"inputFragments":["dotfiles.authority"],"task":{"objective":"Inspect the bounded dotfiles issue/manifest context supplied by the user prompt.","constraints":["Do not fetch raw GitHub issue bodies unless explicitly requested.","Do not perform broad repo scans."],"files":[".github/dotfiles-manifest-slice/contracts/issues",".github/WORKSPACE_IDE_VERIFICATION.md"],"providerIDs":["df:provider/codex-cli","df:provider/cue-rg"]},"outputSchema":{"schema":"agent.route-result.inspect.v1"},"gates":["registry-authority","route-local-propagation","structured-result"],"parallelGroup":"inspect"},{"id":"dotfiles.workspace-ide.plan","kind":"inspect","priority":95,"promptRouteIDs":["dotfiles-workspace-ide"],"sequence":20,"dependsOn":["dotfiles.issue.inspect"],"inputFragments":["dotfiles.workspace-ide","dotfiles.wezterm-lua","dotfiles.nvim-workflow","dotfiles.xplr-sidebar"],"task":{"objective":"Plan or review bounded Workspace IDE changes across WezTerm, xplr, and Neovim workflow files.","constraints":["WezTerm owns session/topology.","xplr owns local sidebar navigation and open intent.","Neovim owns buffers and socket RPC.","Do not add tree-view.xplr unless explicitly selected."],"files":["chezmoi/private_dot_config/wezterm/**","chezmoi/private_dot_config/nvim/lua/workflow/**","chezmoi/private_dot_config/xplr/init.lua",".github/WORKSPACE_IDE_VERIFICATION.md"],"providerIDs":["df:provider/lua-lsp","df:provider/wezterm-types","df:provider/cue-rg"]},"outputSchema":{"schema":"agent.route-result.inspect.v1"},"gates":["registry-authority","route-local-propagation","structured-result"]},{"id":"dotfiles.provider-catalogue.inspect","kind":"inspect","priority":95,"promptRouteIDs":["dotfiles-provider-catalogue"],"sequence":20,"dependsOn":["dotfiles.issue.inspect"],"inputFragments":["providers.runtime-catalogue","dotfiles.wezterm-lua"],"task":{"objective":"Inspect bundled provider declarations and enforce that providers are declarations only at hook runtime.","constraints":["Do not execute provider tools from the hook.","Do not require factory or contract.cuemod checkout at runtime.","Treat wezterm-types as type-library evidence, not a vendored runtime dependency."],"files":[".codex/plugins/agent-context-resolver/generated/provider_inventory.json",".codex/plugins/agent-context-resolver/manifest.json"],"providerIDs":["df:provider/codex-cli","df:provider/wezterm-types"]},"outputSchema":{"schema":"agent.route-result.inspect.v1"},"gates":["registry-authority","route-local-propagation","structured-result"]},{"id":"dotfiles.plugin-bundle.plan","kind":"generate","priority":90,"promptRouteIDs":["dotfiles-provider-catalogue"],"sequence":30,"dependsOn":["dotfiles.provider-catalogue.inspect"],"inputFragments":["providers.runtime-catalogue","dotfiles.cue-validation"],"task":{"objective":"Generate or update the self-contained dotfiles Codex plugin bundle.","constraints":["Runtime dependencies are sh, jq, and bundled JSON only.","No external factory root lookup.","No CUE at runtime.","No MCP/A2A/SDK worker execution."],"files":[".codex/hooks.json",".codex/plugins/agent-context-resolver/**"],"commands":["sh .codex/plugins/agent-context-resolver/scripts/resolve-agent-context --prompt \"dotfiles wezterm xplr workspace ide\" | jq -e '.controller.routes | length > 0'"],"providerIDs":["df:provider/codex-cli"]},"outputSchema":{"schema":"agent.route-result.generate.v1"},"gates":["registry-authority","route-local-propagation","runtime-deny","structured-result"]},{"id":"dotfiles.nvim-workflow.inspect","kind":"inspect","priority":85,"promptRouteIDs":["dotfiles-neovim-workflow"],"sequence":20,"dependsOn":["dotfiles.issue.inspect"],"inputFragments":["dotfiles.nvim-workflow","dotfiles.xplr-sidebar"],"task":{"objective":"Inspect the xplr-to-Neovim socket workflow and buffer lifecycle boundaries.","constraints":["Prefer :bd! or project buffer close for file close.","Do not rewrite :q! unless explicitly selected.","Do not audit unrelated Neovim config."],"files":["chezmoi/private_dot_config/nvim/lua/workflow/**","chezmoi/private_dot_config/xplr/init.lua"],"providerIDs":["df:provider/lua-lsp","df:provider/cue-rg"]},"outputSchema":{"schema":"agent.route-result.inspect.v1"},"gates":["registry-authority","route-local-propagation","structured-result"]},{"id":"dotfiles.manifest.validate","kind":"validate","priority":90,"promptRouteIDs":["dotfiles-manifest-slice"],"sequence":30,"dependsOn":["dotfiles.issue.inspect"],"inputFragments":["dotfiles.manifest-slice","dotfiles.cue-validation"],"task":{"objective":"Validate the dotfiles CUE manifest-slice contract and negative bottom checks.","constraints":["Run only targeted issue-slice validation.","Do not move validation authority into scripts."],"files":[".github/dotfiles-manifest-slice/contracts/issues"],"commands":["cd .github && cue vet ./dotfiles-manifest-slice/contracts/issues/<issue>","cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/<issue> -e normalizedDotfilesIssueManifest"],"providerIDs":["df:provider/codex-cli"]},"outputSchema":{"schema":"agent.route-result.validate.v1"},"gates":["registry-authority","route-local-propagation","runtime-deny","structured-result"]},{"id":"dotfiles.patch.execute","kind":"generate","priority":80,"promptRouteIDs":["dotfiles-workspace-ide"],"sequence":40,"dependsOn":["dotfiles.workspace-ide.plan"],"inputFragments":["dotfiles.authority","dotfiles.workspace-ide"],"task":{"objective":"Apply a bounded dotfiles patch only after the selected route has declared files and validation.","constraints":["Do not broaden outside allowed files.","Stop after patch and targeted validation.","Report exact files changed."],"files":["<route-declared-files-only>"],"providerIDs":["df:provider/codex-cli"]},"outputSchema":{"schema":"agent.route-result.generate.v1"},"gates":["registry-authority","route-local-propagation","runtime-deny","structured-result"]},{"id":"dotfiles.validation.report","kind":"validate","priority":70,"promptRouteIDs":["dotfiles-workspace-ide","dotfiles-manifest-slice","dotfiles-provider-catalogue","dotfiles-neovim-workflow"],"sequence":50,"dependsOn":[],"inputFragments":["dotfiles.authority"],"task":{"objective":"Return structured validation evidence and stop.","constraints":["Report exact commands.","Report exact changed files.","Do not summarize full transcript."],"commands":["git diff --stat","targeted validation from selected route"],"providerIDs":["df:provider/codex-cli"]},"outputSchema":{"schema":"agent.route-result.validate.v1"},"gates":["registry-authority","route-local-propagation","structured-result"]}]}
+{
+    "generatedFrom": "contracts/plugin-bundle/agent-context-resolver/src/routes.cue",
+    "gates": [
+        {
+            "id": "registry-authority",
+            "class": "registry_authority",
+            "stage": "selection",
+            "appliesToKinds": [
+                "inspect",
+                "validate",
+                "generate",
+                "diff",
+                "test",
+                "summarize",
+                "risk_scan"
+            ],
+            "required": true
+        },
+        {
+            "id": "route-local-propagation",
+            "class": "propagation_boundary",
+            "stage": "projection",
+            "appliesToKinds": [
+                "inspect",
+                "validate",
+                "generate",
+                "diff",
+                "test",
+                "summarize",
+                "risk_scan"
+            ],
+            "required": true
+        },
+        {
+            "id": "runtime-deny",
+            "class": "runtime_denial",
+            "stage": "execution",
+            "appliesToKinds": [
+                "validate",
+                "generate",
+                "diff",
+                "test",
+                "risk_scan"
+            ],
+            "required": true
+        },
+        {
+            "id": "structured-result",
+            "class": "structured_result",
+            "stage": "merge",
+            "appliesToKinds": [
+                "inspect",
+                "validate",
+                "generate",
+                "diff",
+                "test",
+                "summarize",
+                "risk_scan"
+            ],
+            "required": true
+        }
+    ],
+    "routes": [
+        {
+            "id": "resolver.inspect.current",
+            "kind": "inspect",
+            "priority": 100,
+            "promptRouteIDs": [
+                "resolver"
+            ],
+            "sequence": 10,
+            "parallelGroup": "inspect",
+            "dependsOn": [],
+            "inputFragments": [
+                "agent-context-resolver.authority"
+            ],
+            "task": {
+                "objective": "Inspect the current resolver authority and generated boundary.",
+                "constraints": [
+                    "Treat CUE and repository state as durable authority."
+                ],
+                "files": [
+                    "contracts/plugin-bundle/agent-context-resolver/src"
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.inspect.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        },
+        {
+            "id": "resolver.plan.compile",
+            "kind": "validate",
+            "priority": 95,
+            "promptRouteIDs": [
+                "resolver"
+            ],
+            "sequence": 20,
+            "dependsOn": [
+                "resolver.inspect.current"
+            ],
+            "inputFragments": [
+                "agent-context-resolver.authority"
+            ],
+            "task": {
+                "objective": "Compile and validate a generated route controller packet.",
+                "constraints": [
+                    "Reference registered routes and selected fragments only.",
+                    "Keep root Codex as merge and synthesis authority.",
+                    "Do not execute routes or spawn SDK subagents during route planning."
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.validation.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "runtime-deny",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        },
+        {
+            "id": "vcs.patch-stack.inspect",
+            "kind": "inspect",
+            "priority": 80,
+            "promptRouteIDs": [
+                "patch-stack"
+            ],
+            "sequence": 10,
+            "parallelGroup": "inspect",
+            "dependsOn": [],
+            "inputFragments": [
+                "vcs.patch-stack"
+            ],
+            "task": {
+                "objective": "Inspect the declared patch-stack workflow.",
+                "constraints": [
+                    "Do not mutate repository state during route inspection."
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.inspect.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        },
+        {
+            "id": "mcp.evidence.inspect",
+            "kind": "inspect",
+            "priority": 80,
+            "promptRouteIDs": [
+                "mcp"
+            ],
+            "sequence": 10,
+            "parallelGroup": "inspect",
+            "dependsOn": [],
+            "inputFragments": [
+                "mcp.evidence-plane"
+            ],
+            "task": {
+                "objective": "Inspect MCP evidence-plane constraints.",
+                "constraints": [
+                    "Do not promote tool output into implied context."
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.inspect.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        },
+        {
+            "id": "agent-skill.projection.validate",
+            "kind": "validate",
+            "priority": 70,
+            "promptRouteIDs": [
+                "skill"
+            ],
+            "sequence": 20,
+            "dependsOn": [],
+            "inputFragments": [
+                "agent-skill.projection"
+            ],
+            "task": {
+                "objective": "Validate generated agent skill and hook projections.",
+                "constraints": [
+                    "Regenerate derived assets from CUE authority."
+                ],
+                "commands": [
+                    "generated/checks/agent-context-hook"
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.validation.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        },
+        {
+            "id": "resolver.context-packet.inspect",
+            "kind": "inspect",
+            "priority": 70,
+            "promptRouteIDs": [
+                "context-packet"
+            ],
+            "sequence": 10,
+            "parallelGroup": "inspect",
+            "dependsOn": [],
+            "inputFragments": [
+                "resolver.context-packet"
+            ],
+            "task": {
+                "objective": "Inspect context packet projection constraints.",
+                "constraints": [
+                    "Return structured evidence without forwarding parent context."
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.inspect.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        },
+        {
+            "id": "repo.lifecycle.validate",
+            "kind": "validate",
+            "priority": 70,
+            "promptRouteIDs": [
+                "repo"
+            ],
+            "sequence": 20,
+            "dependsOn": [],
+            "inputFragments": [
+                "repo.lifecycle"
+            ],
+            "task": {
+                "objective": "Validate repository lifecycle and generated-output boundaries.",
+                "constraints": [
+                    "Do not treat projection artifacts as source authority."
+                ]
+            },
+            "outputSchema": {
+                "schema": "agent.route-result.validation.v1"
+            },
+            "gates": [
+                "registry-authority",
+                "route-local-propagation",
+                "structured-result"
+            ],
+            "workerProfileID": "agent-context-resolver.a2a-worker",
+            "workerBindingID": "agent-context-resolver.validation-worker",
+            "preferredWorkerAdapter": "a2a"
+        }
+    ]
+}
