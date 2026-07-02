@@ -3,18 +3,25 @@ version = "1.1.0"
 local xplr = xplr
 
 local project_root = os.getenv("TERM_PROJECT_ROOT")
+local home = os.getenv("HOME")
+
+if home then
+	package.path = home .. "/.config/xplr/plugins/?/init.lua;" .. home .. "/.config/xplr/plugins/?.lua;" .. package.path
+end
+
+require("tree-view").setup({
+	fallback_layout = "compact",
+	fallback_threshold = 500,
+})
 
 local function sh_quote(value)
 	return "'" .. tostring(value):gsub("'", "'\"'\"'") .. "'"
 end
 
-local function rpc_binding(help, op, field, value)
+local function rpc_message(op, field, value)
 	return {
-		help = help,
-		messages = {
-			{
-				BashExec0 = string.format(
-					[===[
+		BashExec0 = string.format(
+			[===[
         payload=$(
           TERM_XPLR_OP=%q TERM_XPLR_FIELD=%q TERM_XPLR_VALUE=%q python3 - <<'PY'
 import json
@@ -28,11 +35,18 @@ PY
         ) || exit
         printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%%s\a' "$payload" > /dev/tty
       ]===],
-					op,
-					field,
-					value
-				),
-			},
+			op,
+			field,
+			value
+		),
+	}
+end
+
+local function rpc_binding(help, op, field, value)
+	return {
+		help = help,
+		messages = {
+			rpc_message(op, field, value),
 		},
 	}
 end
@@ -41,9 +55,28 @@ xplr.config.general.read_only = false
 xplr.config.general.show_hidden = false
 xplr.config.general.enable_mouse = false
 xplr.config.general.hide_remaps_in_help_menu = true
-xplr.config.general.initial_layout = "compact"
+xplr.config.general.initial_layout = "project_tree"
 
 xplr.config.layouts.builtin.compact = "Table"
+xplr.config.layouts.custom.project_tree = {
+	Dynamic = "custom.tree_view.render",
+}
+xplr.config.layouts.custom.project_tree_preview = {
+	Horizontal = {
+		config = {
+			constraints = {
+				{ Percentage = 55 },
+				{ Percentage = 45 },
+			},
+		},
+		splits = {
+			{
+				Dynamic = "custom.tree_view.render",
+			},
+			"Selection",
+		},
+	},
+}
 
 xplr.config.general.table.header.cols = {
 	{ format = " project tree" },
@@ -64,26 +97,27 @@ local function direct_open_script(path)
 		"set -eu",
 		"printf 'xplr-open %s\\n' " .. sh_quote(path) .. " >> /tmp/xplr-open.trace",
 		"path=$(realpath --canonicalize-existing " .. sh_quote(path) .. ")",
-		"root=$(realpath --canonicalize-existing \"${TERM_PROJECT_ROOT:?}\")",
-		"case \"$path\" in \"$root\"|\"$root\"/*) ;; *) exit 23 ;; esac",
+		'root=$(realpath --canonicalize-existing "${TERM_PROJECT_ROOT:?}")',
+		'case "$path" in "$root"|"$root"/*) ;; *) exit 23 ;; esac',
 		"socket=${TERM_NVIM_SOCKET:?}",
-		"test -S \"$socket\"",
+		'test -S "$socket"',
 		"expr=$(TERM_XPLR_PATH=\"$path\" python3 - <<'PY'",
 		"import os",
 		"print('v:lua.TermXplrMuxRpc(\"open\", %r)' % os.environ['TERM_XPLR_PATH'])",
 		"PY",
 		")",
 		"set +e",
-		"${TERM_EDITOR:-nvim} --server \"$socket\" --remote-expr \"$expr\" >/tmp/xplr-open.out 2>/tmp/xplr-open.err",
+		'${TERM_EDITOR:-nvim} --server "$socket" --remote-expr "$expr" >/tmp/xplr-open.out 2>/tmp/xplr-open.err',
 		"status=$?",
 		"set -e",
 		"result=$(cat /tmp/xplr-open.out /tmp/xplr-open.err 2>/dev/null | tr -d '\\r' | tail -n 1)",
-		"case \"$result\" in true|1|v:true) exit 0 ;; esac",
-		"exit \"$status\"",
+		'case "$result" in true|1|v:true) exit 0 ;; esac',
+		'exit "$status"',
 	}, "\n")
 end
 
 xplr.fn.custom.project_tree = xplr.fn.custom.project_tree or {}
+xplr.fn.custom.project_tree.preview_enabled = false
 xplr.fn.custom.project_tree.open = function(app)
 	local node = app.focused_node
 	if not node then
@@ -102,6 +136,25 @@ xplr.fn.custom.project_tree.open = function(app)
 		},
 	}
 end
+xplr.fn.custom.project_tree.toggle_preview = function()
+	if xplr.fn.custom.project_tree.preview_enabled then
+		xplr.fn.custom.project_tree.preview_enabled = false
+		return {
+			{
+				SwitchLayoutCustom = "project_tree",
+			},
+			rpc_message("layout", "kind", "preview_off"),
+		}
+	end
+
+	xplr.fn.custom.project_tree.preview_enabled = true
+	return {
+		{
+			SwitchLayoutCustom = "project_tree_preview",
+		},
+		rpc_message("layout", "kind", "preview_on"),
+	}
+end
 
 local project_tree_open_binding = {
 	help = "enter/open",
@@ -116,8 +169,7 @@ xplr.config.modes.builtin.default.key_bindings.on_key["h"] =
 	xplr.config.modes.builtin.default.key_bindings.on_key["left"]
 xplr.config.modes.builtin.default.key_bindings.on_key["j"] =
 	xplr.config.modes.builtin.default.key_bindings.on_key["down"]
-xplr.config.modes.builtin.default.key_bindings.on_key["k"] =
-	xplr.config.modes.builtin.default.key_bindings.on_key["up"]
+xplr.config.modes.builtin.default.key_bindings.on_key["k"] = xplr.config.modes.builtin.default.key_bindings.on_key["up"]
 xplr.config.modes.builtin.default.key_bindings.on_key["l"] = project_tree_open_binding
 xplr.config.modes.builtin.default.key_bindings.on_key["enter"] = project_tree_open_binding
 xplr.config.modes.builtin.default.key_bindings.on_key["right"] = project_tree_open_binding
@@ -130,6 +182,14 @@ xplr.config.modes.builtin.default.key_bindings.on_key["H"] = rpc_binding("hide t
 xplr.config.modes.builtin.default.key_bindings.on_key["R"] = rpc_binding("reveal tree", "layout", "kind", "reveal")
 xplr.config.modes.builtin.default.key_bindings.on_key["N"] = rpc_binding("narrow tree", "layout", "kind", "narrow")
 xplr.config.modes.builtin.default.key_bindings.on_key["W"] = rpc_binding("widen tree", "layout", "kind", "wide")
+xplr.config.modes.builtin.default.key_bindings.on_key["P"] = {
+	help = "toggle preview",
+	messages = {
+		{
+			CallLuaSilently = "custom.project_tree.toggle_preview",
+		},
+	},
+}
 
 local on_load = {}
 if project_root and project_root:sub(1, 1) == "/" then

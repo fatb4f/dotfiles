@@ -1,5 +1,9 @@
 local M = {}
 
+local preview_active = false
+local preview_delta = 64
+local hide_delta = 80
+
 local directions = {
 	left = true,
 	right = true,
@@ -62,7 +66,7 @@ local layouts = {
 			return false, err
 		end
 
-		return resize("left", 80)
+		return resize("left", hide_delta)
 	end,
 	reveal = function()
 		return focus("left")
@@ -82,6 +86,41 @@ local layouts = {
 		end
 
 		return resize("right", 8)
+	end,
+	preview_on = function()
+		if preview_active then
+			return true, nil
+		end
+
+		local ok, err = focus("left")
+		if not ok then
+			return false, err
+		end
+
+		ok, err = resize("right", preview_delta)
+		if ok then
+			preview_active = true
+		end
+
+		return ok, err
+	end,
+	preview_off = function()
+		if not preview_active then
+			return true, nil
+		end
+
+		local ok, err = focus("right")
+		if not ok then
+			return false, err
+		end
+
+		ok, err = resize("left", preview_delta)
+		if not ok then
+			return false, err
+		end
+
+		preview_active = false
+		return focus("left")
 	end,
 }
 

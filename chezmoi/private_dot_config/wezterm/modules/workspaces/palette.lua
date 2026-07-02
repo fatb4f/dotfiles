@@ -22,6 +22,8 @@ function M.setup()
 			layout_entry("Reveal project tree", "reveal"),
 			layout_entry("Narrow project tree", "narrow"),
 			layout_entry("Widen project tree", "wide"),
+			layout_entry("Project tree preview on", "preview_on"),
+			layout_entry("Project tree preview off", "preview_off"),
 		}
 	end)
 end

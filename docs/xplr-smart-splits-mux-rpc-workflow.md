@@ -1,6 +1,6 @@
 # Xplr / WezTerm / Neovim / smart-splits RPC Workflow
 
-Cheatsheet matrix for the project-tree workflow implemented by issue #43.
+Cheatsheet matrix for the project-tree workflow.
 
 ## Core invariant
 
@@ -23,7 +23,8 @@ xplr owns tree browsing and emits bounded intents.
 | WezTerm events/palette | Entry points for launch and explorer layout commands | Duplicate validation or layout implementation | `events.lua`, `palette.lua` |
 | Neovim mux RPC executor | Load `smart-splits.mux`, get backend, call `next_pane` / `resize_pane`, edit files | Project/session selection | `chezmoi/private_dot_config/nvim/lua/workflow/mux_rpc.lua` |
 | smart-splits backend | Mux navigation and resize execution | Project topology, xplr tree state | `require("smart-splits.mux").get()` |
-| xplr | Tree UI, focused path, local keybindings, bounded intent emission | Direct smart-splits dependency, direct project/session authority | `chezmoi/private_dot_config/xplr/init.lua` |
+| tree-view.xplr | xplr-local tree rendering dependency | WezTerm routing, Neovim RPC, smart-splits mechanics, project topology | `chezmoi/private_dot_config/xplr/plugins/tree-view/init.lua` |
+| xplr | Tree UI, focused path, preview toggle state, local keybindings, bounded intent emission | Direct smart-splits dependency, direct project/session authority | `chezmoi/private_dot_config/xplr/init.lua` |
 
 ## Request flow matrix
 
@@ -40,8 +41,11 @@ xplr owns tree browsing and emits bounded intents.
 | xplr `R` optional | `TERM_XPLR_RPC={op:"layout",kind:"reveal"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "reveal")` | `next_pane("left")` | Tree is revealed/focused by moving left |
 | xplr `N` optional | `TERM_XPLR_RPC={op:"layout",kind:"narrow"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "narrow")` | `next_pane("right")`, then `resize_pane("left", 8)` | Tree narrows |
 | xplr `W` optional | `TERM_XPLR_RPC={op:"layout",kind:"wide"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "wide")` | `next_pane("left")`, then `resize_pane("right", 8)` | Tree widens |
+| xplr `P` preview off -> on | `SwitchLayoutCustom=project_tree_preview` and `TERM_XPLR_RPC={op:"layout",kind:"preview_on"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "preview_on")` | `next_pane("left")`, then `resize_pane("right", 64)` once | xplr shows tree plus preview and remains focused |
+| xplr `P` preview on -> off | `SwitchLayoutCustom=project_tree` and `TERM_XPLR_RPC={op:"layout",kind:"preview_off"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "preview_off")` | `next_pane("right")`, `resize_pane("left", 64)` once, then `next_pane("left")` | xplr returns to tree-only layout and remains focused |
 | Palette: `Hide project tree` | `term-xplr-layout-hide` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "hide")` | same as xplr `H` | Same behavior as xplr key |
 | Palette: `Reveal project tree` | `term-xplr-layout-reveal` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "reveal")` | same as xplr `R` | Same behavior as xplr key |
+| Palette: `Project tree preview on/off` | `term-xplr-layout-preview_on/off` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "preview_on/off")` | guarded preview resize path | Optional direct preview mux resize route |
 | `<C-h/j/k/l>` | direct keypress | WezTerm smart-splits adapter when outside Neovim | Neovim smart-splits mapping when inside Neovim | smart-splits focus traversal | Move across Neovim splits and WezTerm panes |
 | `<A-h/j/k/l>` | direct keypress | WezTerm smart-splits adapter when outside Neovim | Neovim smart-splits mapping when inside Neovim | smart-splits resize traversal | Resize active split/pane |
 
@@ -50,47 +54,24 @@ xplr owns tree browsing and emits bounded intents.
 | Boundary | Accept | Reject | Where enforced |
 |---|---|---|---|
 | RPC payload shape | `{op:"open", path:string}` or `{op:"layout", kind:string}` | Empty payload, malformed JSON, unknown `op` | `xplr_rpc.decode_payload` |
-| Layout kind | `hide`, `reveal`, `narrow`, `wide` | Anything else, for example `fullscreen` | `xplr_rpc.validate_layout`; CUE check `unknown-layout-kind-rejected` |
-| Open path | Existing absolute path inside project root | Relative path, non-existing path, path outside root | `xplr_rpc.validate_open`; CUE check `outside-project-root-rejected` |
+| Layout kind | `hide`, `reveal`, `narrow`, `wide`, `preview_on`, `preview_off` | Anything else, for example `fullscreen` | `xplr_rpc.validate_layout` |
+| Open path | Existing absolute path inside project root | Relative path, non-existing path, path outside root | `xplr_rpc.validate_open` |
 | Project contract | Active configured project session with canonical root | Non-project workspace, missing root | `xplr_rpc.contract_for` |
-| Neovim socket | Existing socket at `TERM_NVIM_SOCKET` | Missing, empty, stale, not a socket | `xplr_rpc.contract_for`; CUE check `missing-nvim-socket-rejected` |
+| Neovim socket | Existing socket at `TERM_NVIM_SOCKET` | Missing, empty, stale, not a socket | `xplr_rpc.contract_for` |
 | Neovim RPC result | `1`, `true`, or `v:true` | Any failed command or false-like return | `xplr_rpc.nvim_accepted` |
 | smart-splits backend | `smart-splits.mux.get()` returns active backend in session | Missing plugin, no mux session, failed `next_pane` / `resize_pane` | `workflow/mux_rpc.lua` |
+| Preview resize drift | First `preview_on` while inactive and first `preview_off` while active | Repeated on/off accumulating resize deltas | ephemeral `preview_active` guard in `workflow/mux_rpc.lua` |
 
-## CUE manifest checks
+## Validation Commands
 
-| Check | Intent | Expected result |
-|---|---|---|
-| `outside-project-root-rejected` | Open payload outside `/home/_404/src/dotfiles` must not validate | bottoms |
-| `unknown-layout-kind-rejected` | Layout kind outside `hide | reveal | narrow | wide` must not validate | bottoms |
-| `missing-nvim-socket-rejected` | Dispatch contract with empty socket must not validate | bottoms |
-
-Validation commands:
+Run repository-local syntax checks against materialized config.
 
 ```bash
-cd .github && cue vet ./dotfiles-manifest-slice/contracts/issues/43
-cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/43 -e normalizedDotfilesIssueManifest
-cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/43 -e dotfilesValidationPlan
-cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/43 -e dotfilesCompletionReportContract
-cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.outside-project-root-rejected'
-cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.unknown-layout-kind-rejected'
-cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/43/checks -e '_negativeBottomChecks.missing-nvim-socket-rejected'
+stylua --check chezmoi/private_dot_config/xplr/init.lua chezmoi/private_dot_config/wezterm/modules/workspaces/xplr_rpc.lua chezmoi/private_dot_config/wezterm/modules/workspaces/events.lua chezmoi/private_dot_config/wezterm/modules/workspaces/palette.lua chezmoi/private_dot_config/nvim/lua/workflow/mux_rpc.lua
+tmp_home=$(mktemp -d); mkdir -p "$tmp_home/.config"; ln -s "$PWD/chezmoi/private_dot_config/xplr" "$tmp_home/.config/xplr"; TERM=xterm HOME="$tmp_home" TERM_PROJECT_ROOT="$PWD" timeout 1 xplr -c "$tmp_home/.config/xplr/init.lua" "$PWD"
 ```
 
-Issue #45 boundary gate validation:
-
-```bash
-cd .github && cue vet ./dotfiles-manifest-slice/contracts/issues/45
-cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/45 -e normalizedDotfilesIssueManifest
-cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/45 -e dotfilesValidationPlan
-cd .github && cue export ./dotfiles-manifest-slice/contracts/issues/45 -e dotfilesCompletionReportContract
-cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/45/checks -e '_negativeBottomChecks.neovim-topology-owner-rejected'
-cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/45/checks -e '_negativeBottomChecks.xplr-direct-pane-bridge-rejected'
-cd .github && ! cue export ./dotfiles-manifest-slice/contracts/issues/45/checks -e '_negativeBottomChecks.generated-decision-source-rejected'
-cd .github && ! rg '[Nn]eovim project picker|[w]orkspace/session topology authority|x[p]lr.*smart-splits|[g]enerated.*authority' ./dotfiles-manifest-slice/contracts/issues/45
-```
-
-## Issue #45 Neovim QoL boundary gate
+## Neovim QoL Boundary Gate
 
 Neovim quality-of-life additions may expose editor-local discovery for buffers, diagnostics, quickfix, symbols, commands, keymaps, and invocation-only commands that call back into the WezTerm/sessionizer workflow.
 
@@ -111,9 +92,9 @@ They must not select, rank, persist, or own project/session topology. Project la
 | `chezmoi/private_dot_config/wezterm/modules/workspaces/events.lua` | Registers launch/layout/user-var events | event adapter |
 | `chezmoi/private_dot_config/wezterm/modules/workspaces/palette.lua` | Command palette entries for launch and layout | UI entrypoint |
 | `chezmoi/private_dot_config/nvim/lua/workflow/mux_rpc.lua` | Smart-splits backend RPC executor | editor-side adapter |
-| `chezmoi/private_dot_config/xplr/init.lua` | Emits JSON `TERM_XPLR_RPC` intents | tree UI adapter |
-| `.github/dotfiles-manifest-slice/contracts/issues/43/manifest.cue` | Issue-local manifest and validation plan | contract workflow |
-| `.github/dotfiles-manifest-slice/contracts/issues/43/checks/bottom.cue` | Executable negative bottom checks | contract proof surface |
+| `chezmoi/private_dot_config/xplr/init.lua` | Loads tree-view, declares `project_tree` / `project_tree_preview`, emits JSON `TERM_XPLR_RPC` intents | tree UI adapter |
+| `chezmoi/private_dot_config/xplr/plugins/tree-view/init.lua` | Vendored tree-view.xplr plugin | xplr-local runtime dependency |
+| `chezmoi/private_dot_config/xplr/plugins/tree-view/LICENSE` | Upstream MIT license | vendored license evidence |
 
 ## Operational cheatsheet
 
@@ -129,6 +110,7 @@ They must not select, rank, persist, or own project/session topology. Project la
 | Reveal tree, optional | xplr `R` or palette `Reveal project tree` | xplr/WezTerm -> Neovim mux RPC |
 | Narrow tree, optional | xplr `N` or palette `Narrow project tree` | xplr/WezTerm -> Neovim mux RPC |
 | Widen tree, optional | xplr `W` or palette `Widen project tree` | xplr/WezTerm -> Neovim mux RPC |
+| Toggle preview | xplr `P` | xplr switches local layout and emits guarded preview mux intent |
 
 ## Forbidden attractors
 
@@ -138,8 +120,9 @@ They must not select, rank, persist, or own project/session topology. Project la
 | Let xplr call smart-splits directly | xplr is not the Neovim Lua host |
 | Reimplement generic pane movement in WezTerm Lua | smart-splits already owns mux mechanics |
 | Treat runtime cache as persistent authority | It is evidence/routing state only |
-| Encode CUE checks as string metadata | Checks must live in issue-local CUE check package |
 | Use generated artifacts as authority | Repo-local workflow and materialized configs are authority surfaces |
+| Let tree-view own topology | It is only an xplr-local rendering dependency |
+| Let repeated preview toggles resize panes | Preview resize is guarded by Neovim-local ephemeral state |
 | Promote Neovim QoL discovery into project/session topology | Duplicates the WezTerm/sessionizer boundary |
 
 ## Runtime smoke sequence
@@ -151,7 +134,10 @@ They must not select, rank, persist, or own project/session topology. Project la
 4. In xplr, confirm `h/j/k/l` move back/down/up/enter locally.
 5. In xplr, press `l` or `enter` on a file.
 6. Confirm file opens in Neovim and focus moves right.
-7. Optionally press H/R/N/W in xplr and confirm layout changes.
-8. Optionally use palette Hide/Reveal/Narrow/Widen and confirm same path.
-9. Use <C-h/j/k/l> and <A-h/j/k/l> from both xplr and Neovim.
+7. Press `P` in xplr and confirm `project_tree_preview` plus one preview-on resize.
+8. Press `P` again and confirm `project_tree` plus one inverse preview-off resize.
+9. Repeatedly dispatch preview on/off and confirm resize deltas do not accumulate.
+10. Optionally press H/R/N/W in xplr and confirm layout changes.
+11. Optionally use palette Hide/Reveal/Narrow/Widen and confirm same path.
+12. Use <C-h/j/k/l> and <A-h/j/k/l> from both xplr and Neovim.
 ```

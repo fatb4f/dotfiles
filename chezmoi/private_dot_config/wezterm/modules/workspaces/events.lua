@@ -10,7 +10,7 @@ function M.setup()
 		controller.launch(window)
 	end)
 
-	for _, kind in ipairs({ "hide", "reveal", "narrow", "wide" }) do
+	for _, kind in ipairs({ "hide", "reveal", "narrow", "wide", "preview_on", "preview_off" }) do
 		wezterm.on("term-xplr-layout-" .. kind, function(window, pane)
 			xplr_rpc.dispatch_layout(window, pane, kind)
 		end)

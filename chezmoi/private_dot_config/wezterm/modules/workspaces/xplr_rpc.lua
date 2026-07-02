@@ -10,6 +10,8 @@ local layout_kinds = {
 	reveal = true,
 	narrow = true,
 	wide = true,
+	preview_on = true,
+	preview_off = true,
 }
 
 local function notify(window, message)
