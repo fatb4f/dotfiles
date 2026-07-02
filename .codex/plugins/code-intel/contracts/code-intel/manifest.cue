@@ -263,9 +263,9 @@ codeIntelLuaFirstWorkflow: #CodeIntelLuaFirstWorkflow & {
 	id:     "dotfiles-code-intel-lua-first"
 	intent: "Resolve dotfiles Lua surfaces before generic repository context."
 	entrypoints: [
-		{id: "nvim-init", language: "lua", path: ".config/nvim/init.lua", domain: "nvim", provider: "lua-language-server", typeOverlays: ["nvim-vim-types"], authority: "dotfiles-source"},
-		{id: "nvim-lua-modules", language: "lua", path: ".config/nvim/lua", domain: "nvim", provider: "lua-language-server", typeOverlays: ["nvim-vim-types"], authority: "dotfiles-source"},
-		{id: "wezterm-config", language: "lua", path: ".config/wezterm/wezterm.lua", domain: "wezterm", provider: "lua-language-server", typeOverlays: ["wezterm-types"], authority: "dotfiles-source"},
+		{id: "nvim-init", language: "lua", path: "chezmoi/private_dot_config/nvim/init.lua", domain: "nvim", provider: "lua-language-server", typeOverlays: ["nvim-vim-types"], authority: "dotfiles-source"},
+		{id: "nvim-lua-modules", language: "lua", path: "chezmoi/private_dot_config/nvim/lua", domain: "nvim", provider: "lua-language-server", typeOverlays: ["nvim-vim-types"], authority: "dotfiles-source"},
+		{id: "wezterm-config", language: "lua", path: "chezmoi/private_dot_config/wezterm/wezterm.lua", domain: "wezterm", provider: "lua-language-server", typeOverlays: ["wezterm-types"], authority: "dotfiles-source"},
 	]
 	providers: [
 		{id: "mcp-tool-registry", kind: "mcp", paths: ["generated/mcp/tool-registry.json"], authority: false, evidenceOnly: true},

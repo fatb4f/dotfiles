@@ -7,8 +7,8 @@
       "id": "nvim-lua",
       "language": "lua",
       "globs": [
-        ".config/nvim/**/*.lua",
-        ".config/nvim/init.lua"
+        "chezmoi/private_dot_config/nvim/**/*.lua",
+        "chezmoi/private_dot_config/nvim/init.lua"
       ],
       "provider": "lua-language-server",
       "typeOverlays": [
@@ -19,8 +19,8 @@
       "id": "wezterm-lua",
       "language": "lua",
       "globs": [
-        ".config/wezterm/**/*.lua",
-        ".config/wezterm/wezterm.lua"
+        "chezmoi/private_dot_config/wezterm/**/*.lua",
+        "chezmoi/private_dot_config/wezterm/wezterm.lua"
       ],
       "provider": "lua-language-server",
       "typeOverlays": [

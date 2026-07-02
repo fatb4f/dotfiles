@@ -6,7 +6,7 @@
     {
       "id": "nvim-init",
       "language": "lua",
-      "path": ".config/nvim/init.lua",
+      "path": "chezmoi/private_dot_config/nvim/init.lua",
       "domain": "nvim",
       "provider": "lua-language-server",
       "typeOverlays": [
@@ -17,7 +17,7 @@
     {
       "id": "nvim-lua-modules",
       "language": "lua",
-      "path": ".config/nvim/lua",
+      "path": "chezmoi/private_dot_config/nvim/lua",
       "domain": "nvim",
       "provider": "lua-language-server",
       "typeOverlays": [
@@ -28,7 +28,7 @@
     {
       "id": "wezterm-config",
       "language": "lua",
-      "path": ".config/wezterm/wezterm.lua",
+      "path": "chezmoi/private_dot_config/wezterm/wezterm.lua",
       "domain": "wezterm",
       "provider": "lua-language-server",
       "typeOverlays": [

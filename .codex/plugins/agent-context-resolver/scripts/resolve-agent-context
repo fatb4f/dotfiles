@@ -31,6 +31,12 @@ output=$(
 		"$(printf '%s' "$prompt" | jq -Rs .)" |
 		AGENT_CONTEXT_RESOLVER_PACKET=1 "$script_dir/agent-context-resolver-hook"
 )
+
+[ -n "$output" ] || {
+	printf '{}\n'
+	exit 0
+}
+
 printf '%s\n' "$output" | jq -er '
 	if . == {} then
 		{}
