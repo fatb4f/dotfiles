@@ -9,9 +9,9 @@ _implementationWorkflow: [
 	{order: 4, id: "#MakePredicateSet", constructor: impl.#MakePredicateSet, instantiateAt: "_predicates"},
 	{order: 5, id: "#MakePromotionCandidate", constructor: impl.#MakePromotionCandidate, instantiateAt: "_promotion"},
 	{order: 6, id: "#MakeSurfaceSet", constructor: impl.#MakeSurfaceSet, instantiateAt: "_surfaces"},
-	{order: 7, id: "#MakeFixture", constructor: impl.#MakeNegativeFixture, instantiateAt: "_fixtures"},
-	{order: 8, id: "#MakeCheckPlan", constructor: impl.#MakeBottomCheckPlan, instantiateAt: "_checkPlans"},
-	{order: 9, id: "#MakeCheckProof", constructor: impl.#MakeBottomCheckProof, instantiateAt: "checks/_checks"},
+	{order: 7, id: "#MakeNegativeFixture", constructor: impl.#MakeNegativeFixture, instantiateAt: "_negativeFixtures"},
+	{order: 8, id: "#MakeBottomCheckPlan", constructor: impl.#MakeBottomCheckPlan, instantiateAt: "_bottomCheckPlans"},
+	{order: 9, id: "#MakeBottomCheckProof", constructor: impl.#MakeBottomCheckProof, instantiateAt: "checks/_negativeBottomChecks"},
 	{order: 10, id: "#MakeValidationPlan", constructor: impl.#MakeValidationPlan, instantiateAt: "_validation"},
 	{order: 11, id: "#MakeCompletionReport", constructor: impl.#MakeCompletionReport, instantiateAt: "_completion"},
 ]
@@ -84,14 +84,14 @@ _surfaces: impl.#MakeSurfaceSet & {
 		admissible: ["#AdmissibleDotfilesSurface"]
 		observed: ["#ObservedDotfilesSurface"]
 		candidates: ["#DotfilesImplementationCandidate"]
-		fixtures: ["_fixtures"]
-		checks: ["_checks"]
+		fixtures: ["_negativeFixtures"]
+		checks: ["_negativeBottomChecks"]
 		publicExports: ["dotfilesImplementationCueBlockSlice"]
 	}
 }
 
-_fixtures: []
-_checkPlans: []
+_negativeFixtures: []
+_bottomCheckPlans: []
 
 _validation: {
 	in: {
@@ -115,8 +115,8 @@ dotfilesImplementationCueBlockSlice: [
 	{predicates: _predicates},
 	{promotion: _promotion},
 	{surfaces: _surfaces},
-	{fixtures: _fixtures},
-	{checkPlans: _checkPlans},
+	{negativeFixtures: _negativeFixtures},
+	{bottomCheckPlans: _bottomCheckPlans},
 	{validation: _validation},
 	{completion: _completion},
 ]
