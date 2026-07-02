@@ -1,6 +1,7 @@
 local wezterm = require("wezterm")
 
 local controller = require("modules.workspaces.controller")
+local project_tree_visibility = require("modules.workspaces.project_tree_visibility")
 local xplr_rpc = require("modules.workspaces.xplr_rpc")
 
 local M = {}
@@ -10,9 +11,9 @@ function M.setup()
 		controller.launch(window)
 	end)
 
-	for _, kind in ipairs({ "hide", "reveal", "narrow", "wide" }) do
-		wezterm.on("term-xplr-layout-" .. kind, function(window, pane)
-			xplr_rpc.dispatch_layout(window, pane, kind)
+	for _, action in ipairs({ "hide", "reveal" }) do
+		wezterm.on("term-project-tree-" .. action, function(window, pane)
+			project_tree_visibility.dispatch(window, pane, action)
 		end)
 	end
 

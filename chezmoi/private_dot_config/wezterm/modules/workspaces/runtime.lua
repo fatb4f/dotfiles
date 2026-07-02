@@ -27,10 +27,37 @@ function M.session_for_workspace(workspace)
 	return state().sessions[workspace]
 end
 
+function M.session_for_project(project_id)
+	for _, session in pairs(state().sessions) do
+		if session.id == project_id then
+			return session
+		end
+	end
+
+	return nil
+end
+
 function M.remember_pane(project_id, role, pane)
 	local current = state()
 	current.panes[project_id] = current.panes[project_id] or {}
 	current.panes[project_id][role] = pane:pane_id()
+end
+
+function M.project_for_pane(pane)
+	if not pane then
+		return nil
+	end
+
+	local id = pane:pane_id()
+	for project_id, project_panes in pairs(state().panes) do
+		for _, cached_id in pairs(project_panes) do
+			if cached_id == id then
+				return project_id
+			end
+		end
+	end
+
+	return nil
 end
 
 function M.pane(project_id, role)

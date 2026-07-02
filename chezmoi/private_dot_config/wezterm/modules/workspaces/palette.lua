@@ -2,11 +2,11 @@ local wezterm = require("wezterm")
 
 local M = {}
 
-local function layout_entry(label, kind)
+local function visibility_entry(label, action)
 	return {
 		brief = label,
-		doc = "Route explorer layout through the validated xplr RPC boundary",
-		action = wezterm.action.EmitEvent("term-xplr-layout-" .. kind),
+		doc = "Toggle the project tree through WezTerm tab visibility",
+		action = wezterm.action.EmitEvent("term-project-tree-" .. action),
 	}
 end
 
@@ -18,10 +18,8 @@ function M.setup()
 				doc = "Launch or focus socket-backed Neovim and the project Xplr pane",
 				action = wezterm.action.EmitEvent("term-ide-launch"),
 			},
-			layout_entry("Hide project tree", "hide"),
-			layout_entry("Reveal project tree", "reveal"),
-			layout_entry("Narrow project tree", "narrow"),
-			layout_entry("Widen project tree", "wide"),
+			visibility_entry("Hide project tree", "hide"),
+			visibility_entry("Reveal project tree", "reveal"),
 		}
 	end)
 end
