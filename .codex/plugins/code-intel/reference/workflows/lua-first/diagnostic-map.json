@@ -1,6 +1,6 @@
 {
   "schema": "factory.plugin-bundle.code-intel.lua-first.diagnostic-map.v1",
-  "generated": true,
+  "reference": true,
   "authority": false,
   "diagnosticsAreAuthority": false,
   "providers": {

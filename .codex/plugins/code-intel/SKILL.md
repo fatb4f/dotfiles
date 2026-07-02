@@ -1,33 +1,25 @@
 ---
 name: dotfiles-code-intel
-description: Scaffold-aligned code-intel bundle shell for dotfiles contract validation.
+description: Read-only code-intelligence reference overlays for dotfiles work.
 ---
 
 # Dotfiles Code Intel
 
-This plugin projection is the installable scaffold shell for the code-intel bundle. Runtime evidence remains under the source contract surfaces, not under `contracts/plugin-bundle/generated/code-intel`.
+This installed plugin contains one operator skill and read-only reference material for dotfiles code-intelligence work.
 
 ## Contract boundary
 
-- Treat generated plugin projection files as evidence only.
-- Do not treat MCP output, LSP diagnostics, generated type stubs, or generated workflow JSON as source authority.
+- Load reference/type overlays as read-only operator context.
+- Do not treat reference files as source authority.
+- Do not treat MCP output, LSP diagnostics, type stubs, or workflow JSON as source authority.
 - Do not import or depend on the agent-context-resolver bundle.
-- Do not place `contracts`, `generated`, or `manifest.json` under the installable generated root.
+- Do not place `contracts`, `generated`, `skills`, or `manifest.json` under the installed plugin root.
+- All CUE authority remains in factory/plugin-bundle contracts.
+- All dotfiles source authority remains in dotfiles source paths.
 
-## Validation
+## Reference layout
 
-```sh
-cue vet ./contracts/plugin-bundle/code-intel
-cue vet ./contracts/plugin-bundle/code-intel/checks
-cue vet ./contracts/plugin-bundle/code-intel/src
-cue vet ./contracts/plugin-bundle/code-intel/src/contracts/code-intel
-cue vet ./contracts/plugin-bundle/code-intel/src/contracts/code-intel/checks
-cue export ./contracts/plugin-bundle/code-intel/src/contracts/code-intel -e normalizedMaterializedBundleShapeManifest
-cue export ./contracts/plugin-bundle/code-intel/src/contracts/code-intel -e materializedBundleShapeValidationPlan
-cue export ./contracts/plugin-bundle/code-intel/src/contracts/code-intel -e materializedBundleShapeCompletionReportContract
-cue export ./contracts/plugin-bundle/code-intel/src/contracts/code-intel -e codeIntelBoundaryReport
-cue export ./contracts/plugin-bundle/code-intel/src/contracts/code-intel -e codeIntelImplementationRecommendations
-test ! -e contracts/plugin-bundle/generated/code-intel/manifest.json
-test ! -e contracts/plugin-bundle/generated/code-intel/contracts
-test ! -e contracts/plugin-bundle/generated/code-intel/generated
-```
+- `reference/lsp/`: LSP provider and routing context.
+- `reference/tools/`: formatter and lint tool context.
+- `reference/types/`: Neovim and WezTerm type overlays.
+- `reference/workflows/`: Lua-first operator workflow context.

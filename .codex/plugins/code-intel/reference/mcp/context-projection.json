@@ -1,12 +1,12 @@
 {
   "schema": "factory.plugin-bundle.code-intel.mcp.context-projection.v1",
-  "generated": true,
+  "reference": true,
   "authority": false,
   "fragments": [
     {
       "id": "dotfiles.lua.entrypoints",
       "paths": [
-        "generated/workflows/lua-first/entrypoints.json"
+        "reference/workflows/lua-first/entrypoints.json"
       ],
       "providers": [
         "lua-language-server"
@@ -16,10 +16,10 @@
     {
       "id": "dotfiles.lua.type-overlays",
       "paths": [
-        "generated/types/nvim/vim.lua",
-        "generated/types/wezterm/wezterm.lua",
-        "generated/types/wezterm/events.lua",
-        "generated/types/wezterm/config-builder.lua"
+        "reference/types/nvim/vim.lua",
+        "reference/types/wezterm/wezterm.lua",
+        "reference/types/wezterm/events.lua",
+        "reference/types/wezterm/config-builder.lua"
       ],
       "providers": [
         "nvim-vim-types",

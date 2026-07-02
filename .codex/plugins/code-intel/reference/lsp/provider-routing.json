@@ -1,6 +1,6 @@
 {
   "schema": "factory.plugin-bundle.code-intel.lsp.provider-routing.v1",
-  "generated": true,
+  "reference": true,
   "authority": false,
   "routes": [
     {

@@ -1,6 +1,6 @@
 {
   "schema": "factory.plugin-bundle.code-intel.mcp.server-manifest.v1",
-  "generated": true,
+  "reference": true,
   "authority": false,
   "servers": [
     {

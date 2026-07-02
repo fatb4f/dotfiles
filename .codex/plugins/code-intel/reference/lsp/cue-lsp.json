@@ -1,7 +1,7 @@
 {
   "schema": "factory.plugin-bundle.code-intel.lsp.cue.v1",
   "id": "cue-lsp",
-  "generated": true,
+  "reference": true,
   "authority": false,
   "language": "cue",
   "command": "cue-lsp",

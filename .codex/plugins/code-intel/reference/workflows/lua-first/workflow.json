@@ -42,7 +42,7 @@
       "id": "mcp-tool-registry",
       "kind": "mcp",
       "paths": [
-        "generated/mcp/tool-registry.json"
+        "reference/mcp/tool-registry.json"
       ],
       "authority": false,
       "evidenceOnly": true
@@ -51,7 +51,7 @@
       "id": "mcp-context-projection",
       "kind": "mcp",
       "paths": [
-        "generated/mcp/context-projection.json"
+        "reference/mcp/context-projection.json"
       ],
       "authority": false,
       "evidenceOnly": true
@@ -60,7 +60,7 @@
       "id": "cue-lsp",
       "kind": "lsp",
       "paths": [
-        "generated/lsp/cue-lsp.json"
+        "reference/lsp/cue-lsp.json"
       ],
       "authority": false,
       "evidenceOnly": true
@@ -69,8 +69,8 @@
       "id": "lua-language-server",
       "kind": "lsp",
       "paths": [
-        "generated/lsp/lua-language-server.json",
-        "generated/lsp/provider-routing.json"
+        "reference/lsp/lua-language-server.json",
+        "reference/lsp/provider-routing.json"
       ],
       "authority": false,
       "evidenceOnly": true
@@ -79,9 +79,9 @@
       "id": "wezterm-types",
       "kind": "types",
       "paths": [
-        "generated/types/wezterm/wezterm.lua",
-        "generated/types/wezterm/events.lua",
-        "generated/types/wezterm/config-builder.lua"
+        "reference/types/wezterm/wezterm.lua",
+        "reference/types/wezterm/events.lua",
+        "reference/types/wezterm/config-builder.lua"
       ],
       "authority": false,
       "evidenceOnly": true
@@ -90,7 +90,7 @@
       "id": "nvim-vim-types",
       "kind": "types",
       "paths": [
-        "generated/types/nvim/vim.lua"
+        "reference/types/nvim/vim.lua"
       ],
       "authority": false,
       "evidenceOnly": true
