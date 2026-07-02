@@ -10,8 +10,6 @@ local layout_kinds = {
 	reveal = true,
 	narrow = true,
 	wide = true,
-	preview_on = true,
-	preview_off = true,
 }
 
 local function notify(window, message)
@@ -46,7 +44,8 @@ local function is_within(root, path)
 end
 
 local function path_is_socket(path)
-	return wezterm.run_child_process({ "test", "-S", path })
+	local success = wezterm.run_child_process({ "test", "-S", path })
+	return success
 end
 
 local function pane_cwd(pane)
@@ -87,7 +86,9 @@ local function active_session(window, pane)
 	return cached
 end
 
-local function contract_for(window, pane)
+local function contract_for(window, pane, opts)
+	opts = opts or {}
+
 	local session = active_session(window, pane)
 	if type(session) ~= "table" then
 		return nil, "active workspace is not a configured project session"
@@ -96,6 +97,15 @@ local function contract_for(window, pane)
 	local root = canonical_path(session.root)
 	if not root or not is_dir(root) then
 		return nil, "TERM_PROJECT_ROOT must be an existing absolute directory"
+	end
+
+	if opts.nvim_socket == false then
+		return {
+			editor = session.editor or "nvim",
+			id = session.id,
+			root = root,
+			socket = session.env and session.env.TERM_NVIM_SOCKET or nil,
+		}
 	end
 
 	if type(session.env) ~= "table" or type(session.env.TERM_NVIM_SOCKET) ~= "string" then
@@ -108,6 +118,7 @@ local function contract_for(window, pane)
 
 	return {
 		editor = session.editor or "nvim",
+		id = session.id,
 		root = root,
 		socket = session.env.TERM_NVIM_SOCKET,
 	}
@@ -156,7 +167,7 @@ local function decode_payload(value)
 		return nil, "TERM_XPLR_RPC payload must be JSON"
 	end
 
-	if payload.op ~= "open" and payload.op ~= "layout" then
+	if payload.op ~= "open" and payload.op ~= "layout" and payload.op ~= "preview" then
 		return nil, "unknown xplr operation"
 	end
 
@@ -184,8 +195,143 @@ local function validate_layout(payload)
 	return payload.kind, nil
 end
 
+local function validate_preview(contract, payload)
+	if payload.state ~= "on" and payload.state ~= "off" then
+		return nil, "unknown preview state"
+	end
+
+	if payload.state == "off" then
+		return {
+			state = "off",
+		}, nil
+	end
+
+	local fifo_path = payload.fifoPath
+	if type(fifo_path) ~= "string" or fifo_path:sub(1, 1) ~= "/" then
+		return nil, "preview fifo path must be absolute"
+	end
+
+	local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
+	if type(runtime_dir) ~= "string" or runtime_dir == "" then
+		return nil, "XDG_RUNTIME_DIR is required for preview fifo"
+	end
+
+	local expected_dir = runtime_dir .. "/term-xplr-preview"
+	local expected_path = expected_dir .. "/" .. contract.id .. ".fifo"
+	if fifo_path ~= expected_path then
+		return nil, "preview fifo path does not match the active project"
+	end
+
+	return {
+		state = "on",
+		fifo_path = fifo_path,
+		fifo_dir = expected_dir,
+		ready_path = fifo_path .. ".ready",
+	},
+		nil
+end
+
+local function ensure_fifo(preview)
+	local ok, _, stderr = wezterm.run_child_process({ "mkdir", "-p", preview.fifo_dir })
+	if not ok then
+		return false, stderr
+	end
+
+	local is_fifo = wezterm.run_child_process({ "test", "-p", preview.fifo_path })
+	if is_fifo then
+		return true, nil
+	end
+
+	local exists = wezterm.run_child_process({ "test", "-e", preview.fifo_path })
+	if exists then
+		local removed, remove_err = os.remove(preview.fifo_path)
+		if not removed then
+			return false, remove_err
+		end
+	end
+
+	ok, _, stderr = wezterm.run_child_process({ "mkfifo", preview.fifo_path })
+	if not ok then
+		return false, stderr
+	end
+
+	return true, nil
+end
+
+local function mark_ready(preview)
+	local file, err = io.open(preview.ready_path, "w")
+	if not file then
+		return false, err
+	end
+
+	file:write("ready\n")
+	file:close()
+	return true, nil
+end
+
+local function preview_reader()
+	return wezterm.home_dir .. "/.local/bin/term-xplr-preview"
+end
+
+local function ensure_preview_pane(window, pane, contract, preview)
+	local reader = preview_reader()
+	if not wezterm.run_child_process({ "test", "-x", reader }) then
+		return false, "Preview reader is unavailable: " .. reader
+	end
+
+	local ready, fifo_err = ensure_fifo(preview)
+	if not ready then
+		return false, "Unable to prepare preview FIFO: " .. tostring(fifo_err)
+	end
+
+	local preview_pane = runtime.pane(contract.id, "preview")
+	if not preview_pane then
+		local split_ok, split_or_err = pcall(pane.split, pane, {
+			direction = "Right",
+			size = 0.35,
+			cwd = contract.root,
+			args = { reader, contract.root, preview.fifo_path },
+			set_environment_variables = {
+				TERM_PROJECT_ID = contract.id,
+				TERM_PROJECT_ROOT = contract.root,
+			},
+		})
+		if not split_ok then
+			return false, "Unable to create preview pane: " .. tostring(split_or_err)
+		end
+
+		preview_pane = split_or_err
+		runtime.remember_pane(contract.id, "preview", preview_pane)
+	end
+
+	local marked, mark_err = mark_ready(preview)
+	if not marked then
+		return false, "Unable to mark preview reader ready: " .. tostring(mark_err)
+	end
+
+	pane:activate()
+	return true, nil
+end
+
+local function stop_preview_pane(pane, contract)
+	local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
+	if type(runtime_dir) == "string" and runtime_dir ~= "" then
+		os.remove(runtime_dir .. "/term-xplr-preview/" .. contract.id .. ".fifo.ready")
+	end
+
+	local preview_pane = runtime.pane(contract.id, "preview")
+	if preview_pane then
+		preview_pane:send_text("\003")
+	end
+
+	pane:activate()
+	return true, nil
+end
+
 function M.dispatch(window, pane, payload)
-	local contract, contract_err = contract_for(window, pane)
+	local contract, contract_err = contract_for(window, pane, {
+		nvim_socket = payload.op ~= "preview",
+	})
 	if not contract then
 		notify(window, contract_err)
 		return false
@@ -196,6 +342,8 @@ function M.dispatch(window, pane, payload)
 		value, validation_err = validate_open(contract, payload)
 	elseif payload.op == "layout" then
 		value, validation_err = validate_layout(payload)
+	elseif payload.op == "preview" then
+		value, validation_err = validate_preview(contract, payload)
 	else
 		validation_err = "unknown xplr operation"
 	end
@@ -203,6 +351,22 @@ function M.dispatch(window, pane, payload)
 	if not value then
 		notify(window, validation_err)
 		return false
+	end
+
+	if payload.op == "preview" then
+		local ok, err
+		if value.state == "on" then
+			ok, err = ensure_preview_pane(window, pane, contract, value)
+		else
+			ok, err = stop_preview_pane(pane, contract)
+		end
+
+		if not ok then
+			notify(window, err)
+			return false
+		end
+
+		return true
 	end
 
 	local success, stdout, stderr = nvim_dispatch(contract, payload.op, value)

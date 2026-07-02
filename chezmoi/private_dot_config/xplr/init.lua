@@ -42,6 +42,41 @@ PY
 	}
 end
 
+local function fifo_path()
+	local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
+	local project_id = os.getenv("TERM_PROJECT_ID")
+
+	if runtime_dir and runtime_dir:sub(1, 1) == "/" and project_id and project_id:match("^[%w._-]+$") then
+		return runtime_dir .. "/term-xplr-preview/" .. project_id .. ".fifo"
+	end
+
+	return nil
+end
+
+local function preview_on_script(path)
+	local ready_path = path .. ".ready"
+
+	return table.concat({
+		"set -eu",
+		"fifo=" .. sh_quote(path),
+		"ready=" .. sh_quote(ready_path),
+		'rm -f "$ready"',
+		"payload=$(",
+		"  TERM_XPLR_FIFO=\"$fifo\" python3 - <<'PY'",
+		"import json",
+		"import os",
+		'print(json.dumps({"op": "preview", "state": "on", "fifoPath": os.environ["TERM_XPLR_FIFO"]}, separators=(",", ":")))',
+		"PY",
+		") || exit",
+		"printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%s\a' \"$payload\" > /dev/tty",
+		"deadline=$((SECONDS + 3))",
+		'while [ ! -p "$fifo" ] || [ ! -e "$ready" ]; do',
+		'  [ "$SECONDS" -lt "$deadline" ] || exit 24',
+		"  sleep 0.05",
+		"done",
+	}, "\n")
+end
+
 local function rpc_binding(help, op, field, value)
 	return {
 		help = help,
@@ -60,24 +95,6 @@ xplr.config.general.initial_layout = "project_tree"
 xplr.config.layouts.builtin.compact = "Table"
 xplr.config.layouts.custom.project_tree = {
 	Dynamic = "custom.tree_view.render",
-}
-xplr.config.layouts.custom.project_tree_preview = {
-	Horizontal = {
-		config = {
-			constraints = {
-				{ Percentage = 55 },
-				{ Percentage = 45 },
-			},
-		},
-		splits = {
-			{
-				Dynamic = "custom.tree_view.render",
-			},
-			{
-				Dynamic = "custom.project_tree.preview",
-			},
-		},
-	},
 }
 
 xplr.config.general.table.header.cols = {
@@ -120,15 +137,6 @@ end
 
 xplr.fn.custom.project_tree = xplr.fn.custom.project_tree or {}
 xplr.fn.custom.project_tree.preview_enabled = false
-xplr.fn.custom.project_tree.preview = function(ctx)
-	local node = ctx.app.focused_node
-	return {
-		CustomParagraph = {
-			ui = { title = { format = " preview " } },
-			body = node and xplr.util.to_yaml(node) or "",
-		},
-	}
-end
 xplr.fn.custom.project_tree.open = function(app)
 	local node = app.focused_node
 	if not node then
@@ -151,19 +159,28 @@ xplr.fn.custom.project_tree.toggle_preview = function()
 	if xplr.fn.custom.project_tree.preview_enabled then
 		xplr.fn.custom.project_tree.preview_enabled = false
 		return {
+			"StopFifo",
+			rpc_message("preview", "state", "off"),
+		}
+	end
+
+	local path = fifo_path()
+	if not path then
+		return {
 			{
-				SwitchLayoutCustom = "project_tree",
+				LogError = "TERM_PROJECT_ID and XDG_RUNTIME_DIR are required for preview",
 			},
-			rpc_message("layout", "kind", "preview_off"),
 		}
 	end
 
 	xplr.fn.custom.project_tree.preview_enabled = true
 	return {
 		{
-			SwitchLayoutCustom = "project_tree_preview",
+			BashExec0 = preview_on_script(path),
 		},
-		rpc_message("layout", "kind", "preview_on"),
+		{
+			StartFifo = path,
+		},
 	}
 end
 

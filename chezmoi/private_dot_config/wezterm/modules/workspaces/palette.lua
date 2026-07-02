@@ -5,7 +5,7 @@ local M = {}
 local function layout_entry(label, kind)
 	return {
 		brief = label,
-		doc = "Route explorer layout through Neovim smart-splits mux RPC",
+		doc = "Route explorer layout through the validated xplr RPC boundary",
 		action = wezterm.action.EmitEvent("term-xplr-layout-" .. kind),
 	}
 end
