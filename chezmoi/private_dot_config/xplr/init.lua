@@ -18,40 +18,6 @@ local function sh_quote(value)
 	return "'" .. tostring(value):gsub("'", "'\"'\"'") .. "'"
 end
 
-local function rpc_message(op, field, value)
-	return {
-		BashExecSilently0 = string.format(
-			[===[
-        payload=$(
-          TERM_XPLR_OP=%q TERM_XPLR_FIELD=%q TERM_XPLR_VALUE=%q python3 - <<'PY'
-import json
-import os
-
-op = os.environ["TERM_XPLR_OP"]
-field = os.environ["TERM_XPLR_FIELD"]
-value = os.environ["TERM_XPLR_VALUE"]
-print(json.dumps({"op": op, field: value}, separators=(",", ":")))
-PY
-        ) || exit
-        encoded=$(printf '%%s' "$payload" | base64 | tr -d '\n') || exit
-        printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%%s\a' "$encoded" > /dev/tty
-      ]===],
-			op,
-			field,
-			value
-		),
-	}
-end
-
-local function rpc_binding(help, op, field, value)
-	return {
-		help = help,
-		messages = {
-			rpc_message(op, field, value),
-		},
-	}
-end
-
 xplr.config.general.read_only = false
 xplr.config.general.show_hidden = false
 xplr.config.general.enable_mouse = false
@@ -81,17 +47,29 @@ local preview_active = false
 
 local function direct_nvim_rpc_script(op, value)
 	local env_name = "TERM_XPLR_VALUE"
+	local value_setup
+
+	if op == "layout" then
+		value_setup = table.concat({
+			'case "$' .. env_name .. '" in hide|reveal|narrow|wide) ;; *) exit 24 ;; esac',
+			'path="$' .. env_name .. '"',
+		}, "\n")
+	else
+		value_setup = table.concat({
+			'if [ "$' .. env_name .. '" != "off" ]; then',
+			'  path=$(realpath --canonicalize-existing "$' .. env_name .. '")',
+			'  root=$(realpath --canonicalize-existing "${TERM_PROJECT_ROOT:?}")',
+			'  case "$path" in "$root"|"$root"/*) ;; *) exit 23 ;; esac',
+			"else",
+			'  path="$' .. env_name .. '"',
+			"fi",
+		}, "\n")
+	end
 
 	return table.concat({
 		"set -eu",
 		env_name .. "=" .. sh_quote(value),
-		'if [ "$' .. env_name .. '" != "off" ]; then',
-		'  path=$(realpath --canonicalize-existing "$' .. env_name .. '")',
-		'  root=$(realpath --canonicalize-existing "${TERM_PROJECT_ROOT:?}")',
-		'  case "$path" in "$root"|"$root"/*) ;; *) exit 23 ;; esac',
-		"else",
-		'  path="$' .. env_name .. '"',
-		"fi",
+		value_setup,
 		"socket=${TERM_NVIM_SOCKET:?}",
 		'test -S "$socket"',
 		"expr=$(TERM_XPLR_OP=" .. sh_quote(op) .. " TERM_XPLR_PATH=\"$path\" python3 - <<'PY'",
@@ -115,6 +93,21 @@ end
 
 local function direct_preview_script(path)
 	return direct_nvim_rpc_script("preview", path)
+end
+
+local function direct_layout_script(kind)
+	return direct_nvim_rpc_script("layout", kind)
+end
+
+local function layout_binding(help, kind)
+	return {
+		help = help,
+		messages = {
+			{
+				BashExecSilently0 = direct_layout_script(kind),
+			},
+		},
+	}
 end
 
 xplr.fn.custom.project_tree = xplr.fn.custom.project_tree or {}
@@ -211,10 +204,10 @@ xplr.config.modes.builtin.default.key_bindings.on_key["c"] = nil
 xplr.config.modes.builtin.default.key_bindings.on_key["d"] = nil
 xplr.config.modes.builtin.default.key_bindings.on_key["m"] = nil
 xplr.config.modes.builtin.default.key_bindings.on_key["r"] = nil
-xplr.config.modes.builtin.default.key_bindings.on_key["H"] = rpc_binding("hide tree", "layout", "kind", "hide")
-xplr.config.modes.builtin.default.key_bindings.on_key["R"] = rpc_binding("reveal tree", "layout", "kind", "reveal")
-xplr.config.modes.builtin.default.key_bindings.on_key["N"] = rpc_binding("narrow tree", "layout", "kind", "narrow")
-xplr.config.modes.builtin.default.key_bindings.on_key["W"] = rpc_binding("widen tree", "layout", "kind", "wide")
+xplr.config.modes.builtin.default.key_bindings.on_key["H"] = layout_binding("hide tree", "hide")
+xplr.config.modes.builtin.default.key_bindings.on_key["R"] = layout_binding("reveal tree", "reveal")
+xplr.config.modes.builtin.default.key_bindings.on_key["N"] = layout_binding("narrow tree", "narrow")
+xplr.config.modes.builtin.default.key_bindings.on_key["W"] = layout_binding("widen tree", "wide")
 xplr.config.modes.builtin.default.key_bindings.on_key["P"] = {
 	help = "toggle preview",
 	messages = {

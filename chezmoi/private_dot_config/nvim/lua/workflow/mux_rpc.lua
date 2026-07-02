@@ -5,6 +5,9 @@ local preview_delta = 64
 local hide_delta = 80
 local preview_window
 local preview_directory_buffer
+local preview_namespace = vim.api.nvim_create_namespace("xplr-preview")
+local directory_preview_max_depth = 2
+local directory_preview_max_entries = 200
 
 local directions = {
 	left = true,
@@ -68,7 +71,12 @@ local layouts = {
 			return false, err
 		end
 
-		return resize("left", hide_delta)
+		ok, err = resize("left", hide_delta)
+		if not ok then
+			return false, err
+		end
+
+		return true, nil
 	end,
 	reveal = function()
 		return focus("left")
@@ -87,7 +95,8 @@ local layouts = {
 			return false, err
 		end
 
-		return resize("right", 8)
+		ok, err = resize("right", 8)
+		return ok, err
 	end,
 	preview_on = function()
 		if preview_active then
@@ -163,27 +172,99 @@ local function ensure_preview_window()
 	return preview_window
 end
 
-local function directory_lines(path)
-	local lines = { path, "" }
-	local ok, entries = pcall(vim.fs.dir, path)
-	if not ok or not entries then
-		return { path, "", "Unable to read directory" }
+local function ensure_preview_highlights()
+	pcall(vim.api.nvim_set_hl, 0, "XplrPreviewTreeGlyph", { default = true, link = "NonText" })
+	pcall(vim.api.nvim_set_hl, 0, "XplrPreviewDirectory", { default = true, link = "Directory" })
+end
+
+local function sorted_directory_entries(path)
+	local ok, iter = pcall(vim.fs.dir, path)
+	if not ok or not iter then
+		return nil
 	end
 
-	local count = 0
-	for name, type in entries do
-		count = count + 1
-		if count > 200 then
-			table.insert(lines, "")
-			table.insert(lines, "... truncated")
-			break
+	local entries = {}
+	for name, type in iter do
+		table.insert(entries, { name = name, type = type })
+	end
+
+	table.sort(entries, function(left, right)
+		if left.type ~= right.type then
+			return left.type == "directory"
 		end
 
-		local suffix = type == "directory" and "/" or ""
-		table.insert(lines, suffix .. name)
+		return left.name:lower() < right.name:lower()
+	end)
+
+	return entries
+end
+
+local function add_tree_line(lines, highlights, line, glyph_end, directory_start)
+	table.insert(lines, line)
+	local row = #lines - 1
+	table.insert(highlights, {
+		group = "XplrPreviewTreeGlyph",
+		row = row,
+		from = 0,
+		to = glyph_end,
+	})
+
+	if directory_start then
+		table.insert(highlights, {
+			group = "XplrPreviewDirectory",
+			row = row,
+			from = directory_start,
+			to = #line,
+		})
+	end
+end
+
+local function append_directory_tree(path, prefix, depth, state)
+	local entries = sorted_directory_entries(path)
+	if not entries then
+		add_tree_line(state.lines, state.highlights, prefix .. "`-- [unreadable]", #prefix + 4)
+		return
 	end
 
-	return lines
+	for index, entry in ipairs(entries) do
+		if state.count >= directory_preview_max_entries then
+			add_tree_line(state.lines, state.highlights, prefix .. "`-- ... truncated", #prefix + 4)
+			state.truncated = true
+			return
+		end
+
+		state.count = state.count + 1
+		local is_last = index == #entries
+		local branch = is_last and "`-- " or "|-- "
+		local suffix = entry.type == "directory" and "/" or ""
+		local line = prefix .. branch .. entry.name .. suffix
+		local directory_start = entry.type == "directory" and #prefix + #branch or nil
+		add_tree_line(state.lines, state.highlights, line, #prefix + #branch, directory_start)
+
+		if entry.type == "directory" and depth < directory_preview_max_depth and not state.truncated then
+			local child_prefix = prefix .. (is_last and "    " or "|   ")
+			append_directory_tree(path .. "/" .. entry.name, child_prefix, depth + 1, state)
+		end
+	end
+end
+
+local function directory_lines(path)
+	local state = {
+		count = 0,
+		highlights = {},
+		lines = { path, "", "." },
+		truncated = false,
+	}
+
+	table.insert(state.highlights, {
+		group = "XplrPreviewDirectory",
+		row = 2,
+		from = 0,
+		to = 1,
+	})
+	append_directory_tree(path, "", 1, state)
+
+	return state.lines, state.highlights
 end
 
 local function directory_buffer(path)
@@ -194,12 +275,46 @@ local function directory_buffer(path)
 		vim.bo[preview_directory_buffer].swapfile = false
 	end
 
+	local lines, highlights = directory_lines(path)
 	vim.bo[preview_directory_buffer].modifiable = true
-	vim.api.nvim_buf_set_lines(preview_directory_buffer, 0, -1, false, directory_lines(path))
+	vim.api.nvim_buf_set_lines(preview_directory_buffer, 0, -1, false, lines)
 	vim.bo[preview_directory_buffer].modifiable = false
 	vim.bo[preview_directory_buffer].filetype = "xplr-preview"
+	vim.bo[preview_directory_buffer].syntax = "xplr-preview"
+	ensure_preview_highlights()
+	vim.api.nvim_buf_clear_namespace(preview_directory_buffer, preview_namespace, 0, -1)
+	for _, highlight in ipairs(highlights) do
+		vim.api.nvim_buf_add_highlight(
+			preview_directory_buffer,
+			preview_namespace,
+			highlight.group,
+			highlight.row,
+			highlight.from,
+			highlight.to
+		)
+	end
 
 	return preview_directory_buffer
+end
+
+local function activate_file_preview(bufnr, path)
+	vim.bo[bufnr].buflisted = false
+
+	local ok, filetype = pcall(function()
+		return vim.filetype.match({ filename = path, buf = bufnr })
+	end)
+	if ok and type(filetype) == "string" and filetype ~= "" then
+		vim.bo[bufnr].filetype = filetype
+	end
+
+	vim.api.nvim_buf_call(bufnr, function()
+		pcall(vim.cmd, "silent! filetype detect")
+		if vim.bo[bufnr].filetype ~= "" then
+			vim.bo[bufnr].syntax = vim.bo[bufnr].filetype
+		else
+			pcall(vim.cmd, "silent! syntax enable")
+		end
+	end)
 end
 
 local function preview_buffer(path)
@@ -209,7 +324,7 @@ local function preview_buffer(path)
 
 	local bufnr = vim.fn.bufadd(path)
 	vim.fn.bufload(bufnr)
-	vim.bo[bufnr].buflisted = false
+	activate_file_preview(bufnr, path)
 	return bufnr
 end
 

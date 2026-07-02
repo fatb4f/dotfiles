@@ -12,6 +12,12 @@ local layout_kinds = {
 	wide = true,
 }
 
+local layout_deltas = {
+	hide = 80,
+	narrow = 8,
+	wide = 8,
+}
+
 local function notify(window, message)
 	window:toast_notification("Xplr RPC", message, nil, 5000)
 end
@@ -195,6 +201,74 @@ local function validate_layout(payload)
 	return payload.kind, nil
 end
 
+local function layout_state()
+	wezterm.GLOBAL.term_xplr_layout = wezterm.GLOBAL.term_xplr_layout or {}
+	return wezterm.GLOBAL.term_xplr_layout
+end
+
+local function project_panes(contract)
+	local editor = runtime.pane(contract.id, "editor")
+	local explorer = runtime.pane(contract.id, "explorer")
+	if not editor or not explorer then
+		return nil, nil, "project editor/explorer panes are unavailable"
+	end
+
+	return editor, explorer, nil
+end
+
+local function adjust(window, pane, direction, amount)
+	window:perform_action({
+		AdjustPaneSize = { direction, amount },
+	}, pane)
+end
+
+local function activate(pane)
+	if pane then
+		pane:activate()
+	end
+end
+
+local function apply_pane_layout(window, contract, kind)
+	local editor, explorer, err = project_panes(contract)
+	if not editor then
+		return false, err
+	end
+
+	local state = layout_state()
+	state[contract.id] = state[contract.id] or {}
+	local project_state = state[contract.id]
+
+	if kind == "hide" then
+		adjust(window, editor, "Left", layout_deltas.hide)
+		project_state.hidden = true
+		activate(editor)
+		return true, nil
+	end
+
+	if kind == "reveal" then
+		adjust(window, editor, "Right", layout_deltas.hide)
+		project_state.hidden = false
+		activate(explorer)
+		return true, nil
+	end
+
+	if kind == "narrow" then
+		adjust(window, editor, "Left", layout_deltas.narrow)
+		project_state.hidden = false
+		activate(editor)
+		return true, nil
+	end
+
+	if kind == "wide" then
+		adjust(window, editor, "Right", layout_deltas.wide)
+		project_state.hidden = false
+		activate(explorer)
+		return true, nil
+	end
+
+	return false, "unknown explorer layout kind"
+end
+
 function M.dispatch(window, pane, payload)
 	local contract, contract_err = contract_for(window, pane)
 	if not contract then
@@ -231,10 +305,24 @@ function M.dispatch(window, pane, payload)
 end
 
 function M.dispatch_layout(window, pane, kind)
-	return M.dispatch(window, pane, {
-		op = "layout",
-		kind = kind,
-	})
+	local value, validation_err = validate_layout({ kind = kind })
+	if not value then
+		notify(window, validation_err)
+		return false
+	end
+
+	local contract, contract_err = contract_for(window, pane, { nvim_socket = false })
+	if not contract then
+		notify(window, contract_err)
+		return false
+	end
+
+	local ok, err = apply_pane_layout(window, contract, value)
+	if not ok then
+		notify(window, err)
+	end
+
+	return ok
 end
 
 function M.handle_user_var(window, pane, name, value)
@@ -249,6 +337,39 @@ function M.handle_user_var(window, pane, name, value)
 	end
 
 	M.dispatch(window, pane, payload)
+end
+
+local function layout_key(key, kind)
+	return {
+		key = key,
+		mods = "NONE",
+		action = wezterm.action_callback(function(window, pane)
+			M.dispatch_layout(window, pane, kind)
+		end),
+	}
+end
+
+local function shifted_layout_key(key, kind)
+	return {
+		key = key,
+		mods = "SHIFT",
+		action = wezterm.action_callback(function(window, pane)
+			M.dispatch_layout(window, pane, kind)
+		end),
+	}
+end
+
+function M.apply_to_config(config)
+	config.keys = config.keys or {}
+
+	table.insert(config.keys, layout_key("H", "hide"))
+	table.insert(config.keys, layout_key("R", "reveal"))
+	table.insert(config.keys, layout_key("N", "narrow"))
+	table.insert(config.keys, layout_key("W", "wide"))
+	table.insert(config.keys, shifted_layout_key("H", "hide"))
+	table.insert(config.keys, shifted_layout_key("R", "reveal"))
+	table.insert(config.keys, shifted_layout_key("N", "narrow"))
+	table.insert(config.keys, shifted_layout_key("W", "wide"))
 end
 
 return M
