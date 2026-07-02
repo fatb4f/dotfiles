@@ -106,6 +106,3 @@ _completion: impl.#MakeCompletionReport & {
 
 issueTemplateValidationPlan: _validation.out
 issueTemplateCompletionReportContract: _completion.out
-
-dotfilesValidationPlan: issueTemplateValidationPlan
-dotfilesCompletionReportContract: issueTemplateCompletionReportContract
