@@ -128,6 +128,10 @@ local function lua_quote(value)
 	return string.format("%q", tostring(value))
 end
 
+local function sh_quote(value)
+	return "'" .. tostring(value):gsub("'", "'\"'\"'") .. "'"
+end
+
 local function nvim_dispatch(contract, op, value)
 	local expr = string.format("v:lua.TermXplrMuxRpc(%s, %s)", lua_quote(op), lua_quote(value))
 	return wezterm.run_child_process({
@@ -258,19 +262,30 @@ local function ensure_fifo(preview)
 	return true, nil
 end
 
-local function mark_ready(preview)
-	local file, err = io.open(preview.ready_path, "w")
-	if not file then
-		return false, err
-	end
-
-	file:write("ready\n")
-	file:close()
-	return true, nil
-end
-
 local function preview_reader()
 	return wezterm.home_dir .. "/.local/bin/term-xplr-preview"
+end
+
+local function remove_ready_marker(preview)
+	os.remove(preview.ready_path)
+end
+
+local function preview_reader_command(reader, contract, preview)
+	return table.concat({
+		"cd " .. sh_quote(contract.root),
+		"TERM_PROJECT_ID="
+			.. sh_quote(contract.id)
+			.. " TERM_PROJECT_ROOT="
+			.. sh_quote(contract.root)
+			.. " "
+			.. sh_quote(reader)
+			.. " "
+			.. sh_quote(contract.root)
+			.. " "
+			.. sh_quote(preview.fifo_path)
+			.. " "
+			.. sh_quote(preview.ready_path),
+	}, " && ") .. "\n"
 end
 
 local function ensure_preview_pane(window, pane, contract, preview)
@@ -278,6 +293,8 @@ local function ensure_preview_pane(window, pane, contract, preview)
 	if not wezterm.run_child_process({ "test", "-x", reader }) then
 		return false, "Preview reader is unavailable: " .. reader
 	end
+
+	remove_ready_marker(preview)
 
 	local ready, fifo_err = ensure_fifo(preview)
 	if not ready then
@@ -290,7 +307,6 @@ local function ensure_preview_pane(window, pane, contract, preview)
 			direction = "Right",
 			size = 0.35,
 			cwd = contract.root,
-			args = { reader, contract.root, preview.fifo_path },
 			set_environment_variables = {
 				TERM_PROJECT_ID = contract.id,
 				TERM_PROJECT_ROOT = contract.root,
@@ -302,12 +318,11 @@ local function ensure_preview_pane(window, pane, contract, preview)
 
 		preview_pane = split_or_err
 		runtime.remember_pane(contract.id, "preview", preview_pane)
+	else
+		preview_pane:send_text("\003")
 	end
 
-	local marked, mark_err = mark_ready(preview)
-	if not marked then
-		return false, "Unable to mark preview reader ready: " .. tostring(mark_err)
-	end
+	preview_pane:send_text(preview_reader_command(reader, contract, preview))
 
 	pane:activate()
 	return true, nil

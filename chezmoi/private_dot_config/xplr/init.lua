@@ -77,6 +77,20 @@ local function preview_on_script(path)
 	}, "\n")
 end
 
+local function preview_ready(path)
+	if not path then
+		return false
+	end
+
+	local file = io.open(path .. ".ready", "r")
+	if not file then
+		return false
+	end
+
+	file:close()
+	return true
+end
+
 local function rpc_binding(help, op, field, value)
 	return {
 		help = help,
@@ -136,7 +150,6 @@ local function direct_open_script(path)
 end
 
 xplr.fn.custom.project_tree = xplr.fn.custom.project_tree or {}
-xplr.fn.custom.project_tree.preview_enabled = false
 xplr.fn.custom.project_tree.open = function(app)
 	local node = app.focused_node
 	if not node then
@@ -156,15 +169,14 @@ xplr.fn.custom.project_tree.open = function(app)
 	}
 end
 xplr.fn.custom.project_tree.toggle_preview = function()
-	if xplr.fn.custom.project_tree.preview_enabled then
-		xplr.fn.custom.project_tree.preview_enabled = false
+	local path = fifo_path()
+	if preview_ready(path) then
 		return {
 			"StopFifo",
 			rpc_message("preview", "state", "off"),
 		}
 	end
 
-	local path = fifo_path()
 	if not path then
 		return {
 			{
@@ -173,7 +185,6 @@ xplr.fn.custom.project_tree.toggle_preview = function()
 		}
 	end
 
-	xplr.fn.custom.project_tree.preview_enabled = true
 	return {
 		{
 			BashExec0 = preview_on_script(path),

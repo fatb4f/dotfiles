@@ -3,6 +3,7 @@ set -euo pipefail
 
 root=${1:?usage: term-xplr-preview ROOT FIFO}
 fifo=${2:?usage: term-xplr-preview ROOT FIFO}
+ready=${3:-"$fifo.ready"}
 max_lines=${TERM_XPLR_PREVIEW_LINES:-200}
 
 root=$(realpath --canonicalize-existing "$root")
@@ -12,9 +13,21 @@ case "$fifo" in
 	*) exit 64 ;;
 esac
 
+case "$ready" in
+	/*) ;;
+	*) exit 64 ;;
+esac
+
 if ! [[ "$max_lines" =~ ^[0-9]+$ ]] || [ "$max_lines" -lt 1 ] || [ "$max_lines" -gt 1000 ]; then
 	max_lines=200
 fi
+
+cleanup() {
+	rm -f -- "$ready"
+}
+
+trap cleanup EXIT
+trap 'cleanup; exit 0' INT TERM
 
 clear_screen() {
 	printf '\033[2J\033[H'
@@ -100,7 +113,10 @@ render() {
 clear_screen
 printf 'waiting for xplr focus stream\n'
 
+exec 3<>"$fifo"
+printf 'ready\n' > "$ready"
+
 while IFS= read -r focused_path; do
 	[ -n "$focused_path" ] || continue
 	render "$focused_path"
-done < "$fifo"
+done <&3
