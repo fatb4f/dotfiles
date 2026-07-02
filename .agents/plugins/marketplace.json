@@ -8,7 +8,7 @@
       "name": "agent-context-resolver",
       "source": {
         "source": "local",
-        "path": "../../.codex/plugins/agent-context-resolver"
+        "path": "./.codex/plugins/agent-context-resolver"
       },
       "policy": {
         "installation": "AVAILABLE",
@@ -20,7 +20,7 @@
       "name": "code-intel",
       "source": {
         "source": "local",
-        "path": "../../.codex/plugins/code-intel"
+        "path": "./.codex/plugins/code-intel"
       },
       "policy": {
         "installation": "AVAILABLE",
