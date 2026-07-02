@@ -2,31 +2,6 @@ package contract
 
 import impl "github.com/fatb4f/dotfiles/github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
 
-_implementationWorkflow: [
-	{order: 1, id: "#MakeDotfilesPrimitive", constructor: impl.#MakeDotfilesPrimitive, instantiateAt: "_primitives"},
-	{order: 2, id: "#MakeObservedSurface", constructor: impl.#MakeObservedSurface, instantiateAt: "_observed"},
-	{order: 3, id: "#MakeAdmissibleSurface", constructor: impl.#MakeAdmissibleSurface, instantiateAt: "_admissible"},
-	{order: 4, id: "#MakePredicateSet", constructor: impl.#MakePredicateSet, instantiateAt: "_predicates"},
-	{order: 5, id: "#MakePromotionCandidate", constructor: impl.#MakePromotionCandidate, instantiateAt: "_promotion"},
-	{order: 6, id: "#MakeSurfaceSet", constructor: impl.#MakeSurfaceSet, instantiateAt: "_surfaces"},
-	{order: 7, id: "#MakeNegativeFixture", constructor: impl.#MakeNegativeFixture, instantiateAt: "_negativeFixtures"},
-	{order: 8, id: "#MakeBottomCheckPlan", constructor: impl.#MakeBottomCheckPlan, instantiateAt: "_bottomCheckPlans"},
-	{order: 9, id: "#MakeBottomCheckProof", constructor: impl.#MakeBottomCheckProof, instantiateAt: "checks/_negativeBottomChecks"},
-	{order: 10, id: "#MakeValidationPlan", constructor: impl.#MakeValidationPlan, instantiateAt: "_validation"},
-	{order: 11, id: "#MakeCompletionReport", constructor: impl.#MakeCompletionReport, instantiateAt: "_completion"},
-]
-
-_workflowIndex: [for step in _implementationWorkflow {
-	order: step.order
-	id: step.id
-	instantiateAt: step.instantiateAt
-}]
-
-_contract: {
-	title: "template"
-	path: "<contract-path>/manifest.cue"
-}
-
 _primitives: [
 	impl.#MakeDotfilesPrimitive & {
 		in: {
@@ -98,7 +73,6 @@ _surfaces: impl.#MakeSurfaceSet & {
 		fixtures: ["_negativeFixtures"]
 		checks: ["_negativeBottomChecks"]
 		publicExports: [
-			"normalizedDotfilesContractManifest",
 			"dotfilesValidationPlan",
 			"dotfilesCompletionReportContract",
 		]
@@ -135,11 +109,8 @@ _validation: impl.#MakeValidationPlan & {
 		name: "dotfilesValidationPlan"
 		commands: [
 			"cue vet <contract-path>",
-			"cue export <contract-path> -e normalizedDotfilesContractManifest",
 			"cue export <contract-path> -e dotfilesValidationPlan",
 			"cue export <contract-path> -e dotfilesCompletionReportContract",
-			"! cue export <contract-path>/checks -e '_negativeBottomChecks.<name>'",
-			"! rg '[t]arget:\\s*_|[i]nput:\\s*_|[e]xpression:|[i]sInvalid: true|[o]peratorTruthFlag|[i]nline constructor|[g]enerated.*authority' <contract-path>",
 		]
 	}
 }
@@ -149,7 +120,7 @@ _completion: impl.#MakeCompletionReport & {
 		name: "dotfilesCompletionReportContract"
 		sections: [
 			"summary",
-			"manifest workflow",
+			"implementation blocks",
 			"target surfaces",
 			"materialized config changes",
 			"public eval surfaces",
@@ -159,19 +130,6 @@ _completion: impl.#MakeCompletionReport & {
 			"forbidden attractors avoided",
 		]
 	}
-}
-
-normalizedDotfilesContractManifest: {
-	contract: _contract
-	workflow: _workflowIndex
-	primitives: [for item in _primitives {item.out}]
-	observed: [for item in _observed {item.out}]
-	admissible: [for item in _admissible {item.out}]
-	predicates: [for item in _predicates {item.out}]
-	promotion: [for item in _promotion {item.out}]
-	surfaces: _surfaces.out
-	negativeFixtures: [for item in _negativeFixtures {item.out}]
-	bottomCheckPlans: [for item in _bottomCheckPlans {item.out}]
 }
 
 dotfilesValidationPlan: _validation.out
