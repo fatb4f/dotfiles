@@ -20,7 +20,7 @@ end
 
 local function rpc_message(op, field, value)
 	return {
-		BashExec0 = string.format(
+		BashExecSilently0 = string.format(
 			[===[
         payload=$(
           TERM_XPLR_OP=%q TERM_XPLR_FIELD=%q TERM_XPLR_VALUE=%q python3 - <<'PY'
@@ -33,7 +33,8 @@ value = os.environ["TERM_XPLR_VALUE"]
 print(json.dumps({"op": op, field: value}, separators=(",", ":")))
 PY
         ) || exit
-        printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%%s\a' "$payload" > /dev/tty
+        encoded=$(printf '%%s' "$payload" | base64 | tr -d '\n') || exit
+        printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%%s\a' "$encoded" > /dev/tty
       ]===],
 			op,
 			field,
@@ -68,7 +69,8 @@ local function preview_on_script(path)
 		'print(json.dumps({"op": "preview", "state": "on", "fifoPath": os.environ["TERM_XPLR_FIFO"]}, separators=(",", ":")))',
 		"PY",
 		") || exit",
-		"printf '\033]1337;SetUserVar=TERM_XPLR_RPC=%s\a' \"$payload\" > /dev/tty",
+		"encoded=$(printf '%s' \"$payload\" | base64 | tr -d '\\n') || exit",
+		"printf '\\033]1337;SetUserVar=TERM_XPLR_RPC=%s\\a' \"$encoded\" > /dev/tty",
 		"deadline=$((SECONDS + 3))",
 		'while [ ! -p "$fifo" ] || [ ! -e "$ready" ]; do',
 		'  [ "$SECONDS" -lt "$deadline" ] || exit 24',
@@ -164,7 +166,7 @@ xplr.fn.custom.project_tree.open = function(app)
 
 	return {
 		{
-			BashExec0 = direct_open_script(node.absolute_path),
+			BashExecSilently0 = direct_open_script(node.absolute_path),
 		},
 	}
 end
@@ -187,7 +189,7 @@ xplr.fn.custom.project_tree.toggle_preview = function()
 
 	return {
 		{
-			BashExec0 = preview_on_script(path),
+			BashExecSilently0 = preview_on_script(path),
 		},
 		{
 			StartFifo = path,

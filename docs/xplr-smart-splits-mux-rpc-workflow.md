@@ -38,12 +38,12 @@ xplr owns tree browsing and focused-path FIFO emission.
 | xplr `k` | xplr internal `FocusPrevious` | none | none | none | xplr moves cursor up |
 | xplr `l` / `enter` on directory | xplr internal `Enter` | none | none | none | xplr descends into directory |
 | xplr `l` / `enter` on file | direct `nvim --server "$TERM_NVIM_SOCKET" --remote-expr` after shell root/socket checks | none | `v:lua.TermXplrMuxRpc("open", path)` | `next_pane("right")` after `edit` | File opens in project Neovim and focus moves right to editor |
-| xplr `H` optional | `TERM_XPLR_RPC={op:"layout",kind:"hide"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "hide")` | `next_pane("right")`, then `resize_pane("left", 80)` | Tree is visually hidden by resizing |
-| xplr `R` optional | `TERM_XPLR_RPC={op:"layout",kind:"reveal"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "reveal")` | `next_pane("left")` | Tree is revealed/focused by moving left |
-| xplr `N` optional | `TERM_XPLR_RPC={op:"layout",kind:"narrow"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "narrow")` | `next_pane("right")`, then `resize_pane("left", 8)` | Tree narrows |
-| xplr `W` optional | `TERM_XPLR_RPC={op:"layout",kind:"wide"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "wide")` | `next_pane("left")`, then `resize_pane("right", 8)` | Tree widens |
-| xplr `P` preview off -> on | `TERM_XPLR_RPC={op:"preview",state:"on",fifoPath}` then `StartFifo` after reader-owned readiness marker | validate project/root/FIFO path, restart preview reader, restore xplr focus | none | none | xplr emits focused paths only after the preview reader opens the FIFO |
-| xplr `P` preview on -> off | `StopFifo` then `TERM_XPLR_RPC={op:"preview",state:"off"}` | remove readiness marker, interrupt preview reader, preserve cached preview pane, restore xplr focus | none | none | xplr stops focused-path emission and WezTerm winds down preview lifecycle |
+| xplr `H` optional | base64 `TERM_XPLR_RPC={op:"layout",kind:"hide"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "hide")` | `next_pane("right")`, then `resize_pane("left", 80)` | Tree is visually hidden by resizing |
+| xplr `R` optional | base64 `TERM_XPLR_RPC={op:"layout",kind:"reveal"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "reveal")` | `next_pane("left")` | Tree is revealed/focused by moving left |
+| xplr `N` optional | base64 `TERM_XPLR_RPC={op:"layout",kind:"narrow"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "narrow")` | `next_pane("right")`, then `resize_pane("left", 8)` | Tree narrows |
+| xplr `W` optional | base64 `TERM_XPLR_RPC={op:"layout",kind:"wide"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "wide")` | `next_pane("left")`, then `resize_pane("right", 8)` | Tree widens |
+| xplr `P` preview off -> on | base64 `TERM_XPLR_RPC={op:"preview",state:"on",fifoPath}` then `StartFifo` after reader-owned readiness marker | validate project/root/FIFO path, restart preview reader, restore xplr focus | none | none | xplr emits focused paths only after the preview reader opens the FIFO |
+| xplr `P` preview on -> off | `StopFifo` then base64 `TERM_XPLR_RPC={op:"preview",state:"off"}` | remove readiness marker, interrupt preview reader, preserve cached preview pane, restore xplr focus | none | none | xplr stops focused-path emission and WezTerm winds down preview lifecycle |
 | Palette: `Hide project tree` | `term-xplr-layout-hide` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "hide")` | same as xplr `H` | Same behavior as xplr key |
 | Palette: `Reveal project tree` | `term-xplr-layout-reveal` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "reveal")` | same as xplr `R` | Same behavior as xplr key |
 | `<C-h/j/k/l>` | direct keypress | WezTerm smart-splits adapter when outside Neovim | Neovim smart-splits mapping when inside Neovim | smart-splits focus traversal | Move across Neovim splits and WezTerm panes |
@@ -53,7 +53,7 @@ xplr owns tree browsing and focused-path FIFO emission.
 
 | Boundary | Accept | Reject | Where enforced |
 |---|---|---|---|
-| RPC payload shape | `{op:"open", path:string}`, `{op:"layout", kind:string}`, or `{op:"preview", state:string, fifoPath?:string}` | Empty payload, malformed JSON, unknown `op` | `xplr_rpc.decode_payload` |
+| RPC payload shape | WezTerm OSC 1337 `SetUserVar` carrying base64 JSON: `{op:"open", path:string}`, `{op:"layout", kind:string}`, or `{op:"preview", state:string, fifoPath?:string}` | Empty payload, malformed JSON, unknown `op` | `xplr_rpc.decode_payload` |
 | Layout kind | `hide`, `reveal`, `narrow`, `wide` | Anything else, for example `fullscreen` | `xplr_rpc.validate_layout` |
 | Preview lifecycle | `state=on` with `$XDG_RUNTIME_DIR/term-xplr-preview/$TERM_PROJECT_ID.fifo`; `state=off` without FIFO start | FIFO path outside the active project runtime namespace, starting xplr FIFO before the reader writes readiness | `xplr_rpc.validate_preview`, `xplr/init.lua`, `executable_term-xplr-preview` |
 | Open path | Existing absolute path inside project root | Relative path, non-existing path, path outside root | `xplr_rpc.validate_open` |
