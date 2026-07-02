@@ -179,9 +179,9 @@ classification=$(
 				}
 			},
 			generatedFrom: {
-				turnStart: ".codex/plugins/agent-context-resolver/generated/turn_start_fragments.json",
-				promptRoutes: ".codex/plugins/agent-context-resolver/generated/prompt_routes.json",
-				routeInventory: ".codex/plugins/agent-context-resolver/generated/route_inventory.json"
+				turnStart: "contracts/plugin-bundle/agent-context-resolver/src/contracts/agent-context-resolver/generated/turn_start_fragments.json",
+				promptRoutes: "contracts/plugin-bundle/agent-context-resolver/src/contracts/agent-context-resolver/generated/prompt_routes.json",
+				routeInventory: "contracts/plugin-bundle/agent-context-resolver/src/contracts/agent-context-resolver/generated/route_inventory.json"
 			},
 			resolver: {
 				command: ".codex/plugins/agent-context-resolver/scripts/resolve-agent-context",

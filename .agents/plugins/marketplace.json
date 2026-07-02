@@ -1,10 +1,26 @@
 {
+  "name": "dotfiles",
+  "interface": {
+    "displayName": "Dotfiles"
+  },
   "plugins": [
     {
       "name": "agent-context-resolver",
       "source": {
         "source": "local",
-        "path": "./plugins/agent-context-resolver"
+        "path": "../../.codex/plugins/agent-context-resolver"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Developer Tools"
+    },
+    {
+      "name": "code-intel",
+      "source": {
+        "source": "local",
+        "path": "../../.codex/plugins/code-intel"
       },
       "policy": {
         "installation": "AVAILABLE",

@@ -12,8 +12,7 @@
     "sourceRoot": "contracts/plugin-bundle/code-intel/instances/dotfiles/src"
   },
   "contracts": [
-    "contracts/code-intel/lua-first-workflow.cue",
-    "contracts/code-intel/checks.cue"
+    "contracts/code-intel/manifest.cue"
   ],
   "providers": [
     "mcp-tool-registry",
