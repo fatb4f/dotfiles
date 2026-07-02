@@ -47,24 +47,15 @@ local preview_active = false
 
 local function direct_nvim_rpc_script(op, value)
 	local env_name = "TERM_XPLR_VALUE"
-	local value_setup
-
-	if op == "layout" then
-		value_setup = table.concat({
-			'case "$' .. env_name .. '" in hide|reveal|narrow|wide) ;; *) exit 24 ;; esac',
-			'path="$' .. env_name .. '"',
-		}, "\n")
-	else
-		value_setup = table.concat({
-			'if [ "$' .. env_name .. '" != "off" ]; then',
-			'  path=$(realpath --canonicalize-existing "$' .. env_name .. '")',
-			'  root=$(realpath --canonicalize-existing "${TERM_PROJECT_ROOT:?}")',
-			'  case "$path" in "$root"|"$root"/*) ;; *) exit 23 ;; esac',
-			"else",
-			'  path="$' .. env_name .. '"',
-			"fi",
-		}, "\n")
-	end
+	local value_setup = table.concat({
+		'if [ "$' .. env_name .. '" != "off" ]; then',
+		'  path=$(realpath --canonicalize-existing "$' .. env_name .. '")',
+		'  root=$(realpath --canonicalize-existing "${TERM_PROJECT_ROOT:?}")',
+		'  case "$path" in "$root"|"$root"/*) ;; *) exit 23 ;; esac',
+		"else",
+		'  path="$' .. env_name .. '"',
+		"fi",
+	}, "\n")
 
 	return table.concat({
 		"set -eu",
@@ -93,21 +84,6 @@ end
 
 local function direct_preview_script(path)
 	return direct_nvim_rpc_script("preview", path)
-end
-
-local function direct_layout_script(kind)
-	return direct_nvim_rpc_script("layout", kind)
-end
-
-local function layout_binding(help, kind)
-	return {
-		help = help,
-		messages = {
-			{
-				BashExecSilently0 = direct_layout_script(kind),
-			},
-		},
-	}
 end
 
 xplr.fn.custom.project_tree = xplr.fn.custom.project_tree or {}
@@ -204,10 +180,6 @@ xplr.config.modes.builtin.default.key_bindings.on_key["c"] = nil
 xplr.config.modes.builtin.default.key_bindings.on_key["d"] = nil
 xplr.config.modes.builtin.default.key_bindings.on_key["m"] = nil
 xplr.config.modes.builtin.default.key_bindings.on_key["r"] = nil
-xplr.config.modes.builtin.default.key_bindings.on_key["H"] = layout_binding("hide tree", "hide")
-xplr.config.modes.builtin.default.key_bindings.on_key["R"] = layout_binding("reveal tree", "reveal")
-xplr.config.modes.builtin.default.key_bindings.on_key["N"] = layout_binding("narrow tree", "narrow")
-xplr.config.modes.builtin.default.key_bindings.on_key["W"] = layout_binding("widen tree", "wide")
 xplr.config.modes.builtin.default.key_bindings.on_key["P"] = {
 	help = "toggle preview",
 	messages = {

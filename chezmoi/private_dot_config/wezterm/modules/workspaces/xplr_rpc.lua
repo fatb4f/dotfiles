@@ -13,7 +13,6 @@ local layout_kinds = {
 }
 
 local layout_deltas = {
-	hide = 80,
 	narrow = 8,
 	wide = 8,
 }
@@ -173,7 +172,7 @@ local function decode_payload(value)
 		return nil, "TERM_XPLR_RPC payload must be JSON"
 	end
 
-	if payload.op ~= "open" and payload.op ~= "layout" then
+	if payload.op ~= "open" then
 		return nil, "unknown xplr operation"
 	end
 
@@ -210,10 +209,72 @@ local function project_panes(contract)
 	local editor = runtime.pane(contract.id, "editor")
 	local explorer = runtime.pane(contract.id, "explorer")
 	if not editor or not explorer then
-		return nil, nil, "project editor/explorer panes are unavailable"
+		return nil, nil, "pane lookup failed: project editor/explorer panes are unavailable"
 	end
 
 	return editor, explorer, nil
+end
+
+local function pane_id(pane)
+	local ok, id = pcall(function()
+		return pane:pane_id()
+	end)
+	if ok and id then
+		return tostring(id)
+	end
+
+	return "unknown"
+end
+
+local function tab_id(pane)
+	local ok, tab = pcall(function()
+		return pane:tab()
+	end)
+	if not ok or not tab then
+		return nil
+	end
+
+	local id_ok, id = pcall(function()
+		return tab:tab_id()
+	end)
+	if id_ok and id then
+		return tostring(id)
+	end
+
+	return nil
+end
+
+local function dimensions(pane)
+	local ok, dims = pcall(function()
+		return pane:get_dimensions()
+	end)
+	if not ok or type(dims) ~= "table" then
+		return nil
+	end
+
+	return {
+		cols = dims.cols,
+		rows = dims.viewport_rows or dims.rows,
+	}
+end
+
+local function dimensions_changed(before, after)
+	if not before or not after then
+		return nil
+	end
+
+	return before.cols ~= after.cols or before.rows ~= after.rows
+end
+
+local function pane_is_zoomed(pane)
+	local ok, zoomed = pcall(function()
+		return pane:is_zoomed()
+	end)
+	if ok and type(zoomed) == "boolean" then
+		return zoomed
+	end
+
+	return nil
 end
 
 local function adjust(window, pane, direction, amount)
@@ -222,10 +283,77 @@ local function adjust(window, pane, direction, amount)
 	}, pane)
 end
 
+local function toggle_zoom(window, pane)
+	window:perform_action(wezterm.action.TogglePaneZoomState, pane)
+end
+
 local function activate(pane)
 	if pane then
 		pane:activate()
 	end
+end
+
+local function ensure_same_tab(editor, explorer)
+	local editor_tab = tab_id(editor)
+	local explorer_tab = tab_id(explorer)
+	if editor_tab and explorer_tab and editor_tab ~= explorer_tab then
+		return false,
+			string.format(
+				"same-tab check failed: editor pane %s tab %s explorer pane %s tab %s",
+				pane_id(editor),
+				editor_tab,
+				pane_id(explorer),
+				explorer_tab
+			)
+	end
+
+	return true, nil
+end
+
+local function set_editor_zoom(window, project_state, editor, target)
+	local zoomed = pane_is_zoomed(editor)
+	if zoomed == target then
+		project_state.zoomed = target
+		project_state.hidden = target
+		return true, target and "editor already zoomed" or "editor already unzoomed"
+	end
+
+	if zoomed == nil and project_state.zoomed == target then
+		project_state.hidden = target
+		return true, target and "editor zoom state already recorded" or "editor unzoom state already recorded"
+	end
+
+	if zoomed == nil and not target and not project_state.zoomed and not project_state.hidden then
+		project_state.hidden = false
+		return true, "editor unzoom assumed from runtime state"
+	end
+
+	activate(editor)
+	local before = dimensions(editor)
+	toggle_zoom(window, editor)
+	local after = dimensions(editor)
+	local changed = dimensions_changed(before, after)
+	if changed == false and zoomed ~= nil then
+		return false, "mutation failed: TogglePaneZoomState did not change editor dimensions"
+	end
+
+	project_state.zoomed = target
+	project_state.hidden = target
+	return true, nil
+end
+
+local function resize_editor(window, project_state, editor, direction, amount)
+	local before = dimensions(editor)
+	adjust(window, editor, direction, amount)
+	local after = dimensions(editor)
+	local changed = dimensions_changed(before, after)
+	if changed == false then
+		return false, "mutation failed: AdjustPaneSize did not change editor dimensions"
+	end
+
+	project_state.zoomed = false
+	project_state.hidden = false
+	return true, nil
 end
 
 local function apply_pane_layout(window, contract, kind)
@@ -234,34 +362,56 @@ local function apply_pane_layout(window, contract, kind)
 		return false, err
 	end
 
+	local same_tab, same_tab_err = ensure_same_tab(editor, explorer)
+	if not same_tab then
+		return false, same_tab_err
+	end
+
 	local state = layout_state()
 	state[contract.id] = state[contract.id] or {}
 	local project_state = state[contract.id]
+	notify(window, string.format("layout panes: editor=%s explorer=%s", pane_id(editor), pane_id(explorer)))
 
 	if kind == "hide" then
-		adjust(window, editor, "Left", layout_deltas.hide)
-		project_state.hidden = true
-		activate(editor)
-		return true, nil
+		return set_editor_zoom(window, project_state, editor, true)
 	end
 
 	if kind == "reveal" then
-		adjust(window, editor, "Right", layout_deltas.hide)
-		project_state.hidden = false
+		local ok, zoom_err = set_editor_zoom(window, project_state, editor, false)
+		if not ok then
+			return false, zoom_err
+		end
+
 		activate(explorer)
 		return true, nil
 	end
 
 	if kind == "narrow" then
-		adjust(window, editor, "Left", layout_deltas.narrow)
-		project_state.hidden = false
+		local unzoomed, unzoom_err = set_editor_zoom(window, project_state, editor, false)
+		if not unzoomed then
+			return false, unzoom_err
+		end
+
+		local ok, resize_err = resize_editor(window, project_state, editor, "Left", layout_deltas.narrow)
+		if not ok then
+			return false, resize_err
+		end
+
 		activate(editor)
 		return true, nil
 	end
 
 	if kind == "wide" then
-		adjust(window, editor, "Right", layout_deltas.wide)
-		project_state.hidden = false
+		local unzoomed, unzoom_err = set_editor_zoom(window, project_state, editor, false)
+		if not unzoomed then
+			return false, unzoom_err
+		end
+
+		local ok, resize_err = resize_editor(window, project_state, editor, "Right", layout_deltas.wide)
+		if not ok then
+			return false, resize_err
+		end
+
 		activate(explorer)
 		return true, nil
 	end
@@ -279,8 +429,6 @@ function M.dispatch(window, pane, payload)
 	local value, validation_err
 	if payload.op == "open" then
 		value, validation_err = validate_open(contract, payload)
-	elseif payload.op == "layout" then
-		value, validation_err = validate_layout(payload)
 	else
 		validation_err = "unknown xplr operation"
 	end
@@ -305,6 +453,8 @@ function M.dispatch(window, pane, payload)
 end
 
 function M.dispatch_layout(window, pane, kind)
+	notify(window, "layout dispatch: " .. tostring(kind))
+
 	local value, validation_err = validate_layout({ kind = kind })
 	if not value then
 		notify(window, validation_err)
@@ -342,16 +492,6 @@ end
 local function layout_key(key, kind)
 	return {
 		key = key,
-		mods = "NONE",
-		action = wezterm.action_callback(function(window, pane)
-			M.dispatch_layout(window, pane, kind)
-		end),
-	}
-end
-
-local function shifted_layout_key(key, kind)
-	return {
-		key = key,
 		mods = "SHIFT",
 		action = wezterm.action_callback(function(window, pane)
 			M.dispatch_layout(window, pane, kind)
@@ -366,10 +506,6 @@ function M.apply_to_config(config)
 	table.insert(config.keys, layout_key("R", "reveal"))
 	table.insert(config.keys, layout_key("N", "narrow"))
 	table.insert(config.keys, layout_key("W", "wide"))
-	table.insert(config.keys, shifted_layout_key("H", "hide"))
-	table.insert(config.keys, shifted_layout_key("R", "reveal"))
-	table.insert(config.keys, shifted_layout_key("N", "narrow"))
-	table.insert(config.keys, shifted_layout_key("W", "wide"))
 end
 
 return M

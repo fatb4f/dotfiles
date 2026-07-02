@@ -1,8 +1,6 @@
 local M = {}
 
 local preview_active = false
-local preview_delta = 64
-local hide_delta = 80
 local preview_window
 local preview_directory_buffer
 local preview_namespace = vim.api.nvim_create_namespace("xplr-preview")
@@ -46,94 +44,6 @@ local function focus(direction)
 
 	return true, nil
 end
-
-local function resize(direction, amount)
-	if not directions[direction] then
-		return false, "unknown resize direction"
-	end
-
-	local mux, err = smart_mux()
-	if not mux then
-		return false, err
-	end
-
-	if not mux.resize_pane(direction, amount) then
-		return false, "smart-splits mux resize failed: " .. direction
-	end
-
-	return true, nil
-end
-
-local layouts = {
-	hide = function()
-		local ok, err = focus("right")
-		if not ok then
-			return false, err
-		end
-
-		ok, err = resize("left", hide_delta)
-		if not ok then
-			return false, err
-		end
-
-		return true, nil
-	end,
-	reveal = function()
-		return focus("left")
-	end,
-	narrow = function()
-		local ok, err = focus("right")
-		if not ok then
-			return false, err
-		end
-
-		return resize("left", 8)
-	end,
-	wide = function()
-		local ok, err = focus("left")
-		if not ok then
-			return false, err
-		end
-
-		ok, err = resize("right", 8)
-		return ok, err
-	end,
-	preview_on = function()
-		if preview_active then
-			return focus("left")
-		end
-
-		local ok, err = focus("left")
-		if not ok then
-			return false, err
-		end
-
-		ok, err = resize("right", preview_delta)
-		if ok then
-			preview_active = true
-		end
-
-		return ok, err
-	end,
-	preview_off = function()
-		if not preview_active then
-			return focus("left")
-		end
-
-		local ok, err = focus("right")
-		if not ok then
-			return false, err
-		end
-
-		ok, err = resize("left", preview_delta)
-		if not ok then
-			return false, err
-		end
-
-		preview_active = false
-		return focus("left")
-	end,
-}
 
 function M.open(path)
 	if type(path) ~= "string" or path == "" then
@@ -364,21 +274,10 @@ function M.preview(path)
 	return true, nil
 end
 
-function M.layout(kind)
-	local apply = layouts[kind]
-	if not apply then
-		return false, "unknown explorer layout kind"
-	end
-
-	return apply()
-end
-
 function M.dispatch(op, value)
 	local ok, err
 	if op == "open" then
 		ok, err = M.open(value)
-	elseif op == "layout" then
-		ok, err = M.layout(value)
 	elseif op == "preview" then
 		ok, err = M.preview(value)
 	else
