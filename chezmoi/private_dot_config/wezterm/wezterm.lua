@@ -1,8 +1,8 @@
-local wezterm = require("wezterm")
+local wezterm = require("wezterm") ---@type Wezterm
 local shell = require("modules.shell")
 local act = wezterm.action
 
-local config = wezterm.config_builder()
+local config = wezterm.config_builder() ---@type Config
 
 config.enable_wayland = true
 config.default_prog = shell.login_args()

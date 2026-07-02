@@ -4,6 +4,9 @@ vim.pack.add({
   -- Lua config intelligence for Neovim runtime/plugin APIs.
   { src = "https://github.com/folke/lazydev.nvim" },
 
+  -- LuaLS annotations for WezTerm configuration APIs.
+  { src = "https://github.com/DrKJeff16/wezterm-types" },
+
   -- Parser install/update adapter.
   -- Native vim.treesitter owns runtime behavior;
   -- this only manages parser supply.
