@@ -36,7 +36,7 @@ xplr owns tree browsing and emits bounded intents.
 | xplr `j` | xplr internal `FocusNext` | none | none | none | xplr moves cursor down |
 | xplr `k` | xplr internal `FocusPrevious` | none | none | none | xplr moves cursor up |
 | xplr `l` / `enter` on directory | xplr internal `Enter` | none | none | none | xplr descends into directory |
-| xplr `l` / `enter` on file | `TERM_XPLR_RPC={op:"open",path}`, then xplr internal `Enter` no-op | `xplr_rpc.handle_user_var` -> validate active project/root/socket/path | `v:lua.TermXplrMuxRpc("open", path)` | `next_pane("right")` after `edit` | File opens in project Neovim and focus moves right to editor |
+| xplr `l` / `enter` on file | direct `nvim --server "$TERM_NVIM_SOCKET" --remote-expr` after shell root/socket checks | none | `v:lua.TermXplrMuxRpc("open", path)` | `next_pane("right")` after `edit` | File opens in project Neovim and focus moves right to editor |
 | xplr `H` optional | `TERM_XPLR_RPC={op:"layout",kind:"hide"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "hide")` | `next_pane("right")`, then `resize_pane("left", 80)` | Tree is visually hidden by resizing |
 | xplr `R` optional | `TERM_XPLR_RPC={op:"layout",kind:"reveal"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "reveal")` | `next_pane("left")` | Tree is revealed/focused by moving left |
 | xplr `N` optional | `TERM_XPLR_RPC={op:"layout",kind:"narrow"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "narrow")` | `next_pane("right")`, then `resize_pane("left", 8)` | Tree narrows |
@@ -45,7 +45,6 @@ xplr owns tree browsing and emits bounded intents.
 | xplr `P` preview on -> off | `SwitchLayoutCustom=project_tree` and `TERM_XPLR_RPC={op:"layout",kind:"preview_off"}` | validate layout kind + socket | `TermXplrMuxRpc("layout", "preview_off")` | `next_pane("right")`, `resize_pane("left", 64)` once, then `next_pane("left")` | xplr returns to tree-only layout and remains focused |
 | Palette: `Hide project tree` | `term-xplr-layout-hide` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "hide")` | same as xplr `H` | Same behavior as xplr key |
 | Palette: `Reveal project tree` | `term-xplr-layout-reveal` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "reveal")` | same as xplr `R` | Same behavior as xplr key |
-| Palette: `Project tree preview on/off` | `term-xplr-layout-preview_on/off` | `events.lua` -> `xplr_rpc.dispatch_layout` | `TermXplrMuxRpc("layout", "preview_on/off")` | guarded preview resize path | Optional direct preview mux resize route |
 | `<C-h/j/k/l>` | direct keypress | WezTerm smart-splits adapter when outside Neovim | Neovim smart-splits mapping when inside Neovim | smart-splits focus traversal | Move across Neovim splits and WezTerm panes |
 | `<A-h/j/k/l>` | direct keypress | WezTerm smart-splits adapter when outside Neovim | Neovim smart-splits mapping when inside Neovim | smart-splits resize traversal | Resize active split/pane |
 
@@ -58,6 +57,7 @@ xplr owns tree browsing and emits bounded intents.
 | Open path | Existing absolute path inside project root | Relative path, non-existing path, path outside root | `xplr_rpc.validate_open` |
 | Project contract | Active configured project session with canonical root | Non-project workspace, missing root | `xplr_rpc.contract_for` |
 | Neovim socket | Existing socket at `TERM_NVIM_SOCKET` | Missing, empty, stale, not a socket | `xplr_rpc.contract_for` |
+| Direct xplr file open | Canonical existing path inside `TERM_PROJECT_ROOT` and existing `TERM_NVIM_SOCKET` | Missing root/socket, non-existing path, path outside root | `xplr/init.lua` shell guard |
 | Neovim RPC result | `1`, `true`, or `v:true` | Any failed command or false-like return | `xplr_rpc.nvim_accepted` |
 | smart-splits backend | `smart-splits.mux.get()` returns active backend in session | Missing plugin, no mux session, failed `next_pane` / `resize_pane` | `workflow/mux_rpc.lua` |
 | Preview resize drift | First `preview_on` while inactive and first `preview_off` while active | Repeated on/off accumulating resize deltas | ephemeral `preview_active` guard in `workflow/mux_rpc.lua` |
@@ -92,7 +92,7 @@ They must not select, rank, persist, or own project/session topology. Project la
 | `chezmoi/private_dot_config/wezterm/modules/workspaces/events.lua` | Registers launch/layout/user-var events | event adapter |
 | `chezmoi/private_dot_config/wezterm/modules/workspaces/palette.lua` | Command palette entries for launch and layout | UI entrypoint |
 | `chezmoi/private_dot_config/nvim/lua/workflow/mux_rpc.lua` | Smart-splits backend RPC executor | editor-side adapter |
-| `chezmoi/private_dot_config/xplr/init.lua` | Loads tree-view, declares `project_tree` / `project_tree_preview`, emits JSON `TERM_XPLR_RPC` intents | tree UI adapter |
+| `chezmoi/private_dot_config/xplr/init.lua` | Loads tree-view, declares `project_tree` / `project_tree_preview`, opens files through direct Neovim remote expr, emits JSON `TERM_XPLR_RPC` layout intents | tree UI adapter |
 | `chezmoi/private_dot_config/xplr/plugins/tree-view/init.lua` | Vendored tree-view.xplr plugin | xplr-local runtime dependency |
 | `chezmoi/private_dot_config/xplr/plugins/tree-view/LICENSE` | Upstream MIT license | vendored license evidence |
 
@@ -105,7 +105,7 @@ They must not select, rank, persist, or own project/session topology. Project la
 | Move between tree/editor/panes | `<C-h/j/k/l>` | smart-splits |
 | Resize active split/pane manually | `<A-h/j/k/l>` | smart-splits |
 | Move inside xplr | `h` / `j` / `k` / `l` | xplr local navigation |
-| Open focused file from xplr | `l` / `enter` / `right` | xplr -> WezTerm RPC -> Neovim edit -> smart-splits focus |
+| Open focused file from xplr | `l` / `enter` / `right` | xplr -> direct Neovim remote expr -> edit -> smart-splits focus |
 | Hide tree, optional | xplr `H` or palette `Hide project tree` | xplr/WezTerm -> Neovim mux RPC |
 | Reveal tree, optional | xplr `R` or palette `Reveal project tree` | xplr/WezTerm -> Neovim mux RPC |
 | Narrow tree, optional | xplr `N` or palette `Narrow project tree` | xplr/WezTerm -> Neovim mux RPC |

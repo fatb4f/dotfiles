@@ -73,7 +73,9 @@ xplr.config.layouts.custom.project_tree_preview = {
 			{
 				Dynamic = "custom.tree_view.render",
 			},
-			"Selection",
+			{
+				Dynamic = "custom.project_tree.preview",
+			},
 		},
 	},
 }
@@ -118,6 +120,15 @@ end
 
 xplr.fn.custom.project_tree = xplr.fn.custom.project_tree or {}
 xplr.fn.custom.project_tree.preview_enabled = false
+xplr.fn.custom.project_tree.preview = function(ctx)
+	local node = ctx.app.focused_node
+	return {
+		CustomParagraph = {
+			ui = { title = { format = " preview " } },
+			body = node and xplr.util.to_yaml(node) or "",
+		},
+	}
+end
 xplr.fn.custom.project_tree.open = function(app)
 	local node = app.focused_node
 	if not node then

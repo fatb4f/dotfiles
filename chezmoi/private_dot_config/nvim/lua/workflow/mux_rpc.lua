@@ -89,7 +89,7 @@ local layouts = {
 	end,
 	preview_on = function()
 		if preview_active then
-			return true, nil
+			return focus("left")
 		end
 
 		local ok, err = focus("left")
@@ -106,7 +106,7 @@ local layouts = {
 	end,
 	preview_off = function()
 		if not preview_active then
-			return true, nil
+			return focus("left")
 		end
 
 		local ok, err = focus("right")
