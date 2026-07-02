@@ -1,4 +1,4 @@
-package issue
+package contract
 
 import impl "github.com/fatb4f/dotfiles/github/dotfiles-manifest-slice/contracts/dotfiles/workflow"
 
@@ -22,10 +22,9 @@ _workflowIndex: [for step in _implementationWorkflow {
 	instantiateAt: step.instantiateAt
 }]
 
-_issue: {
-	number: 0
+_contract: {
 	title: "template"
-	path: ".github/dotfiles-manifest-slice/contracts/issues/_template/manifest.cue"
+	path: "<contract-path>/manifest.cue"
 }
 
 _primitives: [
@@ -99,7 +98,7 @@ _surfaces: impl.#MakeSurfaceSet & {
 		fixtures: ["_negativeFixtures"]
 		checks: ["_negativeBottomChecks"]
 		publicExports: [
-			"normalizedDotfilesIssueManifest",
+			"normalizedDotfilesContractManifest",
 			"dotfilesValidationPlan",
 			"dotfilesCompletionReportContract",
 		]
@@ -135,12 +134,12 @@ _validation: impl.#MakeValidationPlan & {
 	in: {
 		name: "dotfilesValidationPlan"
 		commands: [
-			"cue vet ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number>",
-			"cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number> -e normalizedDotfilesIssueManifest",
-			"cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number> -e dotfilesValidationPlan",
-			"cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number> -e dotfilesCompletionReportContract",
-			"! cue export ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number>/checks -e '_negativeBottomChecks.<name>'",
-			"! rg '[t]arget:\\s*_|[i]nput:\\s*_|[e]xpression:|[i]sInvalid: true|[o]peratorTruthFlag|[i]nline constructor|[g]enerated.*authority' ./.github/dotfiles-manifest-slice/contracts/issues/<issue-number>",
+			"cue vet <contract-path>",
+			"cue export <contract-path> -e normalizedDotfilesContractManifest",
+			"cue export <contract-path> -e dotfilesValidationPlan",
+			"cue export <contract-path> -e dotfilesCompletionReportContract",
+			"! cue export <contract-path>/checks -e '_negativeBottomChecks.<name>'",
+			"! rg '[t]arget:\\s*_|[i]nput:\\s*_|[e]xpression:|[i]sInvalid: true|[o]peratorTruthFlag|[i]nline constructor|[g]enerated.*authority' <contract-path>",
 		]
 	}
 }
@@ -162,8 +161,8 @@ _completion: impl.#MakeCompletionReport & {
 	}
 }
 
-normalizedDotfilesIssueManifest: {
-	issue: _issue
+normalizedDotfilesContractManifest: {
+	contract: _contract
 	workflow: _workflowIndex
 	primitives: [for item in _primitives {item.out}]
 	observed: [for item in _observed {item.out}]
