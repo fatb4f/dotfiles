@@ -17,8 +17,17 @@ return {
 			diagnostics = {
 				globals = { "vim" },
 			},
+			completion = {
+				callSnippet = "Replace",
+			},
+			hint = {
+				enable = true,
+			},
 			workspace = {
 				checkThirdParty = false,
+			},
+			telemetry = {
+				enable = false,
 			},
 		},
 	},

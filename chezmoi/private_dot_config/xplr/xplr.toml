@@ -1,0 +1,9 @@
+[selene]
+base = "lua53"
+name = "xplr"
+
+[xplr]
+any = true
+
+[version]
+any = true

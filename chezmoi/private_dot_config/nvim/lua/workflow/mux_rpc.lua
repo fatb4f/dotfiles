@@ -120,6 +120,7 @@ function M.dispatch(op, value)
 	return ok
 end
 
+-- selene: allow(global_usage)
 _G.TermXplrMuxRpc = M.dispatch
 
 return M

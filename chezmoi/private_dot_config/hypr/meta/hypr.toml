@@ -1,0 +1,7 @@
+[selene]
+base = "lua53"
+name = "hypr"
+
+[hl]
+any = true
+
