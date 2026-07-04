@@ -624,6 +624,7 @@ import (
 	"cue-export" |
 	"cue-export-expected-failure" |
 	"cue-export-expected-success" |
+	"cue-export-package-expected-success" |
 	"matrix-assertion"
 
 #CueExportExpectedFailure: close({
@@ -632,18 +633,21 @@ import (
 	package: #NonEmptyString | *"./contracts"
 	expr:    #CueSelectorExpr
 	out:     "cue" | "json" | *"cue"
+	tags: [...#NonEmptyString] | *[]
 
 	expectedFailure: true
 
-	argv: [
+	let tagArgs = list.FlattenN([for tag in tags {["-t", tag]}], 1)
+	argv: list.Concat([[
 		"cue",
 		"export",
+	], tagArgs, [
 		package,
 		"-e",
 		expr,
 		"--out",
 		out,
-	]
+	]])
 })
 
 #CueExportExpectedSuccess: close({
@@ -652,18 +656,38 @@ import (
 	package: #NonEmptyString | *"./contracts"
 	expr:    #CueSelectorExpr
 	out:     "cue" | "json" | *"cue"
+	tags: [...#NonEmptyString] | *[]
 
 	expectedFailure: false
 
-	argv: [
+	let tagArgs = list.FlattenN([for tag in tags {["-t", tag]}], 1)
+	argv: list.Concat([[
 		"cue",
 		"export",
+	], tagArgs, [
 		package,
 		"-e",
 		expr,
 		"--out",
 		out,
-	]
+	]])
+})
+
+#CueExportPackageExpectedSuccess: close({
+	kind: "cue-export-package-expected-success"
+
+	package: #NonEmptyString | *"./contracts"
+	tags: [...#NonEmptyString] | *[]
+
+	expectedFailure: false
+
+	let tagArgs = list.FlattenN([for tag in tags {["-t", tag]}], 1)
+	argv: list.Concat([[
+		"cue",
+		"export",
+	], tagArgs, [
+		package,
+	]])
 })
 
 #ValidationCommand:
@@ -681,6 +705,7 @@ import (
 	}) |
 	#CueExportExpectedFailure |
 	#CueExportExpectedSuccess |
+	#CueExportPackageExpectedSuccess |
 	close({
 		kind:      "matrix-assertion"
 		argv:      #NonEmptyStringList

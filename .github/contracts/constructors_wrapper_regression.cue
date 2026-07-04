@@ -151,6 +151,7 @@ _negativeFixtureConflictProbe: _negativeFixtureCheck.probe & {
 
 _negativeFixtureValidationCommand: #CueExportExpectedFailure & {
 	expr: "_negativeFixtureConflictProbe.proof"
+	tags: ["negativeproof"]
 }
 
 _negativeFixtureNonConflictCheck: (#MakeNegativeFixtureCheck & {
@@ -168,7 +169,14 @@ _negativeFixtureNonConflictCommand: #CueExportExpectedSuccess & {
 	expr: "_negativeFixtureNonConflictProbe"
 }
 
+_defaultPackageExportCommand: #CueExportPackageExpectedSuccess & {}
+
 _validationCases: [...#ValidationCase] & [
+	{
+		id:          "default-package-export"
+		description: "Default contract package export must remain clean"
+		command:     _defaultPackageExportCommand
+	},
 	{
 		id:          "negative-fixture-conflict"
 		description: "Negative conflict probe must bottom"
@@ -180,6 +188,10 @@ _validationCases: [...#ValidationCase] & [
 		command:     _negativeFixtureNonConflictCommand
 	},
 ]
+
+validationManifest: {
+	validationCases: _validationCases
+}
 
 _subsumptionWithActions: (#MakeSubsumption & {
 	in: {

@@ -36,7 +36,7 @@ echo "$cases_json" | jq -c '.[]' | while read -r case; do
     continue
   fi
 
-  if [[ "$kind" == "cue-export-expected-success" && "$expected_failure" == "false" ]]; then
+  if [[ ( "$kind" == "cue-export-expected-success" || "$kind" == "cue-export-package-expected-success" ) && "$expected_failure" == "false" ]]; then
     if ! "${argv[@]}" >"$stdout" 2>"$stderr"; then
       echo "FAIL: expected success, but command failed: $id"
       cat "$stderr"
