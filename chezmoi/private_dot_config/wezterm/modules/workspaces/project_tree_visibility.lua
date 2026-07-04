@@ -115,7 +115,18 @@ local function tab_id(tab)
 	return nil
 end
 
-local function project_panes(session)
+local function active_tab(window)
+	local ok, tab = pcall(function()
+		return window:active_tab()
+	end)
+	if ok then
+		return tab
+	end
+
+	return nil
+end
+
+local function project_panes(window, session)
 	local editor = runtime.pane(session.id, "editor")
 	local explorer = runtime.pane(session.id, "explorer")
 	if not editor or not explorer then
@@ -139,49 +150,16 @@ local function project_panes(session)
 			)
 	end
 
+	local current_tab_id = tab_id(active_tab(window))
+	local target_tab_id = editor_tab_id or explorer_tab_id
+	if current_tab_id and target_tab_id and current_tab_id ~= target_tab_id then
+		return nil,
+			nil,
+			nil,
+			string.format("active-tab check failed: active tab %s project tab %s", current_tab_id, target_tab_id)
+	end
+
 	return editor, explorer, editor_tab or explorer_tab, nil
-end
-
-local function active_tab(window)
-	local ok, tab = pcall(function()
-		return window:active_tab()
-	end)
-	if ok then
-		return tab
-	end
-
-	return nil
-end
-
-local function tab_fallback_panes(window)
-	local tab = active_tab(window)
-	if not tab then
-		return nil, nil, nil, nil, "tab fallback failed: active tab is unavailable"
-	end
-
-	local ok, panes = pcall(function()
-		return tab:panes_with_info()
-	end)
-	if not ok or type(panes) ~= "table" or #panes < 2 then
-		return nil, nil, nil, nil, "tab fallback failed: active tab does not have at least two panes"
-	end
-
-	table.sort(panes, function(a, b)
-		if a.left == b.left then
-			return a.top < b.top
-		end
-		return a.left < b.left
-	end)
-
-	local explorer_info = panes[1]
-	local editor_info = panes[#panes]
-	if not explorer_info.pane or not editor_info.pane then
-		return nil, nil, nil, nil, "tab fallback failed: pane handles are unavailable"
-	end
-
-	return editor_info.pane, explorer_info.pane, tab, {
-		id = "tab:" .. tostring(tab_id(tab) or "unknown"),
-	}, nil
 end
 
 local function schedule(callback)
@@ -232,14 +210,11 @@ function M.dispatch(window, pane, action)
 	local session = active_session(window, pane)
 	local editor, explorer
 	if type(session) == "table" then
-		editor, explorer = project_panes(session)
+		editor, explorer = project_panes(window, session)
 	end
 
 	if not editor then
-		editor, explorer = tab_fallback_panes(window)
-		if not editor then
-			return false
-		end
+		return false
 	end
 
 	if action == "hide" then
@@ -256,7 +231,11 @@ local function visibility_key(key, action)
 		key = key,
 		mods = "SHIFT",
 		action = wezterm.action_callback(function(window, pane)
-			M.dispatch(window, pane, action)
+			if M.dispatch(window, pane, action) then
+				return
+			end
+
+			window:perform_action(wezterm.action.SendKey({ key = key, mods = "SHIFT" }), pane)
 		end),
 	}
 end
