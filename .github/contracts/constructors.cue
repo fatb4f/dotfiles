@@ -9,6 +9,7 @@ import (
 #NonEmptyString: string & strings.MinRunes(1)
 #NonEmptyStringList: [...#NonEmptyString] & [_, ...]
 #KebabIdentifier: #NonEmptyString & =~"^[a-z0-9]+(-[a-z0-9]+)*$"
+#CueSelectorExpr: #NonEmptyString & =~"^[_#A-Za-z][_A-Za-z0-9]*(\\.[_A-Za-z][_A-Za-z0-9]*)*$"
 #KebabMapKeyGuard: {
 	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
 		_invalidMapKey: ID & #KebabIdentifier
@@ -358,19 +359,29 @@ import (
 	}
 })
 
-#NegativeFixtureConflictProbe: {
+#NegativeFixtureProbeSpec: {
+	authority: #ClosedObligationState
+	invalid:   #ClosedObligationState
+	...
+}
+
+#NegativeFixtureConflictProbe: #NegativeFixtureProbeSpec & {
 	authority: #ClosedObligationState
 	invalid:   #ClosedObligationState
 
+	// Deliberate destructive proof surface: bottoms when invalid conflicts with authority.
 	proof: authority & invalid
 }
 
 #NegativeFixtureCheck: close({
 	fixture: #NegativeFixture
-	command: #CueExportExpectedFailure
+	probe: #NegativeFixtureProbeSpec & {
+		authority: fixture.authority
+		invalid:   fixture.invalid
+	}
 })
 
-#MakeNegativeFixture: {
+#MakeUncheckedNegativeFixture: {
 	in: close({
 		id:          #KebabIdentifier
 		description: #NonEmptyString
@@ -403,21 +414,20 @@ import (
 		description: #NonEmptyString
 		authority:   #CodexObligationState
 		invalid:     #CodexObligationState
-		command:     #CueExportExpectedFailure
 	})
-	let negativeFixture = (#MakeNegativeFixture & {
-		"in": {
-			id:          in.id
-			description: in.description
-			authority:   in.authority
-			invalid:     in.invalid
-		}
+	let checkedFixture = (#MakeUncheckedNegativeFixture & {
+		"in": in
 	}).out
 	out: #NegativeFixtureCheck & {
-		fixture: negativeFixture
-		command: in.command
+		fixture: checkedFixture
+		probe: {
+			authority: checkedFixture.authority
+			invalid:   checkedFixture.invalid
+		}
 	}
 }
+
+#MakeNegativeFixture: #MakeNegativeFixtureCheck
 
 #Subsumption: close({
 	id:             #KebabIdentifier
@@ -613,14 +623,17 @@ import (
 	"cue-eval" |
 	"cue-export" |
 	"cue-export-expected-failure" |
+	"cue-export-expected-success" |
 	"matrix-assertion"
 
 #CueExportExpectedFailure: close({
-	package:             #NonEmptyString | *"./contracts"
-	expr:                #NonEmptyString
-	out:                 "cue" | "json" | *"cue"
-	expectedFailure:     true
-	expectedDiagnostic?: #NonEmptyString
+	kind: "cue-export-expected-failure"
+
+	package: #NonEmptyString | *"./contracts"
+	expr:    #CueSelectorExpr
+	out:     "cue" | "json" | *"cue"
+
+	expectedFailure: true
 
 	argv: [
 		"cue",
@@ -631,7 +644,26 @@ import (
 		"--out",
 		out,
 	]
-	kind: "cue-export-expected-failure"
+})
+
+#CueExportExpectedSuccess: close({
+	kind: "cue-export-expected-success"
+
+	package: #NonEmptyString | *"./contracts"
+	expr:    #CueSelectorExpr
+	out:     "cue" | "json" | *"cue"
+
+	expectedFailure: false
+
+	argv: [
+		"cue",
+		"export",
+		package,
+		"-e",
+		expr,
+		"--out",
+		out,
+	]
 })
 
 #ValidationCommand:
@@ -648,11 +680,18 @@ import (
 		argv: #NonEmptyStringList
 	}) |
 	#CueExportExpectedFailure |
+	#CueExportExpectedSuccess |
 	close({
 		kind:      "matrix-assertion"
 		argv:      #NonEmptyStringList
 		assertion: #KebabIdentifier
 	})
+
+#ValidationCase: close({
+	id:          #KebabIdentifier
+	description: #NonEmptyString
+	command:     #ValidationCommand
+})
 
 #ValidationPlan: close({
 	kind: "validation-plan"

@@ -107,19 +107,28 @@ _positiveFixtureWithActions: (#MakePositiveFixture & {
 	}
 }).out
 
-_negativeFixtureWithActions: (#MakeNegativeFixture & {
+_uncheckedNegativeFixtureWitnessWithActions: (#MakeUncheckedNegativeFixture & {
 	in: {
-		id:          "negative-actions"
-		description: "Negative wrapper accepts action map entries before bottom proof"
+		id:          "unchecked-negative-actions"
+		description: "Unchecked negative witness accepts action map entries"
 		authority:   _validState
 		invalid:     _validState
 	}
 }).out
 
-_negativeFixtureExportable: (#MakeNegativeFixture & {
+_uncheckedNegativeFixtureAllowsNonConflict: (#MakeUncheckedNegativeFixture & {
+	in: {
+		id:          "unchecked-negative-non-conflict"
+		description: "Unchecked negative witness can export without proving bottom"
+		authority:   _validState
+		invalid:     _validState
+	}
+}).out
+
+_uncheckedNegativeFixtureExportable: (#MakeUncheckedNegativeFixture & {
 	in: {
 		id:          "negative-conflict"
-		description: "Negative wrapper exports witness metadata"
+		description: "Unchecked negative wrapper exports witness metadata"
 		authority:   _validState
 		invalid:     _invalidState
 	}
@@ -128,19 +137,49 @@ _negativeFixtureExportable: (#MakeNegativeFixture & {
 _negativeFixtureCheck: (#MakeNegativeFixtureCheck & {
 	in: {
 		id:          "negative-conflict"
-		description: "Negative wrapper couples witness to expected-failure probe"
+		description: "Negative fixture derives paired probe spec"
 		authority:   _validState
 		invalid:     _invalidState
-		command: {
-			expr: "(#NegativeFixtureConflictProbe & {authority: (#MakeClosedObligationState & {\"in\": _validState}).out, invalid: (#MakeClosedObligationState & {\"in\": _invalidState}).out})"
-		}
 	}
 }).out
 
-_negativeFixtureNonConflictProbe: #NegativeFixtureConflictProbe & {
-	authority: (#MakeClosedObligationState & {"in": _validState}).out
-	invalid: (#MakeClosedObligationState & {"in": _validState}).out
+_negativeFixtureConflictProbe: _negativeFixtureCheck.probe & {
+	authority: _negativeFixtureCheck.probe.authority
+	invalid:   _negativeFixtureCheck.probe.invalid
+	proof?:    authority & invalid
 }
+
+_negativeFixtureValidationCommand: #CueExportExpectedFailure & {
+	expr: "_negativeFixtureConflictProbe.proof"
+}
+
+_negativeFixtureNonConflictCheck: (#MakeNegativeFixtureCheck & {
+	in: {
+		id:          "negative-non-conflict-control"
+		description: "Identical states must not bottom"
+		authority:   _validState
+		invalid:     _validState
+	}
+}).out
+
+_negativeFixtureNonConflictProbe: #NegativeFixtureConflictProbe & _negativeFixtureNonConflictCheck.probe
+
+_negativeFixtureNonConflictCommand: #CueExportExpectedSuccess & {
+	expr: "_negativeFixtureNonConflictProbe"
+}
+
+_validationCases: [...#ValidationCase] & [
+	{
+		id:          "negative-fixture-conflict"
+		description: "Negative conflict probe must bottom"
+		command:     _negativeFixtureValidationCommand
+	},
+	{
+		id:          "negative-fixture-non-conflict-control"
+		description: "Identical-state conflict probe must export"
+		command:     _negativeFixtureNonConflictCommand
+	},
+]
 
 _subsumptionWithActions: (#MakeSubsumption & {
 	in: {
