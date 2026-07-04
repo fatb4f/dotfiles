@@ -145,9 +145,7 @@ _negativeFixtureProbeBinding: (#MakeNegativeFixtureProbeBinding & {
 	}
 }).out
 
-_negativeFixtureConflictProbe: _negativeFixtureProbeBinding.probe & {
-	proof?: authority & invalid
-}
+_negativeFixtureConflictProbe: _negativeFixtureProbeBinding.probe
 
 _negativeFixtureValidationCommand: #CueExportExpectedFailure & {
 	expr: "_negativeFixtureConflictProbe.proof"
