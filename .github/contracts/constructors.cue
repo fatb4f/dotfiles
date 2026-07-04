@@ -346,7 +346,6 @@ import (
 
 	authority: #ClosedObligationState
 	invalid:   #ClosedObligationState
-	proof:     authority & invalid
 
 	assertion: #Assertion & {
 		id:              "negative-\(_fixtureID)"
@@ -355,10 +354,16 @@ import (
 		description:     "Invalid state must bottom against authority"
 		expected:        authority
 		invalid:         invalid
-		proof:           proof
 		expectedFailure: true
 	}
 })
+
+#NegativeFixtureConflictProbe: {
+	authority: #ClosedObligationState
+	invalid:   #ClosedObligationState
+
+	proof: authority & invalid
+}
 
 #MakeNegativeFixture: {
 	in: close({
@@ -375,7 +380,6 @@ import (
 		polarity:    "negative"
 		authority:   closedAuthority
 		invalid:     closedInvalid
-		proof:       closedAuthority & closedInvalid
 		assertion: {
 			id:              "negative-\(in.id)"
 			mode:            "bottoms"
@@ -383,7 +387,6 @@ import (
 			description:     "Invalid state must bottom against authority"
 			expected:        closedAuthority
 			invalid:         closedInvalid
-			proof:           closedAuthority & closedInvalid
 			expectedFailure: true
 		}
 	}

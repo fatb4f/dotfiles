@@ -47,6 +47,53 @@ _validState: {
 	}
 }
 
+_invalidState: {
+	id: "valid-state"
+
+	artifacts: {
+		"authority-file": {
+			path: "contracts/constructors.cue"
+			role: "forbidden"
+		}
+		"generated-file": {
+			path: "generated/assertions.json"
+			role: "generatedOutput"
+		}
+	}
+
+	actions: {
+		"inspect-action": {
+			kind:        "inspect"
+			description: "Inspect authority contract and generate assertions"
+			reads: {
+				"authority-file": true
+			}
+			writes: {}
+			creates: {
+				"generated-file": true
+			}
+			requiresChecks: {
+				"cue-vet": true
+			}
+			requiresEvidence: {
+				"inspection-report": true
+			}
+		}
+	}
+
+	checks: {
+		"cue-vet": {
+			description: "Run cue vet for contract package"
+		}
+	}
+
+	evidence: {
+		"inspection-report": {
+			description: "Recorded wrapper-constructor validation evidence"
+		}
+	}
+}
+
 _directCodexState: #CodexObligationState & _validState
 _directClosedState: (#MakeClosedObligationState & {in: _validState}).out
 _closedStateAccepted: #ClosedObligationState & _directClosedState
@@ -66,6 +113,15 @@ _negativeFixtureWithActions: (#MakeNegativeFixture & {
 		description: "Negative wrapper accepts action map entries before bottom proof"
 		authority:   _validState
 		invalid:     _validState
+	}
+}).out
+
+_negativeFixtureExportable: (#MakeNegativeFixture & {
+	in: {
+		id:          "negative-conflict"
+		description: "Negative wrapper exports witness metadata"
+		authority:   _validState
+		invalid:     _invalidState
 	}
 }).out
 
