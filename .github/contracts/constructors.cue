@@ -56,8 +56,8 @@ import (
 	"generatedMatrix"
 
 #RefSet: close(#KebabMapKeyGuard & {
-	[#KebabIdentifier]: true
-}) | *{}
+	[string]: true
+})
 
 // Input/matrix layer: declarative obligation state and witness records.
 #Artifact: close({
@@ -606,16 +606,16 @@ import (
 	kind: "validation-plan"
 	commands: [...#ValidationCommand] & [_, ...]
 	assertions: close(#KebabMapKeyGuard & {
-		[#KebabIdentifier]: #Assertion
-	}) | *{}
+		[string]: #Assertion
+	})
 })
 
 #MakeValidationPlan: {
 	in: close({
 		commands: [...#ValidationCommand] & [_, ...]
 		assertions: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: #Assertion
-		}) | *{}
+			[string]: #Assertion
+		})
 	})
 	out: #ValidationPlan & {
 		kind:       "validation-plan"
@@ -630,17 +630,17 @@ import (
 	expected: close({
 		state: #KebabIdentifier
 		assertions: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
+			[string]: bool
 		})
 		fixtures: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
-		}) | *{}
+			[string]: bool
+		})
 		subsumptions: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
-		}) | *{}
+			[string]: bool
+		})
 		commands: [...#ValidationCommand] & [_, ...]
 		evidence: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
+			[string]: bool
 		})
 	})
 })
@@ -649,17 +649,17 @@ import (
 	in: close({
 		state: #KebabIdentifier
 		assertions: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
+			[string]: bool
 		})
 		fixtures: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
-		}) | *{}
+			[string]: bool
+		})
 		subsumptions: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
-		}) | *{}
+			[string]: bool
+		})
 		commands: [...#ValidationCommand] & [_, ...]
 		evidence: close(#KebabMapKeyGuard & {
-			[#KebabIdentifier]: bool
+			[string]: bool
 		})
 	})
 	out: #CompletionReportContract & {
