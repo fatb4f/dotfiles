@@ -367,10 +367,7 @@ import (
 
 #NegativeFixtureCheck: close({
 	fixture: #NegativeFixture
-	command: #ValidationCommand & {
-		kind:            "cue-export-expected-failure"
-		expectedFailure: true
-	}
+	command: #CueExportExpectedFailure
 })
 
 #MakeNegativeFixture: {
@@ -406,7 +403,7 @@ import (
 		description: #NonEmptyString
 		authority:   #CodexObligationState
 		invalid:     #CodexObligationState
-		expr:        #NonEmptyString
+		command:     #CueExportExpectedFailure
 	})
 	let negativeFixture = (#MakeNegativeFixture & {
 		"in": {
@@ -418,19 +415,7 @@ import (
 	}).out
 	out: #NegativeFixtureCheck & {
 		fixture: negativeFixture
-		command: {
-			kind: "cue-export-expected-failure"
-			argv: [
-				"cue",
-				"export",
-				"./contracts",
-				"-e",
-				in.expr,
-				"--out",
-				"cue",
-			]
-			expectedFailure: true
-		}
+		command: in.command
 	}
 }
 
@@ -630,6 +615,25 @@ import (
 	"cue-export-expected-failure" |
 	"matrix-assertion"
 
+#CueExportExpectedFailure: close({
+	package:             #NonEmptyString | *"./contracts"
+	expr:                #NonEmptyString
+	out:                 "cue" | "json" | *"cue"
+	expectedFailure:     true
+	expectedDiagnostic?: #NonEmptyString
+
+	argv: [
+		"cue",
+		"export",
+		package,
+		"-e",
+		expr,
+		"--out",
+		out,
+	]
+	kind: "cue-export-expected-failure"
+})
+
 #ValidationCommand:
 	close({
 		kind: "cue-vet"
@@ -643,12 +647,7 @@ import (
 		kind: "cue-export"
 		argv: #NonEmptyStringList
 	}) |
-	close({
-		kind:                "cue-export-expected-failure"
-		argv:                #NonEmptyStringList
-		expectedFailure:     true
-		expectedDiagnostic?: #NonEmptyString
-	}) |
+	#CueExportExpectedFailure |
 	close({
 		kind:      "matrix-assertion"
 		argv:      #NonEmptyStringList

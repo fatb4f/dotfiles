@@ -131,7 +131,9 @@ _negativeFixtureCheck: (#MakeNegativeFixtureCheck & {
 		description: "Negative wrapper couples witness to expected-failure probe"
 		authority:   _validState
 		invalid:     _invalidState
-		expr:        "(#NegativeFixtureConflictProbe & {authority: (#MakeClosedObligationState & {\"in\": _validState}).out, invalid: (#MakeClosedObligationState & {\"in\": _invalidState}).out})"
+		command: {
+			expr: "(#NegativeFixtureConflictProbe & {authority: (#MakeClosedObligationState & {\"in\": _validState}).out, invalid: (#MakeClosedObligationState & {\"in\": _invalidState}).out})"
+		}
 	}
 }).out
 
