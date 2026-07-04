@@ -55,9 +55,12 @@ import (
 	"subsumption" |
 	"generatedMatrix"
 
-#RefSet: close(#KebabMapKeyGuard & {
+#RefSet: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
 	[string]: true
-})
+}
 
 // Input/matrix layer: declarative obligation state and witness records.
 #Artifact: close({
@@ -71,7 +74,7 @@ import (
 	visibility: #VisibilityTier | *"internal"
 })
 
-#Action: close({
+#Action: {
 	[F= !~"^(id|kind|description|reads|writes|creates|requiresChecks|requiresEvidence)$"]: {
 		_invalidField: F & =~"^(id|kind|description|reads|writes|creates|requiresChecks|requiresEvidence)$"
 	}
@@ -86,7 +89,7 @@ import (
 
 	requiresChecks:   #RefSet
 	requiresEvidence: #RefSet
-})
+}
 
 #Check: close({
 	[F= !~"^(id|description|required)$"]: {
@@ -108,98 +111,111 @@ import (
 	required:    bool | *true
 })
 
-#CodexObligationState: close({
+#ArtifactMap: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
+	[string]: #Artifact
+	[ID=string]: {
+		id: ID
+	}
+}
+
+#ActionMap: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
+	[string]: #Action
+	[ID=string]: {
+		id: ID
+	}
+}
+
+#CheckMap: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
+	[string]: #Check
+	[ID=string]: {
+		id: ID
+	}
+}
+
+#EvidenceMap: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
+	[string]: #Evidence
+	[ID=string]: {
+		id: ID
+	}
+}
+
+#CodexObligationState: {
+	[F= !~"^(id|artifacts|actions|checks|evidence)$"]: {
+		_invalidField: F & =~"^(id|artifacts|actions|checks|evidence)$"
+	}
+
 	id: #KebabIdentifier
 
-	artifacts: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Artifact & {
-			id: ID
-		}
-	})
-
-	actions: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Action & {
-			id: ID
-		}
-	})
-
-	checks: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Check & {
-			id: ID
-		}
-	})
-
-	evidence: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Evidence & {
-			id: ID
-		}
-	})
-})
+	artifacts: #ArtifactMap
+	actions:   #ActionMap
+	checks:    #CheckMap
+	evidence:  #EvidenceMap
+}
 
 #ObligationState: #CodexObligationState
 
-#ClosedObligationState: close({
+#ClosedObligationState: {
+	[F= !~"^(id|artifacts|actions|checks|evidence)$"]: {
+		_invalidField: F & =~"^(id|artifacts|actions|checks|evidence)$"
+	}
+
 	id: #KebabIdentifier
 
-	artifacts: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Artifact & {
-			id: ID
-		}
-	})
-	actions: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Action & {
-			id: ID
-		}
-	})
-	checks: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Check & {
-			id: ID
-		}
-	})
-	evidence: close(#KebabMapKeyGuard & {
-		[ID=#KebabIdentifier]: #Evidence & {
-			id: ID
-		}
-	})
-})
+	artifacts: #ArtifactMap
+	actions:   #ActionMap
+	checks:    #CheckMap
+	evidence:  #EvidenceMap
+}
 
 #MakeClosedObligationState: {
 	in: #CodexObligationState
-	out: close({
+	out: #ClosedObligationState & {
 		id: in.id
 
-		artifacts: close({
+		artifacts: {
 			for artifactID, artifact in in.artifacts {
 				"\(artifactID)": artifact & {
 					id: artifactID
 				}
 			}
-		})
+		}
 
-		actions: close({
+		actions: {
 			for actionID, action in in.actions {
 				"\(actionID)": action & {
 					id: actionID
 				}
 			}
-		})
+		}
 
-		checks: close({
+		checks: {
 			for checkID, check in in.checks {
 				"\(checkID)": check & {
 					id: checkID
 				}
 			}
-		})
+		}
 
-		evidence: close({
+		evidence: {
 			for evidenceID, item in in.evidence {
 				"\(evidenceID)": item & {
 					id: evidenceID
 				}
 			}
-		})
-	})
+		}
+	}
 }
 
 #StateKeySet: close({
@@ -301,25 +317,23 @@ import (
 		authority:   #CodexObligationState
 		candidate:   #CodexObligationState
 	})
-	_inputAuthority: in.authority
-	_inputCandidate: in.candidate
-	_authority: (#MakeClosedObligationState & {in: _inputAuthority}).out
-	_candidate: (#MakeClosedObligationState & {in: _inputCandidate}).out
+	let closedAuthority = (#MakeClosedObligationState & {"in": in.authority}).out
+	let closedCandidate = (#MakeClosedObligationState & {"in": in.candidate}).out
 	out: #PositiveFixture & {
 		id:          in.id
 		description: in.description
 		polarity:    "positive"
-		authority:   _authority
-		candidate:   _candidate
-		proof:       _authority & _candidate
+		authority:   closedAuthority
+		candidate:   closedCandidate
+		proof:       closedAuthority & closedCandidate
 		assertion: {
 			id:          "positive-\(in.id)"
 			mode:        "unifies"
 			family:      "assertion"
 			description: "Candidate state must unify with authority"
-			expected:    _authority
-			observed:    _candidate
-			proof:       _authority & _candidate
+			expected:    closedAuthority
+			observed:    closedCandidate
+			proof:       closedAuthority & closedCandidate
 		}
 	}
 }
@@ -353,25 +367,23 @@ import (
 		authority:   #CodexObligationState
 		invalid:     #CodexObligationState
 	})
-	_inputAuthority: in.authority
-	_inputInvalid:   in.invalid
-	_authority: (#MakeClosedObligationState & {in: _inputAuthority}).out
-	_invalid: (#MakeClosedObligationState & {in: _inputInvalid}).out
+	let closedAuthority = (#MakeClosedObligationState & {"in": in.authority}).out
+	let closedInvalid = (#MakeClosedObligationState & {"in": in.invalid}).out
 	out: #NegativeFixture & {
 		id:          in.id
 		description: in.description
 		polarity:    "negative"
-		authority:   _authority
-		invalid:     _invalid
-		proof:       _authority & _invalid
+		authority:   closedAuthority
+		invalid:     closedInvalid
+		proof:       closedAuthority & closedInvalid
 		assertion: {
 			id:              "negative-\(in.id)"
 			mode:            "bottoms"
 			family:          "negativeFixture"
 			description:     "Invalid state must bottom against authority"
-			expected:        _authority
-			invalid:         _invalid
-			proof:           _authority & _invalid
+			expected:        closedAuthority
+			invalid:         closedInvalid
+			proof:           closedAuthority & closedInvalid
 			expectedFailure: true
 		}
 	}
@@ -404,39 +416,36 @@ import (
 		authority:   #CodexObligationState
 		target:      #CodexObligationState
 	})
-	_inputAuthority: in.authority
-	_inputTarget:    in.target
-	_authority: (#MakeClosedObligationState & {in: _inputAuthority}).out
-	_target: (#MakeClosedObligationState & {in: _inputTarget}).out
+	let closedAuthority = (#MakeClosedObligationState & {"in": in.authority}).out
+	let closedTarget = (#MakeClosedObligationState & {"in": in.target}).out
 	out: #Subsumption & {
 		id:          in.id
 		description: in.description
-		authority:   _authority
-		target:      _target
+		authority:   closedAuthority
+		target:      closedTarget
 		assertion: {
 			id:          "subsumes-\(in.id)"
 			mode:        "subsumes"
 			family:      "subsumption"
 			description: "Target state must not widen authority"
-			expected:    _authority
-			observed:    _target
-			proof: #NoWideningProof & {authority: _authority, target: _target}
+			expected:    closedAuthority
+			observed:    closedTarget
+			proof: #NoWideningProof & {authority: closedAuthority, target: closedTarget}
 			noWidening: true
 		}
 	}
 }
 
 #AuthorityDerivedTarget: close({
-	authority:       #CodexObligationState
-	_inputAuthority: authority
-	_authority: (#MakeClosedObligationState & {in: _inputAuthority}).out
+	authority: #CodexObligationState
+	let closedAuthority = (#MakeClosedObligationState & {"in": authority}).out
 
 	target: #ClosedObligationState & {
-		id:        _authority.id
-		artifacts: _authority.artifacts
-		actions:   _authority.actions
-		checks:    _authority.checks
-		evidence:  _authority.evidence
+		id:        closedAuthority.id
+		artifacts: closedAuthority.artifacts
+		actions:   closedAuthority.actions
+		checks:    closedAuthority.checks
+		evidence:  closedAuthority.evidence
 	}
 })
 
@@ -545,10 +554,9 @@ import (
 	in: close({
 		state: #CodexObligationState
 	})
-	_inputState: in.state
-	_state: (#MakeClosedObligationState & {in: _inputState}).out
+	let closedState = (#MakeClosedObligationState & {"in": in.state}).out
 	out: #GeneratedAssertionMatrix & {
-		state: _state
+		state: closedState
 	}
 }
 
