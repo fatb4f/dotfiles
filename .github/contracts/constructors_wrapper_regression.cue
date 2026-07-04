@@ -125,6 +125,21 @@ _negativeFixtureExportable: (#MakeNegativeFixture & {
 	}
 }).out
 
+_negativeFixtureCheck: (#MakeNegativeFixtureCheck & {
+	in: {
+		id:          "negative-conflict"
+		description: "Negative wrapper couples witness to expected-failure probe"
+		authority:   _validState
+		invalid:     _invalidState
+		expr:        "(#NegativeFixtureConflictProbe & {authority: (#MakeClosedObligationState & {\"in\": _validState}).out, invalid: (#MakeClosedObligationState & {\"in\": _invalidState}).out})"
+	}
+}).out
+
+_negativeFixtureNonConflictProbe: #NegativeFixtureConflictProbe & {
+	authority: (#MakeClosedObligationState & {"in": _validState}).out
+	invalid: (#MakeClosedObligationState & {"in": _validState}).out
+}
+
 _subsumptionWithActions: (#MakeSubsumption & {
 	in: {
 		id:          "subsumption-actions"

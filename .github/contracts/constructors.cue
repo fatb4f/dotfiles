@@ -365,6 +365,14 @@ import (
 	proof: authority & invalid
 }
 
+#NegativeFixtureCheck: close({
+	fixture: #NegativeFixture
+	command: #ValidationCommand & {
+		kind:            "cue-export-expected-failure"
+		expectedFailure: true
+	}
+})
+
 #MakeNegativeFixture: {
 	in: close({
 		id:          #KebabIdentifier
@@ -387,6 +395,40 @@ import (
 			description:     "Invalid state must bottom against authority"
 			expected:        closedAuthority
 			invalid:         closedInvalid
+			expectedFailure: true
+		}
+	}
+}
+
+#MakeNegativeFixtureCheck: {
+	in: close({
+		id:          #KebabIdentifier
+		description: #NonEmptyString
+		authority:   #CodexObligationState
+		invalid:     #CodexObligationState
+		expr:        #NonEmptyString
+	})
+	let negativeFixture = (#MakeNegativeFixture & {
+		"in": {
+			id:          in.id
+			description: in.description
+			authority:   in.authority
+			invalid:     in.invalid
+		}
+	}).out
+	out: #NegativeFixtureCheck & {
+		fixture: negativeFixture
+		command: {
+			kind: "cue-export-expected-failure"
+			argv: [
+				"cue",
+				"export",
+				"./contracts",
+				"-e",
+				in.expr,
+				"--out",
+				"cue",
+			]
 			expectedFailure: true
 		}
 	}
