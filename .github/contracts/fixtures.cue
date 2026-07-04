@@ -165,14 +165,14 @@ package impl
 		authority:   #CodexObligationState
 		invalid:     #CodexObligationState
 	})
-	let fixture = (#MakeUncheckedNegativeFixture & {
+	let builtFixture = (#MakeUncheckedNegativeFixture & {
 		"in": in
 	}).out
 	out: #NegativeFixtureProbeBinding & {
-		fixture: fixture
+		fixture: builtFixture
 		probe: {
-			authority: fixture.authority
-			invalid:   fixture.invalid
+			authority: builtFixture.authority
+			invalid:   builtFixture.invalid
 		}
 	}
 }
