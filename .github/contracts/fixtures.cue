@@ -74,8 +74,8 @@ package impl
 }
 
 // Exportable negative fixture metadata. This shape intentionally does not contain
-// the destructive authority & invalid proof. Consumers must evaluate a
-// #NegativeFixtureConflictProbe proof path as an expected-failure validation case.
+// the destructive authority & invalid proof. Use #MakeNegativeFixture for the
+// checked fixture/probe binding.
 #NegativeFixtureSpec: close({
 	id:          #KebabIdentifier
 	description: #NonEmptyString
@@ -97,7 +97,7 @@ package impl
 	}
 })
 
-#NegativeFixture: #NegativeFixtureSpec
+#NegativeFixture:          #NegativeFixtureSpec
 #UncheckedNegativeFixture: #NegativeFixtureSpec
 
 #NegativeFixtureProbeSpec: {
@@ -116,7 +116,7 @@ package impl
 
 #NegativeFixtureProbeBinding: close({
 	fixture: #NegativeFixtureSpec
-	probe: #NegativeFixtureProbeSpec & {
+	probe: #NegativeFixtureConflictProbe & {
 		authority: fixture.authority
 		invalid:   fixture.invalid
 	}
@@ -154,10 +154,6 @@ package impl
 
 #MakeNegativeFixtureSpec: #MakeUncheckedNegativeFixture
 
-// Compatibility alias: creates only the exportable negative fixture spec. It does
-// not create a checked proof witness and does not expose a probe field.
-#MakeNegativeFixture: #MakeUncheckedNegativeFixture
-
 #MakeNegativeFixtureProbeBinding: {
 	in: close({
 		id:          #KebabIdentifier
@@ -177,9 +173,10 @@ package impl
 	}
 }
 
-// Compatibility alias: returns an exportable fixture/probe binding only. The
-// actual bottom proof is #NegativeFixtureConflictProbe.proof and must be exported
-// separately with an expected-failure command.
+// Checked constructor: returns a fixture/probe binding whose probe carries the
+// destructive authority & invalid proof for expected-failure export validation.
+#MakeNegativeFixture: #MakeNegativeFixtureProbeBinding
+
 #MakeNegativeFixtureCheck: #MakeNegativeFixtureProbeBinding
 
 #Subsumption: close({
@@ -199,7 +196,7 @@ package impl
 		observed:    target
 		proof: #NoWideningProof & {authority: authority, target: target}
 		proofStatus: "proven"
-		noWidening: true
+		noWidening:  true
 	}
 })
 
@@ -226,7 +223,7 @@ package impl
 			observed:    closedTarget
 			proof: #NoWideningProof & {authority: closedAuthority, target: closedTarget}
 			proofStatus: "proven"
-			noWidening: true
+			noWidening:  true
 		}
 	}
 }

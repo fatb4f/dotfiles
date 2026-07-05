@@ -107,10 +107,22 @@ _positiveFixtureWithActions: (#MakePositiveFixture & {
 	}
 }).out
 
-_negativeFixtureSpecWithActions: (#MakeNegativeFixture & {
+_negativeFixtureCheckedWithActions: (#MakeNegativeFixture & {
 	in: {
 		id:          "negative-actions"
-		description: "Negative wrapper returns unchecked spec metadata"
+		description: "Negative wrapper returns checked probe binding"
+		authority:   _validState
+		invalid:     _validState
+	}
+}).out
+
+_negativeFixtureCheckedSpecRequiresProbe: _negativeFixtureCheckedWithActions.fixture.assertion.proofStatus & "requiresDestructiveProbe"
+_negativeFixtureCheckedProbeProof:        _negativeFixtureCheckedWithActions.probe.proof
+
+_negativeFixtureSpecWithActions: (#MakeNegativeFixtureSpec & {
+	in: {
+		id:          "negative-spec-actions"
+		description: "Negative spec wrapper returns unchecked metadata"
 		authority:   _validState
 		invalid:     _validState
 	}
@@ -136,19 +148,8 @@ _uncheckedNegativeFixtureExportable: (#MakeUncheckedNegativeFixture & {
 	}
 }).out
 
-_negativeFixtureProbeBinding: (#MakeNegativeFixtureProbeBinding & {
-	in: {
-		id:          "negative-conflict"
-		description: "Negative fixture derives paired destructive probe input"
-		authority:   _validState
-		invalid:     _invalidState
-	}
-}).out
-
-_negativeFixtureConflictProbe: _negativeFixtureProbeBinding.probe
-
 _negativeFixtureValidationCommand: #CueExportExpectedFailure & {
-	expr: "_negativeFixtureConflictProbe.proof"
+	expr: "_negativeFixtureProbeBinding.probe.proof"
 	tags: ["negativeproof"]
 }
 
@@ -161,14 +162,18 @@ _negativeFixtureNonConflictBinding: (#MakeNegativeFixtureProbeBinding & {
 	}
 }).out
 
-_negativeFixtureNonConflictProbe: #NegativeFixtureConflictProbe & _negativeFixtureNonConflictBinding.probe
+_negativeFixtureNonConflictProbe: _negativeFixtureNonConflictBinding.probe
 
 _negativeFixtureNonConflictCommand: #CueExportExpectedSuccess & {
 	expr: "_negativeFixtureNonConflictProbe"
 }
 
-_negativeFixtureAliasProbeAccessCommand: #CueExportExpectedFailure & {
+_negativeFixtureSpecAliasProbeAccessCommand: #CueExportExpectedFailure & {
 	expr: "_negativeFixtureSpecWithActions.probe"
+}
+
+_negativeFixtureCheckedAliasProbeAccessCommand: #CueExportExpectedSuccess & {
+	expr: "_negativeFixtureCheckedWithActions.probe"
 }
 
 _defaultPackageExportCommand: #CueExportPackageExpectedSuccess & {}
@@ -190,9 +195,14 @@ _validationCases: [...#ValidationCase] & [
 		command:     _negativeFixtureNonConflictCommand
 	},
 	{
-		id:          "negative-fixture-alias-spec-only"
-		description: "#MakeNegativeFixture must not expose a checked probe field"
-		command:     _negativeFixtureAliasProbeAccessCommand
+		id:          "negative-fixture-spec-alias-spec-only"
+		description: "#MakeNegativeFixtureSpec must not expose a checked probe field"
+		command:     _negativeFixtureSpecAliasProbeAccessCommand
+	},
+	{
+		id:          "negative-fixture-checked-alias-probe"
+		description: "#MakeNegativeFixture must expose a checked probe field"
+		command:     _negativeFixtureCheckedAliasProbeAccessCommand
 	},
 ]
 

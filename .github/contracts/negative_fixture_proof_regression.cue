@@ -2,6 +2,11 @@
 
 package impl
 
-_negativeFixtureConflictProbe: {
-	proof!: _negativeFixtureConflictProbe.authority & _negativeFixtureConflictProbe.invalid
-}
+_negativeFixtureProbeBinding: (#MakeNegativeFixture & {
+	in: {
+		id:          "negative-conflict"
+		description: "Negative fixture derives paired destructive probe input"
+		authority:   _validState
+		invalid:     _invalidState
+	}
+}).out

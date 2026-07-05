@@ -9,6 +9,6 @@ package impl
 // - validation.cue: validation commands and completion report witnesses
 //
 // Negative-fixture contract note:
-// #MakeNegativeFixture and #MakeUncheckedNegativeFixture create exportable spec metadata only.
-// Bottom proof is exclusively performed by evaluating #NegativeFixtureConflictProbe.proof as an
-// expected-failure validation path.
+// #MakeUncheckedNegativeFixture creates exportable spec metadata only.
+// #MakeNegativeFixture returns the checked fixture/probe binding; evaluate the
+// probe proof as an expected-failure validation path.
