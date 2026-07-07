@@ -11,6 +11,10 @@ function M.setup()
 		controller.launch(window)
 	end)
 
+	wezterm.on("term-project-command-mcp", function(window)
+		controller.launch_command(window, "mcp")
+	end)
+
 	for _, action in ipairs({ "hide", "reveal" }) do
 		wezterm.on("term-project-tree-" .. action, function(window, pane)
 			project_tree_visibility.dispatch(window, pane, action)

@@ -18,6 +18,11 @@ function M.setup()
 				doc = "Launch or focus socket-backed Neovim and the project Xplr pane",
 				action = wezterm.action.EmitEvent("term-ide-launch"),
 			},
+			{
+				brief = "Launch project MCP",
+				doc = "Launch the project git MCP adapter from the active project contract",
+				action = wezterm.action.EmitEvent("term-project-command-mcp"),
+			},
 			visibility_entry("Hide project tree", "hide"),
 			visibility_entry("Reveal project tree", "reveal"),
 		}

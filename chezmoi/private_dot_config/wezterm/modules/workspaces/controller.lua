@@ -185,6 +185,47 @@ local function spawn_editor(window, contract)
 	return editor, nil
 end
 
+local function command_args(command)
+	if command.cmd == nil then
+		return nil
+	end
+
+	if type(command.cmd) == "table" then
+		return command.cmd
+	end
+
+	return { "sh", "-lc", tostring(command.cmd) }
+end
+
+local function command_by_name(session, name)
+	if type(session) ~= "table" or type(name) ~= "string" or name == "" or type(session.commands) ~= "table" then
+		return nil
+	end
+
+	for _, command in ipairs(session.commands) do
+		if type(command) == "table" and command.name == name then
+			return command
+		end
+	end
+
+	return nil
+end
+
+local function spawn_project_command(window, contract, command)
+	local mux_window = window:mux_window()
+	local spawn_ok, tab_or_err, pane = pcall(mux_window.spawn_tab, mux_window, {
+		cwd = contract.cwd,
+		args = command_args(command),
+		set_environment_variables = contract.env,
+	})
+	if not spawn_ok then
+		return nil, tab_or_err
+	end
+
+	runtime.remember_pane(contract.id, command.name, pane)
+	return pane, nil
+end
+
 function M.launch(window)
 	local workspace = window:active_workspace()
 	local session = active_session(window, workspace)
@@ -242,6 +283,32 @@ function M.launch(window)
 
 	runtime.remember_pane(contract.id, "explorer", explorer)
 	editor:activate()
+end
+
+function M.launch_command(window, name)
+	local workspace = window:active_workspace()
+	local session = active_session(window, workspace)
+	local command = command_by_name(session, name)
+	if not command then
+		notify(window, "Project command", "No project command named: " .. tostring(name))
+		return
+	end
+
+	local contract, err = validate(session)
+	if not contract then
+		notify(window, "Project command", err)
+		return
+	end
+
+	runtime.remember_session(session)
+
+	local pane, spawn_err = spawn_project_command(window, contract, command)
+	if not pane then
+		notify(window, "Project command", "Unable to launch " .. name .. ": " .. tostring(spawn_err))
+		return
+	end
+
+	pane:activate()
 end
 
 return M

@@ -10,6 +10,7 @@ return {
 
 	commands = {
 		{ name = "edit", cmd = "nvim" },
+		{ name = "mcp", cmd = { "term-git-mcp" } },
 		{ name = "shell", cmd = nil },
 	},
 }

@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+set -eu
+
+die() {
+	printf 'term-git-mcp: %s\n' "$*" >&2
+	exit 1
+}
+
+[ -n "${TERM_PROJECT_ID:-}" ] || die "TERM_PROJECT_ID missing"
+[ -n "${TERM_PROJECT_ROOT:-}" ] || die "TERM_PROJECT_ROOT missing"
+[ -d "${TERM_PROJECT_ROOT:-}" ] || die "TERM_PROJECT_ROOT is not a directory"
+
+cd "$TERM_PROJECT_ROOT"
+
+[ -n "${SSH_AUTH_SOCK:-}" ] || die "SSH_AUTH_SOCK missing"
+[ -S "$SSH_AUTH_SOCK" ] || die "SSH_AUTH_SOCK is not a live socket: $SSH_AUTH_SOCK"
+
+if ssh_add_output=$(ssh-add -l 2>&1); then
+	:
+else
+	ssh_add_status=$?
+	case "$ssh_add_status" in
+		1) die "ssh-agent reachable but no loaded identity" ;;
+		*) die "ssh-agent preflight failed: $ssh_add_output" ;;
+	esac
+fi
+
+exec git-mcp-go serve \
+	--mode shell \
+	--write-access \
+	-r "$TERM_PROJECT_ROOT" \
+	"$@"
