@@ -20,4 +20,20 @@ vim.pack.add({
 
 	-- Agent Client Protocol client for Codex and other coding agents.
 	{ src = "https://github.com/olimorris/codecompanion.nvim", version = vim.version.range("^19.0.0") },
+
+	-- Desc-backed leader and keymap discovery.
+	{ src = "https://github.com/folke/which-key.nvim" },
+
+	-- Structural edit adapters.
+	{ src = "https://github.com/nvim-mini/mini.surround" },
+	{ src = "https://github.com/nvim-mini/mini.ai" },
+
+	-- Editor-local picker projection.
+	{ src = "https://github.com/nvim-mini/mini.pick" },
+
+	-- Buffer-local git hunk projection.
+	{ src = "https://github.com/lewis6991/gitsigns.nvim" },
+
+	-- Diagnostics and list projection.
+	{ src = "https://github.com/folke/trouble.nvim" },
 })

@@ -3,17 +3,17 @@ package impl
 import (
 	"list"
 
-	lat "github.com/fatb4f/lattice/domain"
+	lat "github.com/fatb4f/lattice/meta"
 )
 
 // Shared primitive constraints are owned by the lattice domain kernel.
 #NonEmptyString:     lat.#NonEmptyString
 #NonEmptyStringList: lat.#NonEmptyStringList
-#KebabIdentifier:   lat.#KebabIdentifier
-#CueSelectorExpr:   lat.#CueSelectorExpr
-#KebabMapKeyGuard:  lat.#KebabMapKeyGuard
-#RefSet:            lat.#RefSet
-#VisibilityTier:    lat.#VisibilityTier
+#KebabIdentifier:    lat.#KebabIdentifier
+#CueSelectorExpr:    lat.#CueSelectorExpr
+#KebabMapKeyGuard:   lat.#KebabMapKeyGuard
+#RefSet:             lat.#RefSet
+#VisibilityTier:     lat.#VisibilityTier
 
 // Codex profile vocabulary.
 #CodexActionKind:
@@ -218,7 +218,26 @@ import (
 	out: lat.#ObligationState & {
 		id: in.id
 
-		resources: in.artifacts
+		resources: {
+			for artifactID, artifact in in.artifacts {
+				if artifact.role == "generatedOutput" {
+					"\(artifactID)": {
+						id:         artifact.id
+						path:       artifact.path
+						role:       lat.#GeneratedOutputResourceRole
+						visibility: artifact.visibility
+					}
+				}
+				if artifact.role != "generatedOutput" {
+					"\(artifactID)": {
+						id:         artifact.id
+						path:       artifact.path
+						role:       artifact.role
+						visibility: artifact.visibility
+					}
+				}
+			}
+		}
 		operations: {
 			for actionID, action in in.actions {
 				"\(actionID)": (#ToLatticeOperation & {in: action}).out
@@ -306,18 +325,18 @@ import (
 	state: #ClosedObligationState
 
 	artifacts: list.SortStrings([for key, _ in state.artifacts {key}])
-	actions:   list.SortStrings([for key, _ in state.actions {key}])
-	checks:    list.SortStrings([for key, _ in state.checks {key}])
-	evidence:  list.SortStrings([for key, _ in state.evidence {key}])
+	actions: list.SortStrings([for key, _ in state.actions {key}])
+	checks: list.SortStrings([for key, _ in state.checks {key}])
+	evidence: list.SortStrings([for key, _ in state.evidence {key}])
 })
 
 #ActionRefKeySet: close({
 	action: #Action
 
-	reads:            list.SortStrings([for key, _ in action.reads {key}])
-	writes:           list.SortStrings([for key, _ in action.writes {key}])
-	creates:          list.SortStrings([for key, _ in action.creates {key}])
-	requiresChecks:   list.SortStrings([for key, _ in action.requiresChecks {key}])
+	reads: list.SortStrings([for key, _ in action.reads {key}])
+	writes: list.SortStrings([for key, _ in action.writes {key}])
+	creates: list.SortStrings([for key, _ in action.creates {key}])
+	requiresChecks: list.SortStrings([for key, _ in action.requiresChecks {key}])
 	requiresEvidence: list.SortStrings([for key, _ in action.requiresEvidence {key}])
 })
 
@@ -328,7 +347,7 @@ import (
 	target:    #ClosedObligationState
 
 	authorityKeys: (#StateKeySet & {state: authority})
-	targetKeys:    (#StateKeySet & {state: target})
+	targetKeys: (#StateKeySet & {state: target})
 
 	keyEquality: {
 		artifacts: authorityKeys.artifacts & targetKeys.artifacts
@@ -341,7 +360,7 @@ import (
 		for actionID, _ in authority.actions {
 			"\(actionID)": {
 				authorityRefs: (#ActionRefKeySet & {action: authority.actions[actionID]})
-				targetRefs:    (#ActionRefKeySet & {action: target.actions[actionID]})
+				targetRefs: (#ActionRefKeySet & {action: target.actions[actionID]})
 
 				reads:            authorityRefs.reads & targetRefs.reads
 				writes:           authorityRefs.writes & targetRefs.writes
@@ -353,7 +372,7 @@ import (
 	}
 
 	authorityLattice: (#ToLatticeObligationState & {in: authority}).out
-	targetLattice:    (#ToLatticeObligationState & {in: target}).out
+	targetLattice: (#ToLatticeObligationState & {in: target}).out
 	latticeProof: lat.#NoWideningProof & {
 		authority: authorityLattice
 		target:    targetLattice
