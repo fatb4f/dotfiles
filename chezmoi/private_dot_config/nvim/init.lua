@@ -11,5 +11,6 @@ require("lang.format")
 require("lang.lua")
 require("lang.attach")
 
+require("ai")
 require("ui")
 require("workflow")
