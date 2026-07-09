@@ -267,21 +267,6 @@ function M.launch(window)
 	end
 
 	runtime.remember_pane(contract.id, "editor", editor)
-
-	local split_ok, explorer = pcall(editor.split, editor, {
-		direction = "Left",
-		size = 0.2,
-		cwd = contract.root,
-		args = { "xplr", "--config", wezterm.home_dir .. "/.config/xplr/init.lua", contract.root },
-		set_environment_variables = contract.env,
-	})
-	if not split_ok then
-		notify(window, "IDE launch", "Neovim launched, but Xplr failed: " .. tostring(explorer))
-		editor:activate()
-		return
-	end
-
-	runtime.remember_pane(contract.id, "explorer", explorer)
 	editor:activate()
 end
 
