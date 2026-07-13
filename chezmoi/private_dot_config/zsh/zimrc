@@ -16,4 +16,5 @@ zmodule zsh-users/zsh-syntax-highlighting
 zmodule zsh-users/zsh-history-substring-search
 zmodule jeffreytse/zsh-vi-mode
 zmodule prompt-pwd
+zmodule zimfw/direnv
 zmodule minimal

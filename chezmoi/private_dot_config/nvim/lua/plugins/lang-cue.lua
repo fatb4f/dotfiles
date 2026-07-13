@@ -4,11 +4,20 @@ return {
 		opts = function(_, opts)
 			opts.servers = opts.servers or {}
 			opts.servers.cue = {
-				cmd = { "cue", "lsp", "serve" },
+				cmd = { vim.fn.expand("~/.local/share/go/bin/cue"), "lsp", "serve" },
 				filetypes = { "cue" },
-				root_dir = function(fname)
-					return vim.fs.root(fname, { "cue.mod", ".git" }) or vim.uv.cwd()
-				end,
+				root_markers = { "cue.mod", ".git" },
+			}
+		end,
+	},
+	{
+		"mfussenegger/nvim-lint",
+		opts = function(_, opts)
+			opts.linters_by_ft = opts.linters_by_ft or {}
+			opts.linters_by_ft.cue = { "cue" }
+			opts.linters = opts.linters or {}
+			opts.linters.cue = {
+				cmd = vim.fn.expand("~/.local/share/go/bin/cue"),
 			}
 		end,
 	},
