@@ -4,6 +4,14 @@ LazyVim manages Neovim plugins. Language tools are installed outside Neovim.
 
 ## Go
 
+Arch Linux package:
+
+```bash
+sudo pacman -S --needed golangci-lint
+```
+
+Go-installed tools:
+
 ```bash
 go install golang.org/x/tools/gopls@latest
 go install github.com/go-delve/delve/cmd/dlv@latest
