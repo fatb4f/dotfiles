@@ -13,7 +13,8 @@ sudo pacman -S --needed golangci-lint
 Go-installed tools:
 
 ```bash
-mkdir -p "${GOBIN:-${XDG_DATA_HOME:-$HOME/.local/share}/go/bin}"
+export GOBIN="${GOBIN:-${XDG_DATA_HOME:-$HOME/.local/share}/go/bin}"
+mkdir -p "$GOBIN"
 
 go install golang.org/x/tools/gopls@latest
 go install github.com/go-delve/delve/cmd/dlv@latest
