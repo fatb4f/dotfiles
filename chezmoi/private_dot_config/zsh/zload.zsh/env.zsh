@@ -23,14 +23,17 @@ _env_path() {
   typeset -a entries prefix
   typeset entry
 
+  GOBIN="${GOBIN:-${XDG_DATA_HOME:-$HOME/.local/share}/go/bin}"
+  export GOBIN
+
   entries=(
     "${XDG_DATA_BIN:-$HOME/.local/bin}"
     "${TOOL_PATH_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/path}"
     "${CARGO_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/cargo}/bin"
-    "${GOBIN:-${XDG_DATA_HOME:-$HOME/.local/share}/go/bin}"
+    "$GOBIN"
     "${BUN_INSTALL:-$HOME/.cache/.bun}/bin"
     "${npm_config_prefix:-${XDG_DATA_HOME:-$HOME/.local/share}/npm}/bin"
-    "${CODEX_BIN:-$HOME/_404/.local/share/codex/bin}"
+    "${CODEX_BIN:-${XDG_DATA_HOME:-$HOME/.local/share}/codex/bin}"
   )
 
   prefix=()
@@ -53,6 +56,10 @@ _env_path() {
 
   if (( ! ${_dotfiles_env_import_vars[(Ie)PATH]} )); then
     _dotfiles_env_import_vars+=(PATH)
+  fi
+
+  if (( ! ${_dotfiles_env_import_vars[(Ie)GOBIN]} )); then
+    _dotfiles_env_import_vars+=(GOBIN)
   fi
 }
 

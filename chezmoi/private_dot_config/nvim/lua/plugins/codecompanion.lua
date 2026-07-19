@@ -19,7 +19,7 @@ return {
 									default = { codex_acp ~= "" and codex_acp or "codex-acp" },
 								},
 								defaults = {
-									auth_method = "chatgpt",
+									auth_method = "chat-gpt",
 								},
 							})
 						end,
