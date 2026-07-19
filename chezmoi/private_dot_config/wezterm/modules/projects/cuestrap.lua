@@ -7,9 +7,4 @@ return {
 	env = {
 		GIT_KATAS_ROOT = "~/src/cuestrap",
 	},
-
-	commands = {
-		{ name = "edit", cmd = "nvim" },
-		{ name = "shell", cmd = nil },
-	},
 }

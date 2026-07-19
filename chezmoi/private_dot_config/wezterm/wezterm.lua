@@ -20,10 +20,8 @@ table.insert(config.keys, {
 	action = act.SendKey({ key = "j", mods = "CTRL" }),
 })
 
-require("modules.smart_splits").apply_to_config(config)
+require("modules.panes").apply_to_config(config)
 require("modules.workspaces.sessionizer").apply_to_config(config)
-require("modules.workspaces.events").setup()
-require("modules.workspaces.palette").setup()
 require("modules.scrollback").apply_to_config(config)
 require("modules.tinty").apply_to_config(config)
 require("modules.tabline").apply_to_config(config)

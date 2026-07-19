@@ -7,8 +7,4 @@ return {
 	cwd = wezterm.home_dir,
 
 	env = {},
-
-	commands = {
-		{ name = "shell", cmd = nil },
-	},
 }

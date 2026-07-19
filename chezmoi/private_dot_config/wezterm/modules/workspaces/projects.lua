@@ -76,14 +76,6 @@ local function validate(project, module_name)
 		error("Invalid workspace project " .. module_name .. ": env must be a table")
 	end
 
-	project.commands = project.commands or project.panes or {
-		{ name = "shell", cmd = nil },
-	}
-
-	if type(project.commands) ~= "table" then
-		error("Invalid workspace project " .. module_name .. ": commands must be a table")
-	end
-
 	return project
 end
 
@@ -113,8 +105,6 @@ end
 
 local function session_env(project)
 	local env = {}
-	local runtime_dir = os.getenv("XDG_RUNTIME_DIR")
-
 	for key, value in pairs(project.env) do
 		if type(key) == "string" and type(value) == "string" then
 			env[key] = value
@@ -125,9 +115,6 @@ local function session_env(project)
 	env.TERM_PROJECT_ROOT = project.root or project.cwd
 	env.TERM_PROJECT_CWD = session_cwd(project)
 	env.TERM_EDITOR = project.editor or env.TERM_EDITOR or "nvim"
-	if type(runtime_dir) == "string" and runtime_dir ~= "" then
-		env.TERM_NVIM_SOCKET = string.format("%s/nvim/%s.sock", runtime_dir, project.id)
-	end
 
 	return env
 end
@@ -143,7 +130,6 @@ local function normalize_session(project)
 		cwd = session_cwd(project),
 		editor = project.editor or "nvim",
 		env = session_env(project),
-		commands = project.commands or {},
 		raw = project,
 	}
 end

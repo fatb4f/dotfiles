@@ -2,7 +2,6 @@ local wezterm = require("wezterm")
 
 local sessionizer = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer.wezterm")
 local projects = require("modules.workspaces.projects")
-local runtime = require("modules.workspaces.runtime")
 
 local M = {}
 
@@ -83,8 +82,6 @@ local function normalize_entries(entries)
 end
 
 local function switch_to_session(window, pane, session)
-	runtime.remember_session(session)
-
 	if workspace_exists(session.workspace) then
 		window:perform_action(
 			wezterm.action.SwitchToWorkspace({
