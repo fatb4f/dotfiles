@@ -1,22 +1,20 @@
 package impl
 
-#DotfilesNvimQoLPlugin: close({
-	id:        #KebabIdentifier
-	plugin:    #NonEmptyString
-	layer:     "ui" | "edit" | "nav" | "git" | "lang"
-	authority: "projection" | "adapter"
-	admits: [...#NonEmptyString] & [_, ...]
-	rejects: [...#NonEmptyString] & [_, ...]
-	gate?: #NonEmptyString
+#DotfilesNvimQoLComponent: close({
+	id:             #KebabIdentifier
+	implementation: #NonEmptyString
+	layer:          "plugin-graph" | "topology" | "nav" | "tooling" | "lang" | "format" | "lint" | "ai"
+	authority:      "owner" | "projection" | "adapter"
+	admits:         [...#NonEmptyString] & [_, ...]
+	rejects:        [...#NonEmptyString] & [_, ...]
 })
 
 #DotfilesNvimQoLSurface: close({
-	id:   #KebabIdentifier
-	role: #NonEmptyString
+	id:          #KebabIdentifier
+	role:        #NonEmptyString
 	constraints: [...#NonEmptyString] & [_, ...]
-	p0: [...#DotfilesNvimQoLPlugin] & [_, ...]
-	p1: [...#DotfilesNvimQoLPlugin]
-	forbids: [...#NonEmptyString] & [_, ...]
+	components:  [...#DotfilesNvimQoLComponent] & [_, ...]
+	forbids:     [...#NonEmptyString] & [_, ...]
 	predicates: close({
 		[string]: #NonEmptyString
 	})
@@ -24,128 +22,122 @@ package impl
 
 dotfilesNvimQoLBlockSlice: #DotfilesNvimQoLSurface & {
 	id:   "dotfiles-nvim-qol-block-slice"
-	role: "bounded high-signal Neovim QoL plugin admission surface"
+	role: "materialized Neovim runtime ownership contract"
 
 	constraints: [
-		"GitHub issue body is the issue contract surface; repo-local CUE records the materialized slice",
-		"Neovim QoL additions are editor-local projections or edit adapters",
-		"xplr remains filesystem tree pane authority",
-		"WezTerm remains project and session topology authority",
-		"plugin supply is declared through config/pack.lua and vim.pack.add",
+		"LazyVim owns the Neovim plugin graph through lazy.nvim",
+		"WezTerm owns project and session topology",
+		"Snacks owns editor-local file exploration",
+		"system PATH owns language executable discovery",
+		"gopls owns Go language intelligence",
+		"Conform owns formatter dispatch",
+		"nvim-lint owns external lint projection",
+		"CodeCompanion delegates Codex ACP interaction to codex-acp",
 	]
 
-	p0: [
+	components: [
 		{
-			id:        "which-key"
-			plugin:    "https://github.com/folke/which-key.nvim"
-			layer:     "ui"
-			authority: "projection"
-			admits: ["leader-key discovery", "desc-backed command graph", "low-recall keymap surface"]
-			rejects: ["manual menu registry that drifts from keymaps", "opaque bindings without desc"]
+			id:             "lazyvim-plugin-graph"
+			implementation: "lazy.nvim with LazyVim imports and repo-local plugin specs"
+			layer:          "plugin-graph"
+			authority:      "owner"
+			admits:         ["LazyVim defaults", "LazyVim extras", "repo-local plugin specs"]
+			rejects:        ["native vim.pack supply", "parallel plugin manager authority", "Mason language-tool authority"]
 		},
 		{
-			id:        "mini-surround"
-			plugin:    "https://github.com/nvim-mini/mini.surround"
-			layer:     "edit"
-			authority: "adapter"
-			admits: ["add/delete/replace surrounds", "dot-repeatable structural edits", "minimal setup"]
-			rejects: ["snippet authority", "completion authority", "custom mapping churn before defaults fail"]
+			id:             "wezterm-topology"
+			implementation: "WezTerm project registry and sessionizer"
+			layer:          "topology"
+			authority:      "owner"
+			admits:         ["project identity", "project roots", "workspace selection", "session lifecycle"]
+			rejects:        ["editor buffer ownership", "editor-local file exploration"]
 		},
 		{
-			id:        "mini-ai"
-			plugin:    "https://github.com/nvim-mini/mini.ai"
-			layer:     "edit"
-			authority: "adapter"
-			admits: ["stronger textobjects", "function/argument/tag object edits", "future CUE/Lua object extension"]
-			rejects: ["full syntax-object framework", "treesitter-textobjects as first pass"]
+			id:             "snacks-explorer"
+			implementation: "https://github.com/folke/snacks.nvim"
+			layer:          "nav"
+			authority:      "owner"
+			admits:         ["editor-local file browsing", "project-root exploration", "cwd exploration", "netrw replacement"]
+			rejects:        ["project registry ownership", "workspace selection", "session persistence"]
 		},
 		{
-			id:        "mini-pick"
-			plugin:    "https://github.com/nvim-mini/mini.pick"
-			layer:     "nav"
-			authority: "projection"
-			admits: ["files", "grep", "buffers", "help", "commands", "keymaps", "vim.ui.select"]
-			rejects: ["project picker", "session picker", "persistent tree", "filesystem mutation adapter"]
+			id:             "system-path-tools"
+			implementation: "system PATH populated by the zsh environment"
+			layer:          "tooling"
+			authority:      "owner"
+			admits:         ["externally installed language servers", "formatters", "linters", "debug adapters"]
+			rejects:        ["Mason-managed executables", "Neovim-local executable installation"]
 		},
 		{
-			id:        "gitsigns"
-			plugin:    "https://github.com/lewis6991/gitsigns.nvim"
-			layer:     "git"
-			authority: "projection"
-			admits: ["hunk signs", "preview hunk", "stage/reset hunk", "next/previous hunk"]
-			rejects: ["git porcelain replacement", "commit workflow ownership", "statusline dependency"]
+			id:             "gopls"
+			implementation: "golang.org/x/tools/gopls resolved from PATH"
+			layer:          "lang"
+			authority:      "owner"
+			admits:         ["Go language intelligence", "Go diagnostics", "Go code navigation"]
+			rejects:        ["Mason installation", "duplicate Go language-server authority"]
 		},
 		{
-			id:        "trouble"
-			plugin:    "https://github.com/folke/trouble.nvim"
-			layer:     "lang"
-			authority: "projection"
-			admits: ["workspace diagnostics", "buffer diagnostics", "quickfix", "loclist", "references", "symbols"]
-			rejects: ["diagnostic source ownership", "inline diagnostic replacement"]
-		},
-	]
-
-	p1: [
-		{
-			id:        "conform"
-			plugin:    "https://github.com/stevearc/conform.nvim"
-			layer:     "lang"
-			authority: "adapter"
-			gate:      "admit only when native formatter wrapper accumulates multi-filetype edge cases"
-			admits: ["declared formatter registry", "manual format command", "opt-in format-on-save"]
-			rejects: ["silent formatter fallback", "undeclared formatters", "hidden format-on-save before manual command"]
+			id:             "conform"
+			implementation: "https://github.com/stevearc/conform.nvim"
+			layer:          "format"
+			authority:      "owner"
+			admits:         ["formatter registry", "formatter dispatch", "format-on-save policy"]
+			rejects:        ["undeclared formatter dispatch", "language-tool installation"]
 		},
 		{
-			id:        "nvim-lint"
-			plugin:    "https://github.com/mfussenegger/nvim-lint"
-			layer:     "lang"
-			authority: "adapter"
-			gate:      "admit only for external non-LSP linters projected through vim.diagnostic"
-			admits: ["shellcheck", "actionlint", "markdownlint", "diagnostic projection"]
-			rejects: ["duplicate LSP diagnostics", "lint-on-every-keystroke"]
+			id:             "nvim-lint"
+			implementation: "https://github.com/mfussenegger/nvim-lint"
+			layer:          "lint"
+			authority:      "owner"
+			admits:         ["external linter dispatch", "vim.diagnostic projection", "filetype-to-linter mapping"]
+			rejects:        ["LSP diagnostic duplication", "language-tool installation"]
+		},
+		{
+			id:             "codecompanion-codex-acp"
+			implementation: "CodeCompanion codex ACP adapter through codex-acp"
+			layer:          "ai"
+			authority:      "owner"
+			admits:         ["Codex ACP interaction", "chat-gpt authentication", "codex-acp resolved from PATH"]
+			rejects:        ["direct API-key authentication", "alternate Codex ACP command ownership"]
 		},
 	]
 
 	forbids: [
-		"mini.files filesystem adapter",
-		"oil.nvim filesystem adapter",
-		"neo-tree or persistent Neovim file tree",
-		"netrw replacement",
-		"Neovim project picker",
-		"Neovim workspace/session topology authority",
-		"Neovim cwd/session persistence as project authority",
-		"duplicate xplr tree-pane ownership inside Neovim",
-		"LazyVim-style framework takeover",
-		"Mason-managed language-tool authority",
+		"native vim.pack plugin graph authority",
+		"xplr-owned editor-local file exploration",
+		"Neovim project or session topology authority",
+		"Snacks project or session topology authority",
+		"Mason-managed language executables",
+		"Neovim-local language executable installation",
+		"duplicate Go language-server authority",
+		"formatter dispatch outside Conform",
+		"external lint projection outside nvim-lint",
+		"CodeCompanion Codex ACP interaction bypassing codex-acp",
 		"generated artifacts as authority",
 	]
 
 	predicates: {
-		"plugin-supply-native":       "plugin supply is declared in config/pack.lua through vim.pack.add"
-		"layer-owned-modules":        "each admitted P0 plugin has a layer-owned Lua module"
-		"desc-backed-discovery":      "which-key projects desc-backed keymaps rather than owning a second registry"
-		"edit-adapter-only":          "mini.surround and mini.ai remain structural edit adapters only"
-		"editor-local-picker":        "mini.pick does not select, rank, persist, or own project/session topology"
-		"xplr-tree-authority":        "xplr remains the filesystem tree pane and focused path selection surface"
-		"no-filesystem-tree-adapter": "mini.files, oil.nvim, neo-tree, and netrw replacement are not materialized"
-		"diagnostic-projection-only": "trouble projects existing diagnostic/list surfaces without becoming diagnostic source authority"
-		"git-projection-only":        "gitsigns does not replace git porcelain or commit workflow"
-		"gated-p1-adapters":          "conform and nvim-lint remain gated P1 adapters until their admission predicates are satisfied"
+		"lazyvim-plugin-graph":       "config/lazy.lua bootstraps lazy.nvim, imports LazyVim and extras, then imports repo-local plugin specs"
+		"wezterm-topology-authority": "WezTerm project registry and sessionizer own project identity, roots, workspaces, and session lifecycle"
+		"snacks-explorer-authority":  "Snacks explorer owns editor-local project-root and cwd exploration without selecting or persisting sessions"
+		"system-path-tool-authority": "language executables are installed outside Neovim and resolved through the zsh-projected system PATH"
+		"gopls-go-intelligence":      "the LazyVim Go extra configures gopls while system-tooling disables Mason ownership"
+		"conform-format-dispatch":    "Conform is materialized in the LazyVim graph as formatter dispatch authority"
+		"nvim-lint-projection":       "nvim-lint dispatches external linters and projects their results through vim.diagnostic"
+		"codecompanion-codex-acp":    "CodeCompanion resolves codex-acp from PATH and selects chat-gpt authentication for the Codex ACP adapter"
 	}
 }
 
 _negativeBottomChecks: {
-	"mini-files-filesystem-adapter-rejected": "bottom"
-	"oil-filesystem-adapter-rejected":        "bottom"
-	"neotree-persistent-tree-rejected":       "bottom"
-	"netrw-replacement-rejected":             "bottom"
-	"neovim-project-picker-rejected":         "bottom"
-	"workspace-session-topology-rejected":    "bottom"
-	"which-key-parallel-registry-rejected":   "bottom"
-	"diagnostic-source-takeover-rejected":    "bottom"
-	"git-porcelain-takeover-rejected":        "bottom"
-	"ungated-conform-rejected":               "bottom"
-	"duplicate-lsp-lint-rejected":            "bottom"
+	"native-vim-pack-authority-rejected":       "bottom"
+	"xplr-editor-exploration-rejected":         "bottom"
+	"neovim-topology-authority-rejected":       "bottom"
+	"snacks-topology-authority-rejected":       "bottom"
+	"mason-language-tool-authority-rejected":   "bottom"
+	"duplicate-go-language-server-rejected":    "bottom"
+	"formatter-dispatch-bypass-rejected":       "bottom"
+	"external-lint-projection-bypass-rejected": "bottom"
+	"codex-acp-bypass-rejected":                "bottom"
 }
 
 dotfilesNvimQoLValidationPlan: {
@@ -156,22 +148,22 @@ dotfilesNvimQoLValidationPlan: {
 		},
 	]
 	assertions: {
-		"no-filesystem-tree-adapter": {
-			id:          "no-filesystem-tree-adapter"
-			mode:        "forbids"
-			family:      "assertion"
-			description: "Rejected filesystem tree adapters remain outside the materialized Neovim QoL slice"
-			expected:    dotfilesNvimQoLBlockSlice.forbids
-			proof:       _negativeBottomChecks
-			proofStatus: "proven"
-		}
-		"gated-p1-adapters": {
-			id:          "gated-p1-adapters"
+		"ownership-graph-materialized": {
+			id:          "ownership-graph-materialized"
 			mode:        "preserves"
 			family:      "assertion"
-			description: "Conform and nvim-lint remain declared as gated P1 adapters only"
-			expected:    dotfilesNvimQoLBlockSlice.p1
-			proof:       dotfilesNvimQoLBlockSlice.predicates."gated-p1-adapters"
+			description: "The contract preserves the implemented Neovim runtime ownership graph"
+			expected:    dotfilesNvimQoLBlockSlice.components
+			proof:       dotfilesNvimQoLBlockSlice.predicates
+			proofStatus: "proven"
+		}
+		"legacy-authorities-rejected": {
+			id:          "legacy-authorities-rejected"
+			mode:        "forbids"
+			family:      "assertion"
+			description: "Stale native vim.pack, xplr editor, and gated-adapter authorities remain outside the materialized runtime contract"
+			expected:    dotfilesNvimQoLBlockSlice.forbids
+			proof:       _negativeBottomChecks
 			proofStatus: "proven"
 		}
 	}
@@ -182,26 +174,24 @@ dotfilesNvimQoLCompletionReport: {
 	requiredSections: [
 		"summary",
 		"manifest workflow",
-		"admitted QoL plugin set",
-		"rejected filesystem tree adapters",
-		"authority matrix",
-		"target surfaces",
-		"materialized config changes",
-		"leader menu surface",
-		"edit adapters",
-		"picker and diagnostics projections",
-		"git hunk projection",
-		"gated formatter/linter adapters",
+		"runtime ownership graph",
+		"LazyVim plugin graph",
+		"WezTerm topology authority",
+		"Snacks editor-local exploration",
+		"system PATH language tooling",
+		"gopls language intelligence",
+		"Conform formatter dispatch",
+		"nvim-lint projection",
+		"CodeCompanion codex-acp interaction",
 		"negative checks",
 		"validation",
 		"evidence",
-		"forbidden attractors avoided",
 	]
 	expected: {
 		state: "dotfiles-nvim-qol-block-slice"
 		assertions: {
-			"no-filesystem-tree-adapter": true
-			"gated-p1-adapters":          true
+			"ownership-graph-materialized": true
+			"legacy-authorities-rejected":  true
 		}
 		fixtures: {
 			for fixture, _ in _negativeBottomChecks {
@@ -209,11 +199,14 @@ dotfilesNvimQoLCompletionReport: {
 			}
 		}
 		subsumptions: {}
-		commands: dotfilesNvimQoLValidationPlan.commands
+		commands:     dotfilesNvimQoLValidationPlan.commands
 		evidence: {
-			"config-pack-lua":     true
-			"layer-owned-modules": true
-			"xplr-authority":      true
+			"lazyvim-config":         true
+			"wezterm-workspaces":     true
+			"snacks-explorer-config": true
+			"system-path-config":     true
+			"system-tooling-config":  true
+			"codecompanion-config":   true
 		}
 	}
 }
