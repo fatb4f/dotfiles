@@ -52,11 +52,12 @@ local function session_entries()
 end
 
 local function normalize_entries(entries)
+	local sessions_by_workspace = load_sessions().sessions_by_workspace
 	local seen = {}
 	local next_index = 1
 
 	for _, entry in ipairs(entries) do
-		if type(entry.id) == "string" and not seen[entry.id] then
+		if type(entry.id) == "string" and sessions_by_workspace[entry.id] and not seen[entry.id] then
 			seen[entry.id] = true
 			entry.label = string.format("Workspace: '%s'", home_relative(entry.id))
 			entries[next_index] = entry
