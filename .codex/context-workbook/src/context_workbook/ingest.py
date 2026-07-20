@@ -5,7 +5,6 @@ from __future__ import annotations
 import fnmatch
 import json
 import re
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,22 +32,18 @@ class MaterializedInputs:
     node_digests: dict[str, str]
 
 
-def load_inventory(snapshot: RepositorySnapshot, cue_binary: str = "cue") -> ContextInventory:
+def load_inventory(model_root: Path, cue_binary: str = "cue") -> ContextInventory:
     """Export the authoritative inventory from CUE through the pinned CLI."""
     import subprocess
 
-    with tempfile.TemporaryDirectory(prefix="context-workbook-cue-") as temporary:
-        model_root = snapshot.materialize_cue_package(
-            ".codex/context-model", Path(temporary)
-        )
-        process = subprocess.run(
-            [cue_binary, "export", ".", "-e", "rootSeed.inventory", "--out", "json"],
-            cwd=model_root,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
+    process = subprocess.run(
+        [cue_binary, "export", ".", "-e", "rootSeed.inventory", "--out", "json"],
+        cwd=model_root,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
     if process.returncode != 0:
         raise IngestError(process.stderr.strip() or "CUE inventory export failed")
     value = json.loads(process.stdout)

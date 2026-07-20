@@ -72,16 +72,16 @@ def _run_json(command: list[str], *, cwd: Path, stdin: bytes | None = None) -> o
     return json.loads(process.stdout)
 
 
-def load_workbook_config(root: Path, cue_binary: str = "cue") -> WorkbookConfig:
+def _load_workbook_config(model_root: Path, cue_binary: str = "cue") -> WorkbookConfig:
     value = _run_json(
         [cue_binary, "export", ".", "-e", "workbookConfig", "--out", "json"],
-        cwd=root / ".codex/context-model",
+        cwd=model_root,
     )
     if not isinstance(value, dict):
         raise EngineError("workbookConfig must be an object")
     projections = _run_json(
         [cue_binary, "export", ".", "-e", "rootSeed.projections", "--out", "json"],
-        cwd=root / ".codex/context-model",
+        cwd=model_root,
     )
     if not isinstance(projections, dict):
         raise EngineError("rootSeed.projections must be an object")
@@ -92,6 +92,20 @@ def load_workbook_config(root: Path, cue_binary: str = "cue") -> WorkbookConfig:
         max_selected_files=int(value["limits"]["maxSelectedFiles"]),
         max_packet_bytes=int(value["limits"]["maxPacketBytes"]),
     )
+
+
+def load_workbook_config(
+    root: Path,
+    cue_binary: str = "cue",
+    *,
+    revision: str = "HEAD",
+) -> WorkbookConfig:
+    snapshot = RepositorySnapshot.resolve(root, revision)
+    with tempfile.TemporaryDirectory(prefix="context-workbook-cue-") as temporary:
+        model_root = snapshot.materialize_cue_package(
+            ".codex/context-model", Path(temporary)
+        )
+        return _load_workbook_config(model_root, cue_binary)
 
 
 def build_request(
@@ -142,17 +156,27 @@ def _scope_inventory(
     allowed_paths: list[str],
     code_intel: dict[str, Any],
 ) -> ContextInventory:
-    fragments = {
-        fragment_id: fragment.model_dump(by_alias=True)
+    fragment_ids = {
+        fragment_id
         for fragment_id, fragment in inventory.fragments.items()
         if isinstance(fragment.source_ref.get("path"), str)
         and path_is_allowed(fragment.source_ref["path"], allowed_paths)
     }
-    fragment_ids = set(fragments)
-    for fragment in fragments.values():
-        fragment["prerequisites"] = [
-            item for item in fragment["prerequisites"] if item in fragment_ids
-        ]
+    pending = list(fragment_ids)
+    while pending:
+        fragment_id = pending.pop()
+        for prerequisite_id in inventory.fragments[fragment_id].prerequisites:
+            if prerequisite_id not in inventory.fragments:
+                raise EngineError(
+                    f"fragment prerequisite is absent from inventory: {prerequisite_id}"
+                )
+            if prerequisite_id not in fragment_ids:
+                fragment_ids.add(prerequisite_id)
+                pending.append(prerequisite_id)
+    fragments = {
+        fragment_id: inventory.fragments[fragment_id].model_dump(by_alias=True)
+        for fragment_id in sorted(fragment_ids)
+    }
 
     providers: dict[str, Any] = {}
     if code_intel:
@@ -265,6 +289,19 @@ def _validate_decision(
         raise EngineError(f"DSPy selected unknown providers: {sorted(unknown_providers)}")
     if unknown_workflows:
         raise EngineError(f"DSPy selected unknown workflows: {sorted(unknown_workflows)}")
+    selected_fragments = set(decision.fragments.ids)
+    missing_prerequisites = {
+        fragment_id: sorted(
+            set(inventory.fragments[fragment_id].prerequisites) - selected_fragments
+        )
+        for fragment_id in selected_fragments
+        if set(inventory.fragments[fragment_id].prerequisites) - selected_fragments
+    }
+    if missing_prerequisites:
+        raise EngineError(
+            "DSPy selected fragments without prerequisites: "
+            f"{missing_prerequisites}"
+        )
     if len(decision.files.ids) > max_selected_files:
         raise EngineError("DSPy selected too many files")
     for relative in decision.files.ids:
@@ -360,13 +397,13 @@ def _make_packet(
     )
 
 
-def cue_validate_state(root: Path, state: ContextState, cue_binary: str = "cue") -> None:
+def cue_validate_state(model_root: Path, state: ContextState, cue_binary: str = "cue") -> None:
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".json") as handle:
         handle.write(state.model_dump_json(by_alias=True, exclude_none=True))
         handle.flush()
         process = subprocess.run(
             [cue_binary, "vet", "-c", "-d", "#ContextState", ".", handle.name],
-            cwd=root / ".codex/context-model",
+            cwd=model_root,
             capture_output=True,
             text=True,
             check=False,
@@ -424,76 +461,86 @@ class ContextEngine:
         self.cue_binary = cue_binary
 
     def run(self, *, request: ContextRequest, reasoner: ContextReasoner) -> EngineResult:
-        config = load_workbook_config(self.root, self.cue_binary)
-        _validate_request_against_config(request, config)
         snapshot = RepositorySnapshot.resolve(self.root, request.repository.revision)
-        inventory = load_inventory(snapshot, self.cue_binary)
-        code_intel = load_code_intel(
-            snapshot, config.code_intel_files, request.allowed_paths
-        )
-        inventory = _scope_inventory(inventory, request.allowed_paths, code_intel)
-        declared_paths = _declared_paths(
-            snapshot, inventory, code_intel, request.allowed_paths
-        )
-        materialized = materialize_inputs(
-            prompt=request.prompt,
-            requested_revision=snapshot.requested_revision,
-            resolved_revision=snapshot.resolved_revision,
-            inventory=inventory,
-            selected_paths=declared_paths,
-            code_intel=code_intel,
-        )
-        decision = reasoner.establish(
-            request=request,
-            inventory=inventory,
-            observations=materialized.observations,
-            evidence=materialized.evidence,
-            code_intel=materialized.code_intel,
-        )
-        _validate_decision(
-            snapshot=snapshot,
-            request=request,
-            inventory=inventory,
-            decision=decision,
-            max_selected_files=config.max_selected_files,
-        )
-        selected = _selection_items(decision)
-        sufficiency = _derive_sufficiency(decision)
-        packet = _make_packet(
-            request=request,
-            inventory=inventory,
-            observations=materialized.observations,
-            evidence=materialized.evidence,
-            decision=decision,
-            selected=selected,
-            sufficiency=sufficiency,
-        )
-        state = ContextState.model_validate(
-            {
-                "schema": "dotfiles.context-state.v0",
-                "request": request.model_dump(by_alias=True),
-                "inventory": inventory.model_dump(by_alias=True),
-                "observations": {
-                    key: value.model_dump(by_alias=True)
-                    for key, value in materialized.observations.items()
-                },
-                "providerObservations": [],
-                "evidence": {
-                    key: value.model_dump(by_alias=True) for key, value in materialized.evidence.items()
-                },
-                "hypotheses": {
-                    key: value.model_dump(by_alias=True) for key, value in decision.hypotheses.items()
-                },
-                "selected": selected.model_dump(by_alias=True),
-                "gaps": {key: value.model_dump(by_alias=True) for key, value in decision.gaps.items()},
-                "conflicts": {
-                    key: value.model_dump(by_alias=True) for key, value in decision.conflicts.items()
-                },
-                "sufficiency": sufficiency.model_dump(by_alias=True),
-                "projection": packet.model_dump(by_alias=True) if packet else None,
-            }
-        )
-        cue_validate_state(self.root, state, self.cue_binary)
+        with tempfile.TemporaryDirectory(prefix="context-workbook-cue-") as temporary:
+            model_root = snapshot.materialize_cue_package(
+                ".codex/context-model", Path(temporary)
+            )
+            config = _load_workbook_config(model_root, self.cue_binary)
+            _validate_request_against_config(request, config)
+            inventory = load_inventory(model_root, self.cue_binary)
+            code_intel = load_code_intel(
+                snapshot, config.code_intel_files, request.allowed_paths
+            )
+            inventory = _scope_inventory(inventory, request.allowed_paths, code_intel)
+            declared_paths = _declared_paths(
+                snapshot, inventory, code_intel, request.allowed_paths
+            )
+            materialized = materialize_inputs(
+                prompt=request.prompt,
+                requested_revision=snapshot.requested_revision,
+                resolved_revision=snapshot.resolved_revision,
+                inventory=inventory,
+                selected_paths=declared_paths,
+                code_intel=code_intel,
+            )
+            decision = reasoner.establish(
+                request=request,
+                inventory=inventory,
+                observations=materialized.observations,
+                evidence=materialized.evidence,
+                code_intel=materialized.code_intel,
+            )
+            _validate_decision(
+                snapshot=snapshot,
+                request=request,
+                inventory=inventory,
+                decision=decision,
+                max_selected_files=config.max_selected_files,
+            )
+            selected = _selection_items(decision)
+            sufficiency = _derive_sufficiency(decision)
+            packet = _make_packet(
+                request=request,
+                inventory=inventory,
+                observations=materialized.observations,
+                evidence=materialized.evidence,
+                decision=decision,
+                selected=selected,
+                sufficiency=sufficiency,
+            )
+            state = ContextState.model_validate(
+                {
+                    "schema": "dotfiles.context-state.v0",
+                    "request": request.model_dump(by_alias=True),
+                    "inventory": inventory.model_dump(by_alias=True),
+                    "observations": {
+                        key: value.model_dump(by_alias=True)
+                        for key, value in materialized.observations.items()
+                    },
+                    "providerObservations": [],
+                    "evidence": {
+                        key: value.model_dump(by_alias=True)
+                        for key, value in materialized.evidence.items()
+                    },
+                    "hypotheses": {
+                        key: value.model_dump(by_alias=True)
+                        for key, value in decision.hypotheses.items()
+                    },
+                    "selected": selected.model_dump(by_alias=True),
+                    "gaps": {
+                        key: value.model_dump(by_alias=True)
+                        for key, value in decision.gaps.items()
+                    },
+                    "conflicts": {
+                        key: value.model_dump(by_alias=True)
+                        for key, value in decision.conflicts.items()
+                    },
+                    "sufficiency": sufficiency.model_dump(by_alias=True),
+                    "projection": packet.model_dump(by_alias=True) if packet else None,
+                }
+            )
+            cue_validate_state(model_root, state, self.cue_binary)
         serialized_packet = json.dumps(
             state.projection.model_dump(by_alias=True) if state.projection else {},
             sort_keys=True,
