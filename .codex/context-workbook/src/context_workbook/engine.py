@@ -10,11 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from .dspy_program import ContextReasoner, DspyUnavailable
-from .ingest import IngestError, load_code_intel, load_inventory, materialize_inputs
+from .ingest import load_code_intel, load_inventory, materialize_inputs
 from .models import (
-    AuthorityBinding,
     ContextDecision,
-    ContextGap,
     ContextPacket,
     ContextRequest,
     ContextState,
@@ -22,9 +20,7 @@ from .models import (
     Evidence,
     FileSelection,
     FragmentSelection,
-    PacketSelections,
     ProviderSelection,
-    RepositoryCoordinate,
     Selections,
     SourceObservation,
     WorkflowSelection,
@@ -32,6 +28,7 @@ from .models import (
     path_is_allowed,
     validate_path,
 )
+from .repository import RepositorySnapshot
 
 
 class EngineError(RuntimeError):
@@ -42,6 +39,7 @@ class EngineError(RuntimeError):
 class WorkbookConfig:
     allowed_paths: list[str]
     code_intel_files: list[str]
+    projection_ids: list[str]
     max_selected_files: int
     max_packet_bytes: int
 
@@ -75,9 +73,16 @@ def load_workbook_config(root: Path, cue_binary: str = "cue") -> WorkbookConfig:
     )
     if not isinstance(value, dict):
         raise EngineError("workbookConfig must be an object")
+    projections = _run_json(
+        [cue_binary, "export", ".", "-e", "rootSeed.projections", "--out", "json"],
+        cwd=root / ".codex/context-model",
+    )
+    if not isinstance(projections, dict):
+        raise EngineError("rootSeed.projections must be an object")
     return WorkbookConfig(
         allowed_paths=[str(item) for item in value["allowedPaths"]],
         code_intel_files=[str(item) for item in value["codeIntelFiles"]],
+        projection_ids=sorted(str(item) for item in projections),
         max_selected_files=int(value["limits"]["maxSelectedFiles"]),
         max_packet_bytes=int(value["limits"]["maxPacketBytes"]),
     )
@@ -107,21 +112,47 @@ def build_request(
     )
 
 
-def _declared_paths(root: Path, inventory: Any, code_intel: dict[str, Any]) -> list[str]:
+def _validate_request_against_config(request: ContextRequest, config: WorkbookConfig) -> None:
+    if request.repository.repository != "fatb4f/dotfiles" or request.repository.root != ".":
+        raise EngineError("request repository coordinate does not match the workbook repository")
+    if not request.allowed_paths:
+        raise EngineError("request must retain at least one configured path boundary")
+    widened_paths = [
+        path for path in request.allowed_paths if not path_is_allowed(path, config.allowed_paths)
+    ]
+    if widened_paths:
+        raise EngineError(f"request widens configured path boundary: {sorted(widened_paths)}")
+    if not request.requested_projection_ids:
+        raise EngineError("request must select at least one configured projection")
+    unknown_projections = set(request.requested_projection_ids) - set(config.projection_ids)
+    if unknown_projections:
+        raise EngineError(
+            f"request selects unknown projections: {sorted(unknown_projections)}"
+        )
+
+
+def _declared_paths(
+    snapshot: RepositorySnapshot, inventory: Any, code_intel: dict[str, Any]
+) -> list[str]:
     paths: set[str] = set()
     for fragment in inventory.fragments.values():
         source = fragment.source_ref.get("path")
         if isinstance(source, str):
             paths.add(source)
-    workflow = code_intel.get(
-        ".codex/plugins/code-intel/reference/workflows/lua-first/workflow.json", {}
+    workflow = next(
+        (
+            document
+            for document in code_intel.values()
+            if isinstance(document, dict) and isinstance(document.get("entrypoints"), list)
+        ),
+        {},
     )
     if isinstance(workflow, dict):
         for entrypoint in workflow.get("entrypoints", []):
             path = entrypoint.get("path")
             if isinstance(path, str):
                 paths.add(path)
-    return sorted(path for path in paths if (root / path).exists())
+    return sorted(path for path in paths if snapshot.is_file(path))
 
 
 def _selection_items(decision: ContextDecision) -> Selections:
@@ -163,7 +194,7 @@ def _selection_items(decision: ContextDecision) -> Selections:
 
 def _validate_decision(
     *,
-    root: Path,
+    snapshot: RepositorySnapshot,
     request: ContextRequest,
     inventory: Any,
     decision: ContextDecision,
@@ -184,12 +215,7 @@ def _validate_decision(
         validate_path(relative)
         if not path_is_allowed(relative, request.allowed_paths):
             raise EngineError(f"DSPy selected file outside request boundary: {relative}")
-        path = (root / relative).resolve(strict=True)
-        try:
-            path.relative_to(root.resolve(strict=True))
-        except ValueError as error:
-            raise EngineError(f"DSPy selected path escape: {relative}") from error
-        if not path.is_file():
+        if not snapshot.is_file(relative):
             raise EngineError(f"DSPy selected non-file path: {relative}")
 
 
@@ -343,15 +369,18 @@ class ContextEngine:
 
     def run(self, *, request: ContextRequest, reasoner: ContextReasoner) -> EngineResult:
         config = load_workbook_config(self.root, self.cue_binary)
-        inventory = load_inventory(self.root, self.cue_binary)
-        code_intel = load_code_intel(self.root)
-        declared_paths = _declared_paths(self.root, inventory, code_intel)
+        _validate_request_against_config(request, config)
+        snapshot = RepositorySnapshot.resolve(self.root, request.repository.revision)
+        inventory = load_inventory(snapshot, self.cue_binary)
+        code_intel = load_code_intel(snapshot, config.code_intel_files)
+        declared_paths = _declared_paths(snapshot, inventory, code_intel)
         materialized = materialize_inputs(
-            root=self.root,
             prompt=request.prompt,
-            revision=request.repository.revision,
+            requested_revision=snapshot.requested_revision,
+            resolved_revision=snapshot.resolved_revision,
             inventory=inventory,
             selected_paths=declared_paths,
+            code_intel=code_intel,
         )
         decision = reasoner.establish(
             request=request,
@@ -361,7 +390,7 @@ class ContextEngine:
             code_intel=materialized.code_intel,
         )
         _validate_decision(
-            root=self.root,
+            snapshot=snapshot,
             request=request,
             inventory=inventory,
             decision=decision,
@@ -464,6 +493,23 @@ def fail_closed_decision(message: str) -> ContextDecision:
             "sufficiencyReasons": ["DSPy context establishment did not run."],
         }
     )
+
+
+class FailClosedProgram:
+    def __init__(self, message: str) -> None:
+        self._decision = fail_closed_decision(message)
+
+    def establish(self, **_: object) -> ContextDecision:
+        return self._decision
+
+
+def production_reasoner_or_fail_closed() -> ContextReasoner:
+    from .dspy_program import production_reasoner
+
+    try:
+        return production_reasoner()
+    except DspyUnavailable as error:
+        return FailClosedProgram(str(error))
 
 
 def establish_context(

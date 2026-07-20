@@ -8,6 +8,8 @@ This directory is the canonical executable program for Issue #54.
 - `workbook_cli.py` executes the same DAG without a browser.
 - recorded decisions are accepted only with `CONTEXT_WORKBOOK_TEST_MODE=1`.
 - missing DSPy configuration produces a typed blocking gap; it never activates the removed lexical classifier.
+- repository inputs are read from the immutable commit resolved by the request revision.
+- request-file paths and projection IDs may narrow, but never widen, the CUE workbook configuration.
 
 ## Bootstrap
 
@@ -16,6 +18,8 @@ uv sync --project .codex/context-workbook
 ```
 
 Production execution requires `CONTEXT_WORKBOOK_DSPY_MODEL` and the credentials required by that DSPy LM.
+Installed resolver adapters discover the workbook from the active Git worktree; automation may set
+`CONTEXT_WORKBOOK_REPO_ROOT` explicitly when the invocation directory is outside that worktree.
 
 ## Validation
 

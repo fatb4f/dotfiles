@@ -4,17 +4,18 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .models import (
-    AuthorityBinding,
     ContextInventory,
     Evidence,
     SourceObservation,
     digest_value,
 )
+from .repository import RepositorySnapshot
 
 
 class IngestError(RuntimeError):
@@ -30,48 +31,46 @@ class MaterializedInputs:
     node_digests: dict[str, str]
 
 
-_CODE_INTEL_FILES = (
-    ".codex/plugins/code-intel/reference/lsp/provider-routing.json",
-    ".codex/plugins/code-intel/reference/mcp/tool-registry.json",
-    ".codex/plugins/code-intel/reference/workflows/lua-first/workflow.json",
-)
-
-
-def _read_json(root: Path, relative: str) -> object:
-    path = (root / relative).resolve(strict=True)
-    try:
-        path.relative_to(root.resolve(strict=True))
-    except ValueError as error:
-        raise IngestError(f"path escapes repository: {relative}") from error
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def load_inventory(root: Path, cue_binary: str = "cue") -> ContextInventory:
+def load_inventory(snapshot: RepositorySnapshot, cue_binary: str = "cue") -> ContextInventory:
     """Export the authoritative inventory from CUE through the pinned CLI."""
     import subprocess
 
-    model_root = root / ".codex/context-model"
-    process = subprocess.run(
-        [cue_binary, "export", ".", "-e", "rootSeed.inventory", "--out", "json"],
-        cwd=model_root,
-        check=False,
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
+    with tempfile.TemporaryDirectory(prefix="context-workbook-cue-") as temporary:
+        model_root = snapshot.materialize_cue_package(
+            ".codex/context-model", Path(temporary)
+        )
+        process = subprocess.run(
+            [cue_binary, "export", ".", "-e", "rootSeed.inventory", "--out", "json"],
+            cwd=model_root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
     if process.returncode != 0:
         raise IngestError(process.stderr.strip() or "CUE inventory export failed")
     value = json.loads(process.stdout)
     return ContextInventory.model_validate(value)
 
 
-def load_code_intel(root: Path) -> dict[str, Any]:
+def load_code_intel(
+    snapshot: RepositorySnapshot, declared_files: list[str]
+) -> dict[str, Any]:
     """Load only the declared read-only code-intel files."""
-    return {path: _read_json(root, path) for path in _CODE_INTEL_FILES}
+    return {path: json.loads(snapshot.read_text(path)) for path in declared_files}
 
 
 def match_code_intel_paths(code_intel: dict[str, Any], paths: list[str]) -> dict[str, list[str]]:
-    routing = code_intel[_CODE_INTEL_FILES[0]]
+    routing = next(
+        (
+            document
+            for document in code_intel.values()
+            if isinstance(document, dict) and isinstance(document.get("routes"), list)
+        ),
+        None,
+    )
+    if routing is None:
+        raise IngestError("declared code-intel inputs contain no provider routing document")
     matches: dict[str, list[str]] = {}
     for route in routing.get("routes", []):
         route_matches = [
@@ -84,13 +83,13 @@ def match_code_intel_paths(code_intel: dict[str, Any], paths: list[str]) -> dict
 
 def materialize_inputs(
     *,
-    root: Path,
     prompt: str,
-    revision: str,
+    requested_revision: str,
+    resolved_revision: str,
     inventory: ContextInventory,
     selected_paths: list[str],
+    code_intel: dict[str, Any],
 ) -> MaterializedInputs:
-    code_intel = load_code_intel(root)
     path_matches = match_code_intel_paths(code_intel, selected_paths)
 
     observations: dict[str, SourceObservation] = {
@@ -112,7 +111,8 @@ def materialize_inputs(
                 "kind": "repository",
                 "subject": "fatb4f/dotfiles",
                 "facts": {
-                    "revision": revision,
+                    "requestedRevision": requested_revision,
+                    "resolvedRevision": resolved_revision,
                     "selectedPaths": selected_paths,
                     "selectedPathDigest": digest_value(selected_paths),
                 },
@@ -129,7 +129,7 @@ def materialize_inputs(
                 "kind": "provider",
                 "subject": "code-intel",
                 "facts": {
-                    "declaredFiles": list(_CODE_INTEL_FILES),
+                    "declaredFiles": sorted(code_intel),
                     "digest": digest_value(code_intel),
                     "pathMatches": path_matches,
                 },
@@ -180,7 +180,13 @@ def materialize_inputs(
     node_digests = {
         "inventory": digest_value(inventory.model_dump(by_alias=True)),
         "prompt": digest_value(prompt),
-        "repository": digest_value({"revision": revision, "paths": selected_paths}),
+        "repository": digest_value(
+            {
+                "requestedRevision": requested_revision,
+                "resolvedRevision": resolved_revision,
+                "paths": selected_paths,
+            }
+        ),
         "code-intel": digest_value(code_intel),
         "materialized-evidence": digest_value(
             {

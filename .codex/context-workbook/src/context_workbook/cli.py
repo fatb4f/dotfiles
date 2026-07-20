@@ -10,17 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .dspy_program import DspyUnavailable, RecordedContextProgram, production_reasoner
-from .engine import build_request, fail_closed_decision, load_workbook_config
-from .models import ContextDecision
-
-
-class _FailClosedProgram:
-    def __init__(self, message: str) -> None:
-        self._decision = fail_closed_decision(message)
-
-    def establish(self, **_: object) -> ContextDecision:
-        return self._decision
+from .dspy_program import RecordedContextProgram
+from .engine import build_request, load_workbook_config, production_reasoner_or_fail_closed
 
 
 def _run_workbook(app: Any, definitions: dict[str, Any]) -> dict[str, Any]:
@@ -35,12 +26,8 @@ def _reasoner_from_args(recorded_decision: Path | None):
     if recorded_decision is None and os.environ.get("CONTEXT_WORKBOOK_RECORDED_DECISION"):
         recorded_decision = Path(os.environ["CONTEXT_WORKBOOK_RECORDED_DECISION"])
     if recorded_decision is not None:
-        os.environ["CONTEXT_WORKBOOK_TEST_MODE"] = "1"
         return RecordedContextProgram.from_path(recorded_decision)
-    try:
-        return production_reasoner()
-    except DspyUnavailable as error:
-        return _FailClosedProgram(str(error))
+    return production_reasoner_or_fail_closed()
 
 
 def _dispatch(app: Any) -> int:

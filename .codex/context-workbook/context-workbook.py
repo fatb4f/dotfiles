@@ -61,8 +61,11 @@ def _(
     revision_input,
     run_context,
 ):
-    from context_workbook.dspy_program import production_reasoner
-    from context_workbook.engine import build_request, load_workbook_config
+    from context_workbook.engine import (
+        build_request,
+        load_workbook_config,
+        production_reasoner_or_fail_closed,
+    )
 
     root = Path(repo_root).resolve(strict=True)
     should_run = execution_mode == "browserless" or run_context.value
@@ -77,7 +80,9 @@ def _(
         request = ContextRequest.model_validate(request_payload)
     else:
         request = None
-    reasoner = context_reasoner or (production_reasoner() if should_run else None)
+    reasoner = context_reasoner or (
+        production_reasoner_or_fail_closed() if should_run else None
+    )
     engine = ContextEngine(root=root, cue_binary=cue_binary)
     return engine, reasoner, request, should_run
 

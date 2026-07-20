@@ -3,27 +3,47 @@ set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd -P)
 plugin_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
-repo_root=$(CDPATH= cd -- "$plugin_root/../../.." && pwd -P)
-runner="$repo_root/.codex/context-workbook/run-context-workbook"
 
-[ -f "$runner" ] || {
-	printf '%s\n' 'agent-context-resolver: context workbook runner unavailable' >&2
-	exit 2
+find_repo_root() {
+	if [ -n "${CONTEXT_WORKBOOK_REPO_ROOT:-}" ] &&
+		[ -f "$CONTEXT_WORKBOOK_REPO_ROOT/.codex/context-workbook/run-context-workbook" ]; then
+		CDPATH= cd -- "$CONTEXT_WORKBOOK_REPO_ROOT" && pwd -P
+		return
+	fi
+	if command -v git >/dev/null 2>&1; then
+		candidate=$(git -C "${PWD:-.}" rev-parse --show-toplevel 2>/dev/null || :)
+		if [ -n "$candidate" ] &&
+			[ -f "$candidate/.codex/context-workbook/run-context-workbook" ]; then
+			CDPATH= cd -- "$candidate" && pwd -P
+			return
+		fi
+	fi
+	candidate=$(CDPATH= cd -- "$plugin_root/../../.." 2>/dev/null && pwd -P || :)
+	if [ -n "$candidate" ] &&
+		[ -f "$candidate/.codex/context-workbook/run-context-workbook" ]; then
+		printf '%s\n' "$candidate"
+		return
+	fi
+	return 1
 }
+
+repo_root=$(find_repo_root || :)
+runner=${repo_root:+$repo_root/.codex/context-workbook/run-context-workbook}
 
 input_json=$(mktemp "${TMPDIR:-/tmp}/agent-context-resolver.XXXXXX.json")
 output_json=$(mktemp "${TMPDIR:-/tmp}/agent-context-resolver.XXXXXX.out")
 trap 'rm -f "$input_json" "$output_json"' EXIT HUP INT TERM
 cat >"$input_json"
 
-if sh "$runner" --repo-root "$repo_root" --hook <"$input_json" >"$output_json"; then
+if [ -n "$runner" ] &&
+	sh "$runner" --repo-root "$repo_root" --hook <"$input_json" >"$output_json"; then
 	cat "$output_json"
 	exit 0
 fi
 
 # Transport-level fail-closed response. No context selection or lexical fallback
 # occurs here; the absence of the canonical workbook is represented explicitly.
-printf '%s\n' 'agent-context-resolver: canonical context workbook failed closed' >&2
+printf '%s\n' 'agent-context-resolver: canonical context workbook unavailable or failed closed' >&2
 python3 - <<'PY'
 import json
 payload = {

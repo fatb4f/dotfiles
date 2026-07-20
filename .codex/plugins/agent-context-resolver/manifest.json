@@ -3,7 +3,7 @@
   "id": "dotfiles.agent-context-resolver",
   "repo": "fatb4f/dotfiles",
   "runtime": {
-    "requires": ["sh", "python3", "cue"],
+    "requires": ["sh", "python3", "cue", "git"],
     "externalRepos": false,
     "cueAtRuntime": true,
     "canonicalWorkbook": ".codex/context-workbook/context-workbook.py",
