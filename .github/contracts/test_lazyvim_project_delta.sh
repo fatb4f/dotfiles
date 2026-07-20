@@ -2,7 +2,8 @@
 set -euo pipefail
 
 repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
-contracts_dir="$repo_root/.github/contracts"
+github_dir="$repo_root/.github"
+contracts_dir="$github_dir/contracts"
 schema_file="$contracts_dir/lazyvim_project_delta.cue"
 
 command -v cue >/dev/null 2>&1 || {
@@ -10,15 +11,18 @@ command -v cue >/dev/null 2>&1 || {
 	exit 1
 }
 
-cue vet "$contracts_dir"
-cue export "$contracts_dir" -e _lazyVimProjectDeltaSchemaWitness --out json >/dev/null
+(
+	cd "$github_dir"
+	cue vet ./contracts
+	cue export ./contracts -e _lazyVimProjectDeltaSchemaWitness --out json >/dev/null
+)
 
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 mkdir -p "$work/cue.mod"
 cat >"$work/cue.mod/module.cue" <<'CUE'
 module: "example.com/lazyvim-project-delta-test"
-language: version: "v0.18.0"
+language: version: "v0.17.0"
 CUE
 cp "$schema_file" "$work/lazyvim_project_delta.cue"
 cat >"$work/primitives.cue" <<'CUE'
