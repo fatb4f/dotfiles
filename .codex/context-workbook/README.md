@@ -1,0 +1,35 @@
+# Dotfiles context workbook
+
+This directory is the canonical executable program for Issue #54.
+
+- `.codex/context-model` is the provisional CUE authority.
+- `context-workbook.py` is the Marimo reactive DAG.
+- `context_workbook.dspy_program.DspyContextProgram` performs context inference.
+- `workbook_cli.py` executes the same DAG without a browser.
+- recorded decisions are accepted only with `CONTEXT_WORKBOOK_TEST_MODE=1`.
+- missing DSPy configuration produces a typed blocking gap; it never activates the removed lexical classifier.
+
+## Bootstrap
+
+```sh
+uv sync --project .codex/context-workbook
+```
+
+Production execution requires `CONTEXT_WORKBOOK_DSPY_MODEL` and the credentials required by that DSPy LM.
+
+## Validation
+
+```sh
+bash .github/scripts/context-workbook-test.sh
+```
+
+## Projection regeneration
+
+```sh
+uv run --project .codex/context-workbook -- \
+  python -m context_workbook.projections --repo-root .
+```
+
+## Evidence-edge containment
+
+The v0 workbook projection permits one evidence ID per hypothesis, selection, conflict, or evidence-to-observation edge. Multiple independent claims are represented as multiple typed nodes. This keeps every reactive edge independently invalidatable while remaining a valid subtype of the broader CUE root model.
