@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from context_workbook.engine import build_request, load_workbook_config
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 WORKBOOK_ROOT = REPO_ROOT / ".codex/context-workbook"
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "sufficient-decision.json"
@@ -44,6 +46,67 @@ class CliTests(unittest.TestCase):
         result = json.loads(process.stdout)
         self.assertEqual(result["schema"], "dotfiles.context-workbook-result.v0")
         self.assertEqual(result["state"]["sufficiency"]["state"], "sufficient")
+        self.assertIn("hook", result)
+        self.assertNotIn("codeIntel", result)
+
+    def test_projection_output_must_be_requested(self) -> None:
+        environment = dict(os.environ)
+        environment["CONTEXT_WORKBOOK_TEST_MODE"] = "1"
+        environment["PYTHONPATH"] = str(WORKBOOK_ROOT / "src")
+        resolver_only = subprocess.run(
+            [
+                sys.executable,
+                str(WORKBOOK_ROOT / "workbook_cli.py"),
+                "--repo-root",
+                str(REPO_ROOT),
+                "--prompt",
+                "Resolver projection only",
+                "--recorded-decision",
+                str(FIXTURE),
+                "--output",
+                "code-intel",
+            ],
+            capture_output=True,
+            text=True,
+            env=environment,
+            check=False,
+            timeout=60,
+        )
+        self.assertEqual(resolver_only.returncode, 2)
+        self.assertIn("code-intel projection was not requested", resolver_only.stderr)
+
+        request = build_request(
+            prompt="Code-intel projection only",
+            revision="HEAD",
+            config=load_workbook_config(REPO_ROOT),
+            requested_projection_ids=["code-intel"],
+        )
+        with tempfile.TemporaryDirectory(prefix="context-workbook-request-") as temporary:
+            request_path = Path(temporary) / "request.json"
+            request_path.write_text(request.model_dump_json(by_alias=True), encoding="utf-8")
+            code_intel_only = subprocess.run(
+                [
+                    sys.executable,
+                    str(WORKBOOK_ROOT / "workbook_cli.py"),
+                    "--repo-root",
+                    str(REPO_ROOT),
+                    "--request-file",
+                    str(request_path),
+                    "--recorded-decision",
+                    str(FIXTURE),
+                    "--output",
+                    "hook",
+                ],
+                capture_output=True,
+                text=True,
+                env=environment,
+                check=False,
+                timeout=60,
+            )
+        self.assertEqual(code_intel_only.returncode, 2)
+        self.assertIn(
+            "agent-context-resolver projection was not requested", code_intel_only.stderr
+        )
 
     def test_recorded_decision_requires_explicit_test_mode(self) -> None:
         environment = dict(os.environ)
@@ -77,6 +140,7 @@ class CliTests(unittest.TestCase):
         environment["CONTEXT_WORKBOOK_TEST_MODE"] = "1"
         environment["CONTEXT_WORKBOOK_RECORDED_DECISION"] = str(FIXTURE)
         environment["CONTEXT_WORKBOOK_PYTHON"] = sys.executable
+        environment.pop("CONTEXT_WORKBOOK_REPO_ROOT", None)
         with tempfile.TemporaryDirectory(prefix="resolver-install-") as temporary:
             scripts = (
                 Path(temporary)
@@ -106,8 +170,15 @@ class CliTests(unittest.TestCase):
                 timeout=60,
             )
             cli_process = subprocess.run(
-                ["sh", str(installed_cli), "--prompt", "Installed CLI"],
-                cwd=REPO_ROOT,
+                [
+                    "sh",
+                    str(installed_cli),
+                    "--cwd",
+                    str(REPO_ROOT),
+                    "--prompt",
+                    "Installed CLI",
+                ],
+                cwd=Path(temporary),
                 capture_output=True,
                 text=True,
                 env=environment,

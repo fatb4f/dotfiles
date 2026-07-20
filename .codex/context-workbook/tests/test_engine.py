@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -21,19 +23,68 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "sufficient-decision.json"
 
 
+class CapturingProgram:
+    def __init__(self, decision: ContextDecision) -> None:
+        self.decision = decision
+        self.inputs: dict[str, object] = {}
+
+    def establish(self, **inputs: object) -> ContextDecision:
+        self.inputs = inputs
+        return self.decision
+
+
 class EngineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         os.environ["CONTEXT_WORKBOOK_TEST_MODE"] = "1"
         cls.config = load_workbook_config(REPO_ROOT)
         cls.decision = ContextDecision.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
+        cls.empty_decision = ContextDecision.model_validate(
+            {
+                "hypotheses": {},
+                "fragments": {
+                    "ids": [],
+                    "reason": "No fragments are needed for this boundary test.",
+                    "evidenceIDs": ["evidence.prompt"],
+                },
+                "files": {
+                    "ids": [],
+                    "reason": "No files are needed for this boundary test.",
+                    "evidenceIDs": ["evidence.prompt"],
+                },
+                "providers": {
+                    "ids": [],
+                    "reason": "No providers are needed for this boundary test.",
+                    "evidenceIDs": ["evidence.prompt"],
+                },
+                "workflows": {
+                    "ids": [],
+                    "reason": "No workflows are needed for this boundary test.",
+                    "evidenceIDs": ["evidence.prompt"],
+                },
+                "gaps": {},
+                "conflicts": {},
+                "sufficiencyState": "sufficient",
+                "sufficiencyReasons": ["The boundary inputs are directly inspectable."],
+            }
+        )
 
-    def request(self, prompt: str = "Implement Issue 54"):
-        return build_request(prompt=prompt, revision="HEAD", config=self.config)
+    def request(
+        self,
+        prompt: str = "Implement Issue 54",
+        projection_ids: list[str] | None = None,
+    ):
+        return build_request(
+            prompt=prompt,
+            revision="HEAD",
+            config=self.config,
+            requested_projection_ids=projection_ids,
+        )
 
     def test_establishes_cue_valid_context_and_packet(self) -> None:
         result = ContextEngine(root=REPO_ROOT).run(
-            request=self.request(), reasoner=RecordedContextProgram(self.decision)
+            request=self.request(projection_ids=["agent-context-resolver", "code-intel"]),
+            reasoner=RecordedContextProgram(self.decision),
         )
         self.assertEqual(result.state.sufficiency.state, "sufficient")
         self.assertIsNotNone(result.state.projection)
@@ -44,6 +95,79 @@ class EngineTests(unittest.TestCase):
             json.loads(result.hook_projection["hookSpecificOutput"]["additionalContext"])["schema"],
             "agent.resolver-prompt-surface.v2",
         )
+
+    def test_requested_projection_ids_gate_projection_creation(self) -> None:
+        resolver = ContextEngine(root=REPO_ROOT).run(
+            request=self.request(), reasoner=RecordedContextProgram(self.decision)
+        )
+        self.assertIsNotNone(resolver.hook_projection)
+        self.assertIsNone(resolver.code_intel_projection)
+
+        code_intel = ContextEngine(root=REPO_ROOT).run(
+            request=self.request(projection_ids=["code-intel"]),
+            reasoner=RecordedContextProgram(self.decision),
+        )
+        self.assertIsNone(code_intel.hook_projection)
+        self.assertIsNotNone(code_intel.code_intel_projection)
+
+    def test_request_boundary_scopes_all_reasoner_inputs(self) -> None:
+        payload = self.request().model_dump(by_alias=True)
+        payload["allowedPaths"] = [".codex/context-model"]
+        request = ContextRequest.model_validate(payload)
+        reasoner = CapturingProgram(self.empty_decision)
+
+        result = ContextEngine(root=REPO_ROOT).run(request=request, reasoner=reasoner)
+
+        inventory = reasoner.inputs["inventory"]
+        self.assertEqual(inventory.fragments, {})
+        self.assertEqual(inventory.providers, {})
+        self.assertNotIn("lua-first", inventory.workflows)
+        self.assertEqual(reasoner.inputs["code_intel"], {})
+        observations = reasoner.inputs["observations"]
+        self.assertNotIn("provider.registry", observations)
+        self.assertEqual(
+            observations["repository.current"].facts["selectedPaths"], []
+        )
+        self.assertNotIn("evidence.code-intel", reasoner.inputs["evidence"])
+        self.assertEqual(result.state.inventory, inventory)
+
+    def test_request_boundary_filters_workflow_entries_and_provider_routes(self) -> None:
+        payload = self.request().model_dump(by_alias=True)
+        payload["allowedPaths"] = [
+            ".codex/plugins/code-intel",
+            "chezmoi/private_dot_config/nvim",
+        ]
+        request = ContextRequest.model_validate(payload)
+        reasoner = CapturingProgram(self.empty_decision)
+
+        ContextEngine(root=REPO_ROOT).run(request=request, reasoner=reasoner)
+
+        code_intel = reasoner.inputs["code_intel"]
+        workflow = code_intel[
+            ".codex/plugins/code-intel/reference/workflows/lua-first/workflow.json"
+        ]
+        self.assertTrue(workflow["entrypoints"])
+        self.assertTrue(
+            all(
+                item["path"].startswith("chezmoi/private_dot_config/nvim/")
+                for item in workflow["entrypoints"]
+            )
+        )
+        routing = code_intel[
+            ".codex/plugins/code-intel/reference/lsp/provider-routing.json"
+        ]
+        self.assertNotIn("wezterm-lua", {route["id"] for route in routing["routes"]})
+        inventory = reasoner.inputs["inventory"]
+        self.assertTrue(
+            all(
+                "wezterm" not in pattern
+                for pattern in inventory.providers["lua-language-server"].path_globs
+            )
+        )
+        selected_paths = reasoner.inputs["observations"]["repository.current"].facts[
+            "selectedPaths"
+        ]
+        self.assertFalse(any("wezterm" in path for path in selected_paths))
 
     def test_prompt_change_invalidates_dependent_nodes_only(self) -> None:
         first = ContextEngine(root=REPO_ROOT).run(
@@ -85,15 +209,93 @@ class EngineTests(unittest.TestCase):
             )
 
     def test_requested_revision_controls_inventory_materialization(self) -> None:
-        request = build_request(
-            prompt="Inspect the base revision",
-            revision="37427466cdf45c38b2d61c6e4152bf13d4699a1f",
-            config=self.config,
-        )
-        with self.assertRaisesRegex(EngineError, "unknown fragments"):
-            ContextEngine(root=REPO_ROOT).run(
-                request=request, reasoner=RecordedContextProgram(self.decision)
+        with tempfile.TemporaryDirectory(prefix="context-workbook-revision-") as temporary:
+            repository = Path(temporary) / "repository"
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    "--quiet",
+                    "--depth",
+                    "1",
+                    "--no-local",
+                    str(REPO_ROOT),
+                    str(repository),
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
             )
+            seed = repository / ".codex/context-model/seed.cue"
+            current_seed = seed.read_text(encoding="utf-8")
+            historical_seed = current_seed.replace(
+                '"code-intel.provider-routing": {',
+                '"code-intel.provider-routing-at-revision": {',
+                1,
+            )
+            self.assertNotEqual(historical_seed, current_seed)
+            seed.write_text(historical_seed, encoding="utf-8")
+            subprocess.run(
+                ["git", "add", ".codex/context-model/seed.cue"],
+                cwd=repository,
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Context Workbook Tests",
+                    "-c",
+                    "user.email=context-workbook@example.invalid",
+                    "-c",
+                    "commit.gpgSign=false",
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "historical inventory",
+                ],
+                cwd=repository,
+                check=True,
+            )
+            historical_revision = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=repository,
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            seed.write_text(current_seed, encoding="utf-8")
+            subprocess.run(
+                ["git", "add", ".codex/context-model/seed.cue"],
+                cwd=repository,
+                check=True,
+            )
+            subprocess.run(
+                [
+                    "git",
+                    "-c",
+                    "user.name=Context Workbook Tests",
+                    "-c",
+                    "user.email=context-workbook@example.invalid",
+                    "-c",
+                    "commit.gpgSign=false",
+                    "commit",
+                    "--quiet",
+                    "-m",
+                    "current inventory",
+                ],
+                cwd=repository,
+                check=True,
+            )
+            request = build_request(
+                prompt="Inspect the local historical revision",
+                revision=historical_revision,
+                config=load_workbook_config(repository),
+            )
+            with self.assertRaisesRegex(EngineError, "unknown fragments"):
+                ContextEngine(root=repository).run(
+                    request=request, reasoner=RecordedContextProgram(self.decision)
+                )
 
     def test_repository_observation_records_resolved_commit(self) -> None:
         result = ContextEngine(root=REPO_ROOT).run(

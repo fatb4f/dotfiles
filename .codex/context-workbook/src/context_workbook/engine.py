@@ -10,9 +10,15 @@ from pathlib import Path
 from typing import Any
 
 from .dspy_program import ContextReasoner, DspyUnavailable
-from .ingest import load_code_intel, load_inventory, materialize_inputs
+from .ingest import (
+    load_code_intel,
+    load_inventory,
+    materialize_inputs,
+    path_glob_intersects_allowed,
+)
 from .models import (
     ContextDecision,
+    ContextInventory,
     ContextPacket,
     ContextRequest,
     ContextState,
@@ -48,8 +54,8 @@ class WorkbookConfig:
 class EngineResult:
     state: ContextState
     trace: dict[str, str]
-    hook_projection: dict[str, Any]
-    code_intel_projection: dict[str, Any]
+    hook_projection: dict[str, Any] | None
+    code_intel_projection: dict[str, Any] | None
 
 
 def _run_json(command: list[str], *, cwd: Path, stdin: bytes | None = None) -> object:
@@ -131,8 +137,54 @@ def _validate_request_against_config(request: ContextRequest, config: WorkbookCo
         )
 
 
+def _scope_inventory(
+    inventory: ContextInventory,
+    allowed_paths: list[str],
+    code_intel: dict[str, Any],
+) -> ContextInventory:
+    fragments = {
+        fragment_id: fragment.model_dump(by_alias=True)
+        for fragment_id, fragment in inventory.fragments.items()
+        if isinstance(fragment.source_ref.get("path"), str)
+        and path_is_allowed(fragment.source_ref["path"], allowed_paths)
+    }
+    fragment_ids = set(fragments)
+    for fragment in fragments.values():
+        fragment["prerequisites"] = [
+            item for item in fragment["prerequisites"] if item in fragment_ids
+        ]
+
+    providers: dict[str, Any] = {}
+    if code_intel:
+        for provider_id, provider in inventory.providers.items():
+            value = provider.model_dump(by_alias=True)
+            value["pathGlobs"] = [
+                pattern
+                for pattern in value["pathGlobs"]
+                if path_glob_intersects_allowed(pattern, allowed_paths)
+            ]
+            if value["pathGlobs"]:
+                providers[provider_id] = value
+
+    has_workflow_entries = any(
+        isinstance(document, dict) and bool(document.get("entrypoints"))
+        for document in code_intel.values()
+    )
+    workflows = {
+        workflow_id: workflow.model_dump(by_alias=True)
+        for workflow_id, workflow in inventory.workflows.items()
+        if workflow.authority.artifact_class == "source" or has_workflow_entries
+    }
+    return ContextInventory.model_validate(
+        {"fragments": fragments, "providers": providers, "workflows": workflows}
+    )
+
+
 def _declared_paths(
-    snapshot: RepositorySnapshot, inventory: Any, code_intel: dict[str, Any]
+    snapshot: RepositorySnapshot,
+    inventory: ContextInventory,
+    code_intel: dict[str, Any],
+    allowed_paths: list[str],
 ) -> list[str]:
     paths: set[str] = set()
     for fragment in inventory.fragments.values():
@@ -152,7 +204,11 @@ def _declared_paths(
             path = entrypoint.get("path")
             if isinstance(path, str):
                 paths.add(path)
-    return sorted(path for path in paths if snapshot.is_file(path))
+    return sorted(
+        path
+        for path in paths
+        if path_is_allowed(path, allowed_paths) and snapshot.is_file(path)
+    )
 
 
 def _selection_items(decision: ContextDecision) -> Selections:
@@ -372,8 +428,13 @@ class ContextEngine:
         _validate_request_against_config(request, config)
         snapshot = RepositorySnapshot.resolve(self.root, request.repository.revision)
         inventory = load_inventory(snapshot, self.cue_binary)
-        code_intel = load_code_intel(snapshot, config.code_intel_files)
-        declared_paths = _declared_paths(snapshot, inventory, code_intel)
+        code_intel = load_code_intel(
+            snapshot, config.code_intel_files, request.allowed_paths
+        )
+        inventory = _scope_inventory(inventory, request.allowed_paths, code_intel)
+        declared_paths = _declared_paths(
+            snapshot, inventory, code_intel, request.allowed_paths
+        )
         materialized = materialize_inputs(
             prompt=request.prompt,
             requested_revision=snapshot.requested_revision,
@@ -451,8 +512,16 @@ class ContextEngine:
         return EngineResult(
             state=state,
             trace=trace,
-            hook_projection=project_hook(state),
-            code_intel_projection=project_code_intel(state),
+            hook_projection=(
+                project_hook(state)
+                if "agent-context-resolver" in request.requested_projection_ids
+                else None
+            ),
+            code_intel_projection=(
+                project_code_intel(state)
+                if "code-intel" in request.requested_projection_ids
+                else None
+            ),
         )
 
 

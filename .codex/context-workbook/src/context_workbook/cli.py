@@ -76,14 +76,22 @@ def _dispatch(app: Any) -> int:
         },
     )
     if args.hook:
+        if "hook" not in result:
+            raise RuntimeError("agent-context-resolver projection was not requested")
         print(json.dumps(result["hook"], sort_keys=True, separators=(",", ":")))
         return 0
+    requested_output = {
+        "hook": ("hook", "agent-context-resolver"),
+        "code-intel": ("codeIntel", "code-intel"),
+    }.get(args.output)
+    if requested_output is not None and requested_output[0] not in result:
+        raise RuntimeError(f"{requested_output[1]} projection was not requested")
     selection = {
         "all": result,
         "state": result["state"],
         "packet": result["state"].get("projection") or {},
-        "hook": result["hook"],
-        "code-intel": result["codeIntel"],
+        "hook": result.get("hook"),
+        "code-intel": result.get("codeIntel"),
         "trace": result["trace"],
     }[args.output]
     print(json.dumps(selection, sort_keys=True, indent=2))

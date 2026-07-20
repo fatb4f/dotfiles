@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import re
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ from .models import (
     Evidence,
     SourceObservation,
     digest_value,
+    path_is_allowed,
 )
 from .repository import RepositorySnapshot
 
@@ -53,11 +55,59 @@ def load_inventory(snapshot: RepositorySnapshot, cue_binary: str = "cue") -> Con
     return ContextInventory.model_validate(value)
 
 
+def path_glob_intersects_allowed(pattern: str, allowed_paths: list[str]) -> bool:
+    wildcard = re.search(r"[*?\[]", pattern)
+    literal = pattern if wildcard is None else pattern[: wildcard.start()]
+    if wildcard is not None:
+        literal = literal.rsplit("/", 1)[0] if "/" in literal else "."
+    candidate = literal.rstrip("/") or "."
+    return path_is_allowed(candidate, allowed_paths) or any(
+        path_is_allowed(allowed, [candidate]) for allowed in allowed_paths
+    )
+
+
+def _scope_code_intel_document(document: Any, allowed_paths: list[str]) -> Any:
+    if not isinstance(document, dict):
+        return document
+    scoped = dict(document)
+    if isinstance(document.get("entrypoints"), list):
+        scoped["entrypoints"] = [
+            entrypoint
+            for entrypoint in document["entrypoints"]
+            if isinstance(entrypoint, dict)
+            and isinstance(entrypoint.get("path"), str)
+            and path_is_allowed(entrypoint["path"], allowed_paths)
+        ]
+    if isinstance(document.get("routes"), list):
+        routes = []
+        for route in document["routes"]:
+            if not isinstance(route, dict):
+                continue
+            globs = [
+                glob
+                for glob in route.get("globs", [])
+                if isinstance(glob, str)
+                and path_glob_intersects_allowed(glob, allowed_paths)
+            ]
+            if globs:
+                routes.append({**route, "globs": globs})
+        scoped["routes"] = routes
+    return scoped
+
+
 def load_code_intel(
-    snapshot: RepositorySnapshot, declared_files: list[str]
+    snapshot: RepositorySnapshot,
+    declared_files: list[str],
+    allowed_paths: list[str],
 ) -> dict[str, Any]:
-    """Load only the declared read-only code-intel files."""
-    return {path: json.loads(snapshot.read_text(path)) for path in declared_files}
+    """Load and scope declared read-only code-intel files to the request boundary."""
+    return {
+        path: _scope_code_intel_document(
+            json.loads(snapshot.read_text(path)), allowed_paths
+        )
+        for path in declared_files
+        if path_is_allowed(path, allowed_paths)
+    }
 
 
 def match_code_intel_paths(code_intel: dict[str, Any], paths: list[str]) -> dict[str, list[str]]:
@@ -70,7 +120,7 @@ def match_code_intel_paths(code_intel: dict[str, Any], paths: list[str]) -> dict
         None,
     )
     if routing is None:
-        raise IngestError("declared code-intel inputs contain no provider routing document")
+        return {}
     matches: dict[str, list[str]] = {}
     for route in routing.get("routes", []):
         route_matches = [
@@ -124,7 +174,9 @@ def materialize_inputs(
                 },
             }
         ),
-        "provider.registry": SourceObservation.model_validate(
+    }
+    if code_intel:
+        observations["provider.registry"] = SourceObservation.model_validate(
             {
                 "kind": "provider",
                 "subject": "code-intel",
@@ -140,8 +192,7 @@ def materialize_inputs(
                     "claimAuthority": "none",
                 },
             }
-        ),
-    }
+        )
     evidence = {
         "evidence.prompt": Evidence.model_validate(
             {
@@ -165,7 +216,9 @@ def materialize_inputs(
                 },
             }
         ),
-        "evidence.code-intel": Evidence.model_validate(
+    }
+    if code_intel:
+        evidence["evidence.code-intel"] = Evidence.model_validate(
             {
                 "summary": "Declared code-intel registries were loaded as read-only evidence.",
                 "observationIDs": ["provider.registry"],
@@ -175,8 +228,7 @@ def materialize_inputs(
                     "claimAuthority": "candidate",
                 },
             }
-        ),
-    }
+        )
     node_digests = {
         "inventory": digest_value(inventory.model_dump(by_alias=True)),
         "prompt": digest_value(prompt),

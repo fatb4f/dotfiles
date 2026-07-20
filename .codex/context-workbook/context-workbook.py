@@ -95,9 +95,11 @@ def _(engine, reasoner, request, should_run):
             "schema": "dotfiles.context-workbook-result.v0",
             "state": engine_result.state.model_dump(by_alias=True, exclude_none=True),
             "trace": engine_result.trace,
-            "hook": engine_result.hook_projection,
-            "codeIntel": engine_result.code_intel_projection,
         }
+        if engine_result.hook_projection is not None:
+            workbook_result["hook"] = engine_result.hook_projection
+        if engine_result.code_intel_projection is not None:
+            workbook_result["codeIntel"] = engine_result.code_intel_projection
     else:
         workbook_result = {
             "schema": "dotfiles.context-workbook-result.v0",
