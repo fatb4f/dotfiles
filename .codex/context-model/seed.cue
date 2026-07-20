@@ -7,6 +7,7 @@ rootSeed: #ContextModel & {
 			"fixture_parity",
 			"projection_parity",
 			"authority_mapping",
+			"workbook_parity",
 		]
 	}
 	inventory: {
@@ -22,14 +23,25 @@ rootSeed: #ContextModel & {
 					sourceRef: path: ".codex/plugins/agent-context-resolver/SKILL.md"
 				}
 			}
-			"resolver.prompt-routing": {
-				summary: "Prompt and repository request materialization for workbook context establishment."
-				sourceRef: path: ".codex/plugins/agent-context-resolver/generated/prompt_routes.json"
+			"resolver.context-workbook": {
+				summary: "Canonical Marimo reactive DAG and DSPy context-establishment program."
+				sourceRef: path: ".codex/context-workbook/context-workbook.py"
 				prerequisites: ["resolver.lifecycle"]
 				authority: {
 					semanticRole:   "workflow"
+					artifactClass:  "source"
+					claimAuthority: "root"
+					sourceRef: path: ".codex/context-workbook/context-workbook.py"
+				}
+			}
+			"resolver.prompt-routing": {
+				summary: "Legacy lexical route projection retained only as migration evidence."
+				sourceRef: path: ".codex/plugins/agent-context-resolver/generated/prompt_routes.json"
+				prerequisites: ["resolver.lifecycle"]
+				authority: {
+					semanticRole:   "evidence"
 					artifactClass:  "generated_projection"
-					claimAuthority: "candidate"
+					claimAuthority: "none"
 					sourceRef: path: ".codex/plugins/agent-context-resolver/generated/prompt_routes.json"
 				}
 			}
@@ -119,7 +131,7 @@ rootSeed: #ContextModel & {
 		"agent-context-resolver": {
 			kind:         "agent_context_resolver"
 			packageRoot:  ".codex/plugins/agent-context-resolver"
-			outputSchema: "agent.resolver-prompt-surface.v1"
+			outputSchema: "agent.resolver-prompt-surface.v2"
 			browserless:  true
 			authority: {
 				semanticRole:   "workflow"
@@ -130,8 +142,8 @@ rootSeed: #ContextModel & {
 		"code-intel": {
 			kind:         "code_intel"
 			packageRoot:  ".codex/plugins/code-intel"
-			outputSchema: "dotfiles.code-intel-reference.v0"
-			browserless:  false
+			outputSchema: "dotfiles.code-intel-context.v0"
+			browserless:  true
 			authority: {
 				semanticRole:   "evidence"
 				artifactClass:  "generated_projection"
