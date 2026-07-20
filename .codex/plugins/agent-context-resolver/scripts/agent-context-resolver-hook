@@ -6,7 +6,7 @@ plugin_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
 repo_root=$(CDPATH= cd -- "$plugin_root/../../.." && pwd -P)
 runner="$repo_root/.codex/context-workbook/run-context-workbook"
 
-[ -x "$runner" ] || {
+[ -f "$runner" ] || {
 	printf '%s\n' 'agent-context-resolver: context workbook runner unavailable' >&2
 	exit 2
 }
@@ -16,7 +16,7 @@ output_json=$(mktemp "${TMPDIR:-/tmp}/agent-context-resolver.XXXXXX.out")
 trap 'rm -f "$input_json" "$output_json"' EXIT HUP INT TERM
 cat >"$input_json"
 
-if "$runner" --repo-root "$repo_root" --hook <"$input_json" >"$output_json"; then
+if sh "$runner" --repo-root "$repo_root" --hook <"$input_json" >"$output_json"; then
 	cat "$output_json"
 	exit 0
 fi
