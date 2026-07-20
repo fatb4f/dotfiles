@@ -1,6 +1,6 @@
 package impl
 
-// Compatibility entrypoint for the lattice TDD/BDD constructor package.
+// Compatibility entrypoint for the repository-local TDD/BDD constructor package.
 //
 // The implementation is intentionally split by surface:
 // - kernel.cue: bounded vocabulary, resource/operation/evidence graph, closure, no-widening proofs
