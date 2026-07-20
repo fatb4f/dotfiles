@@ -19,36 +19,28 @@ echo "$cases_json" | jq -c '.[]' | while read -r case; do
   id="$(jq -r '.id' <<<"$case")"
   kind="$(jq -r '.command.kind' <<<"$case")"
   expected_failure="$(jq -r '.command.expectedFailure' <<<"$case")"
-
   mapfile -t argv < <(jq -r '.command.argv[]' <<<"$case")
-
   stdout="$tmpdir/$id.out"
   stderr="$tmpdir/$id.err"
-
   printf 'Processing: case=%s kind=%s\n' "$id" "$kind"
-
   if [[ "$kind" == "cue-export-expected-failure" && "$expected_failure" == "true" ]]; then
     if "${argv[@]}" >"$stdout" 2>"$stderr"; then
       echo "FAIL: expected failure, but command succeeded: $id"
       cat "$stdout"
       exit 1
     fi
-
     echo "PASS: expected failure observed: $id"
     continue
   fi
-
   if [[ ( "$kind" == "cue-export-expected-success" || "$kind" == "cue-export-package-expected-success" ) && "$expected_failure" == "false" ]]; then
     if ! "${argv[@]}" >"$stdout" 2>"$stderr"; then
       echo "FAIL: expected success, but command failed: $id"
       cat "$stderr"
       exit 1
     fi
-
     echo "PASS: expected success observed: $id"
     continue
   fi
-
   echo "FAIL: unsupported validation command signature: $kind"
   exit 1
 done
@@ -60,6 +52,7 @@ echo "==> Validating nested context-model module"
 cd "$REPO_ROOT/.codex/context-model"
 cue vet .
 cue export . -e rootSeed --out json >"$tmpdir/context-model-root-seed.json"
+cue export . -e workbookConfig --out json >"$tmpdir/context-model-workbook-config.json"
 cue vet ./fixtures/positive
 cue export ./fixtures/positive -e minimal --out json >"$tmpdir/context-model-positive.json"
 
@@ -69,13 +62,11 @@ while IFS= read -r fixture_dir; do
   fixture_id="${fixture_dir##*/}"
   stdout="$tmpdir/context-model-$fixture_id.out"
   stderr="$tmpdir/context-model-$fixture_id.err"
-
   if cue vet "./$fixture_dir" >"$stdout" 2>"$stderr"; then
     echo "FAIL: expected context-model fixture failure, but validation succeeded: $fixture_id"
     cat "$stdout"
     exit 1
   fi
-
   echo "PASS: expected context-model fixture failure observed: $fixture_id"
 done < <(find fixtures/negative -mindepth 1 -maxdepth 1 -type d -print | sort)
 
