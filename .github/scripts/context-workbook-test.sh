@@ -51,7 +51,7 @@ echo "==> Exercise production fail-closed path without a configured DSPy LM"
 env -u CONTEXT_WORKBOOK_DSPY_MODEL \
   -u CONTEXT_WORKBOOK_RECORDED_DECISION \
   CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
-  "$WORKBOOK_ROOT/run-context-workbook" \
+  sh "$WORKBOOK_ROOT/run-context-workbook" \
   --repo-root "$REPO_ROOT" \
   --prompt "No configured model" \
   --revision HEAD \
