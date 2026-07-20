@@ -13,7 +13,7 @@ export CONTEXT_WORKBOOK_CUE="${CONTEXT_WORKBOOK_CUE:-cue}"
 
 cd "$REPO_ROOT"
 
-echo "==> Validate DSPy service CUE transport fixtures"
+echo "==> Validate transport-neutral DSPy inference CUE fixtures"
 fixture_work="$(mktemp -d "${TMPDIR:-/tmp}/dspy-service-fixtures.XXXXXX")"
 cleanup_fixture_work() {
   rm -rf -- "$fixture_work"
@@ -21,6 +21,7 @@ cleanup_fixture_work() {
 trap cleanup_fixture_work EXIT
 
 "$PYTHON_BIN" - "$DSPY_SERVICE_FIXTURES" "$DSPY_SERVICE_REVIEW_REGRESSIONS" "$fixture_work" <<'PY2'
+import copy
 import json
 import sys
 from pathlib import Path
@@ -31,25 +32,26 @@ output_root = Path(sys.argv[3])
 corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
 regressions = json.loads(regressions_path.read_text(encoding="utf-8"))
 valid = corpus["valid"]
-for mutation in regressions["validServiceConfigMutations"]:
-    target = valid["serviceConfig"]
-    for part in mutation["path"][:-1]:
-        target = target[part]
-    target[mutation["path"][-1]] = mutation["value"]
 for name in ("completed", "failed"):
     (output_root / f"{name}.json").write_text(
         json.dumps(valid[name], sort_keys=True), encoding="utf-8"
     )
-(output_root / "service-config.json").write_text(
-    json.dumps(valid["serviceConfig"], sort_keys=True), encoding="utf-8"
+(output_root / "backend-config.json").write_text(
+    json.dumps(valid["backendConfig"], sort_keys=True), encoding="utf-8"
 )
+surface_root = output_root / "execution-surfaces"
+surface_root.mkdir()
+for name, value in valid["executionSurfaces"].items():
+    (surface_root / f"{name}.json").write_text(
+        json.dumps(value, sort_keys=True), encoding="utf-8"
+    )
 invalid_exchange_root = output_root / "invalid-exchange"
 invalid_exchange_root.mkdir()
 for mutation in [
     *corpus["invalidMutations"],
     *regressions["invalidExchangeMutations"],
 ]:
-    value = json.loads(json.dumps(valid["completed"]))
+    value = copy.deepcopy(valid["completed"])
     target = value
     for part in mutation["path"][:-1]:
         target = target[part]
@@ -57,15 +59,26 @@ for mutation in [
     (invalid_exchange_root / f"{mutation['name']}.json").write_text(
         json.dumps(value, sort_keys=True), encoding="utf-8"
     )
-invalid_config_root = output_root / "invalid-config"
-invalid_config_root.mkdir()
-for mutation in regressions["invalidServiceConfigMutations"]:
-    value = json.loads(json.dumps(valid["serviceConfig"]))
+invalid_backend_root = output_root / "invalid-backend"
+invalid_backend_root.mkdir()
+for mutation in regressions["invalidBackendConfigMutations"]:
+    value = copy.deepcopy(valid["backendConfig"])
     target = value
     for part in mutation["path"][:-1]:
         target = target[part]
     target[mutation["path"][-1]] = mutation["value"]
-    (invalid_config_root / f"{mutation['name']}.json").write_text(
+    (invalid_backend_root / f"{mutation['name']}.json").write_text(
+        json.dumps(value, sort_keys=True), encoding="utf-8"
+    )
+invalid_surface_root = output_root / "invalid-surface"
+invalid_surface_root.mkdir()
+for mutation in regressions["invalidExecutionSurfaceMutations"]:
+    value = copy.deepcopy(valid["executionSurfaces"][mutation["surface"]])
+    target = value
+    for part in mutation["path"][:-1]:
+        target = target[part]
+    target[mutation["path"][-1]] = mutation["value"]
+    (invalid_surface_root / f"{mutation['name']}.json").write_text(
         json.dumps(value, sort_keys=True), encoding="utf-8"
     )
 PY2
@@ -74,8 +87,12 @@ PY2
   "$MODEL_ROOT" "$fixture_work/completed.json"
 "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
   "$MODEL_ROOT" "$fixture_work/failed.json"
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyServiceConfig' \
-  "$MODEL_ROOT" "$fixture_work/service-config.json"
+"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyBackendConfig' \
+  "$MODEL_ROOT" "$fixture_work/backend-config.json"
+for execution_surface in "$fixture_work"/execution-surfaces/*.json; do
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyExecutionSurfaceProjection' \
+    "$MODEL_ROOT" "$execution_surface"
+done
 "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyProviderRoutingDocument' \
   "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/lsp/provider-routing.json"
 "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyToolRegistryDocument' \
@@ -85,14 +102,21 @@ PY2
 for invalid_fixture in "$fixture_work"/invalid-exchange/*.json; do
   if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
     "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
-    echo "FAIL: invalid DSPy service fixture passed: $invalid_fixture" >&2
+    echo "FAIL: invalid DSPy inference fixture passed: $invalid_fixture" >&2
     exit 1
   fi
 done
-for invalid_fixture in "$fixture_work"/invalid-config/*.json; do
-  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyServiceConfig' \
+for invalid_fixture in "$fixture_work"/invalid-backend/*.json; do
+  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyBackendConfig' \
     "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
-    echo "FAIL: invalid DSPy service config fixture passed: $invalid_fixture" >&2
+    echo "FAIL: invalid DSPy backend config passed: $invalid_fixture" >&2
+    exit 1
+  fi
+done
+for invalid_fixture in "$fixture_work"/invalid-surface/*.json; do
+  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyExecutionSurfaceProjection' \
+    "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
+    echo "FAIL: invalid DSPy execution surface passed: $invalid_fixture" >&2
     exit 1
   fi
 done
