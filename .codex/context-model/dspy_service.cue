@@ -2,9 +2,9 @@ package contextmodel
 
 import "strings"
 
-// Provisional transport authority for an s6-supervised DSPy/Codex inference
-// service. The service proposes a candidate decision; the Marimo workbook keeps
-// authority for evidence admission, sufficiency derivation, and projection.
+// Provisional transport-neutral authority for DSPy/Codex inference. Backends
+// propose candidate decisions; the Marimo workbook retains evidence admission,
+// sufficiency derivation, and projection commitment authority.
 
 #DspyCorrelation: close({
 	sessionID: #NonEmptyString
@@ -157,7 +157,19 @@ import "strings"
 	sufficiencyReasons: [...#NonEmptyString] & [_, ...]
 })
 
-#DspyRuntimeIdentity: close({
+#DspyExecutionSurfaceKind:
+	"app_run" |
+		"stdio_oneshot" |
+		"marimo_http_sse" |
+		"typed_http_sse" |
+		"unix_socket" |
+		"a2a_http_sse"
+
+#DspyBackendKind:    "codex" | "recorded"
+#DspyCodexTransport: "openai_codex_python_sdk" | "codex_cli" | "recorded"
+#DspyThreadMode:     "fresh_ephemeral" | "not_applicable"
+
+#DspyRuntimeIdentityBase: {
 	serviceID:             #ID
 	serviceVersion:        #NonEmptyString
 	dspyProgramDigest:     #Digest
@@ -165,15 +177,32 @@ import "strings"
 	serviceConfigDigest:   #Digest
 	model:                 #NonEmptyString
 	reasoningEffort:       "minimal" | "low" | "medium" | "high" | "xhigh"
-	openaiCodexVersion:    #NonEmptyString
-	codexRuntimeVersion:   #NonEmptyString
-	transport:             "openai_codex_python_sdk"
-	sdkManagedAppServer:   true
-	persistentClient:      true
-	threadMode:            "fresh_ephemeral"
+	executionSurface:      #DspyExecutionSurfaceKind
 	threadPersisted:       false
 	parentThreadInherited: false
+}
+
+#DspyCodexRuntimeIdentity: close({
+	#DspyRuntimeIdentityBase
+	backendKind:         "codex"
+	openaiCodexVersion:  #NonEmptyString
+	codexRuntimeVersion: #NonEmptyString
+	codexTransport:      "openai_codex_python_sdk" | "codex_cli"
+	sdkManagedAppServer: bool
+	persistentClient:    bool
+	threadMode:          "fresh_ephemeral"
 })
+
+#DspyRecordedRuntimeIdentity: close({
+	#DspyRuntimeIdentityBase
+	backendKind:         "recorded"
+	codexTransport:      "recorded"
+	sdkManagedAppServer: false
+	persistentClient:    false
+	threadMode:          "not_applicable"
+})
+
+#DspyRuntimeIdentity: #DspyCodexRuntimeIdentity | #DspyRecordedRuntimeIdentity
 
 #DspyQueueState: close({
 	depth:              int & >=0
@@ -256,9 +285,8 @@ import "strings"
 	}]
 })
 
-// Validation relation joining one closed request to one closed service result.
-// It is not itself transmitted, so the relation remains open only for hidden
-// referential-integrity derivations.
+// Validation relation joining one closed request to one closed backend result.
+// It is not transmitted, so hidden referential derivations remain local.
 #DspyInferenceExchange: {
 	request: #DspyInferenceRequest
 	result: #DspyInferenceResult & {
@@ -329,24 +357,63 @@ import "strings"
 	inheritUserInstructions: false
 })
 
-#DspyServiceConfig: close({
-	schema:    "dotfiles.dspy-codex-service-config.v0"
+#DspyInferenceContract: close({
+	schema:            "dotfiles.dspy-inference-contract.v0"
+	requestSchema:     "dotfiles.dspy-inference-request.v0"
+	resultSchema:      "dotfiles.dspy-inference-result.v0"
+	oneTerminalResult: true
+	candidateOnly:     true
+	deadlineRequired:  true
+})
+
+#DspyBackendRuntimeBase: {
+	threadPersisted:       false
+	parentThreadInherited: false
+}
+
+#DspyCodexBackendRuntime: close({
+	#DspyBackendRuntimeBase
+	backendKind:         "codex"
+	codexTransport:      "openai_codex_python_sdk" | "codex_cli"
+	sdkManagedAppServer: bool
+	persistentClient:    bool
+	threadMode:          "fresh_ephemeral"
+})
+
+#DspyRecordedBackendRuntime: close({
+	#DspyBackendRuntimeBase
+	backendKind:         "recorded"
+	codexTransport:      "recorded"
+	sdkManagedAppServer: false
+	persistentClient:    false
+	threadMode:          "not_applicable"
+})
+
+#DspyBackendRuntime: #DspyCodexBackendRuntime | #DspyRecordedBackendRuntime
+
+#DspyReadinessBase: {
+	dspyProgramLoaded:    true
+	isolationApplied:     true
+	accountAuthenticated: bool
+	sdkClientInitialized: bool
+}
+
+#DspyCodexReadiness: close({
+	#DspyReadinessBase
+	accountAuthenticated: true
+	sdkClientInitialized: true
+})
+
+#DspyRecordedReadiness: close({
+	#DspyReadinessBase
+	accountAuthenticated: false
+	sdkClientInitialized: false
+})
+
+#DspyBackendConfigBase: {
+	schema:    "dotfiles.dspy-codex-backend-config.v0"
 	serviceID: "dspy-codexd"
-	socket: close({
-		name:                    #Path
-		directoryMode:           "0700"
-		socketMode:              "0600"
-		peerCredentialsRequired: true
-	})
-	protocol: close({
-		framing:       "length_prefixed_json"
-		requestSchema: "dotfiles.dspy-inference-request.v0"
-		resultSchema:  "dotfiles.dspy-inference-result.v0"
-	})
-	supervision: close({
-		manager:               "s6"
-		readinessNotification: true
-	})
+	contract:  #DspyInferenceContract
 	limits: close({
 		maxRequestBytes:    int & >=1024 & <=1048576
 		maxResponseBytes:   int & >=1024 & <=1048576
@@ -355,11 +422,70 @@ import "strings"
 		maxConcurrentTurns: int & >0 & <=16
 	})
 	isolation: #DspyServiceIsolation
-	readinessRequirements: close({
-		dspyProgramLoaded:    true
-		sdkClientInitialized: true
-		accountAuthenticated: true
-		isolationApplied:     true
-		socketListening:      true
+}
+
+#DspyCodexBackendConfig: close({
+	#DspyBackendConfigBase
+	runtime:               #DspyCodexBackendRuntime
+	readinessRequirements: #DspyCodexReadiness
+})
+
+#DspyRecordedBackendConfig: close({
+	#DspyBackendConfigBase
+	runtime:               #DspyRecordedBackendRuntime
+	readinessRequirements: #DspyRecordedReadiness
+})
+
+#DspyBackendConfig: #DspyCodexBackendConfig | #DspyRecordedBackendConfig
+
+// Backward-compatible definition name. The v0 socket-bound shape is replaced
+// by the transport-neutral backend configuration above.
+#DspyServiceConfig: #DspyBackendConfig
+
+#DspyExecutionSurfaceBase: {
+	schema:    "dotfiles.dspy-execution-surface.v0"
+	surfaceID: #ID
+	status:    "candidate" | "qualified" | "selected"
+	contract: close({
+		requestSchema: "dotfiles.dspy-inference-request.v0"
+		resultSchema:  "dotfiles.dspy-inference-result.v0"
+	})
+}
+
+#DspyAppRunSurface: close({
+	#DspyExecutionSurfaceBase
+	kind: "app_run"
+	capabilities: close({
+		crossProcess:         false
+		persistent:           false
+		streaming:            false
+		cancellable:          bool
+		localOnly:            true
+		fixedEntrypoint:      true
+		arbitraryCodeAllowed: false
+	})
+	deployment: close({
+		supervisor:            "none"
+		readinessNotification: false
 	})
 })
+
+#DspyCrossProcessSurface: close({
+	#DspyExecutionSurfaceBase
+	kind: "stdio_oneshot" | "marimo_http_sse" | "typed_http_sse" | "unix_socket" | "a2a_http_sse"
+	capabilities: close({
+		crossProcess:         true
+		persistent:           bool
+		streaming:            bool
+		cancellable:          bool
+		localOnly:            bool
+		fixedEntrypoint:      bool
+		arbitraryCodeAllowed: bool
+	})
+	deployment: close({
+		supervisor:            "s6"
+		readinessNotification: bool
+	})
+})
+
+#DspyExecutionSurfaceProjection: #DspyAppRunSurface | #DspyCrossProcessSurface
