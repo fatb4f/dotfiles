@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CUE_VERSION: v0.17.0
+      CUE_REVISION: 806821e40fae070318600a264d311517e596353b
 
     steps:
       - name: Checkout
@@ -26,7 +26,7 @@ jobs:
 
       - name: Install CUE
         run: |
-          go install cuelang.org/go/cmd/cue@${CUE_VERSION}
+          go install cuelang.org/go/cmd/cue@${CUE_REVISION}
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
       - name: Install matrix tooling

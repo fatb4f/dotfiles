@@ -2,18 +2,29 @@ package impl
 
 import (
 	"list"
-
-	lat "github.com/fatb4f/lattice/meta"
+	"strings"
 )
 
-// Shared primitive constraints are owned by the lattice domain kernel.
-#NonEmptyString:     lat.#NonEmptyString
-#NonEmptyStringList: lat.#NonEmptyStringList
-#KebabIdentifier:    lat.#KebabIdentifier
-#CueSelectorExpr:    lat.#CueSelectorExpr
-#KebabMapKeyGuard:   lat.#KebabMapKeyGuard
-#RefSet:             lat.#RefSet
-#VisibilityTier:     lat.#VisibilityTier
+// Repository-local primitive constraints keep this validation module self-contained.
+#NonEmptyString:     string & strings.MinRunes(1)
+#NonEmptyStringList: [...#NonEmptyString] & [_, ...]
+#KebabIdentifier:    #NonEmptyString & =~"^[a-z0-9]+(-[a-z0-9]+)*$"
+#CueSelectorExpr:    #NonEmptyString & =~"^[_#A-Za-z][_A-Za-z0-9]*(\\.[_A-Za-z][_A-Za-z0-9]*)*$"
+#KebabMapKeyGuard: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
+}
+#RefSet: {
+	[ID= !~"^[a-z0-9]+(-[a-z0-9]+)*$"]: {
+		_invalidMapKey: ID & #KebabIdentifier
+	}
+	[string]: true
+}
+#VisibilityTier:
+	"public" |
+	"internal" |
+	"restricted"
 
 // Codex profile vocabulary.
 #CodexActionKind:
@@ -56,12 +67,12 @@ import (
 	"proven" |
 	"requiresDestructiveProbe"
 
-// Generic lattice aliases retained for profile consumers.
+// Generic aliases retained for profile consumers.
 #ResourceRole:  #ArtifactRole
 #OperationKind: #CodexActionKind
 
-// Codex profile records refine the generic lattice domain records.
-#Artifact: lat.#Resource & close({
+// Codex profile records.
+#Artifact: close({
 	[F= !~"^(id|path|role|visibility)$"]: {
 		_invalidField: F & =~"^(id|path|role|visibility)$"
 	}
@@ -93,7 +104,7 @@ import (
 
 #Operation: #Action
 
-#Check: lat.#Gate & close({
+#Check: close({
 	[F= !~"^(id|description|required)$"]: {
 		_invalidField: F & =~"^(id|description|required)$"
 	}
@@ -105,7 +116,7 @@ import (
 
 #Gate: #Check
 
-#Evidence: lat.#Witness & close({
+#Evidence: close({
 	[F= !~"^(id|description|required)$"]: {
 		_invalidField: F & =~"^(id|description|required)$"
 	}
@@ -193,93 +204,6 @@ import (
 	evidence:  #EvidenceMap
 }
 
-// Domain-neutral state surface from the extracted lattice module.
-#LatticeObligationState:       lat.#ObligationState
-#ClosedLatticeObligationState: lat.#ClosedObligationState
-
-#ToLatticeOperation: close({
-	in: #Action
-	out: lat.#Operation & {
-		id:          in.id
-		kind:        in.kind
-		description: in.description
-
-		reads:   in.reads
-		writes:  in.writes
-		creates: in.creates
-
-		requiresGates:     in.requiresChecks
-		requiresWitnesses: in.requiresEvidence
-	}
-})
-
-#ToLatticeObligationState: close({
-	in: #CodexObligationState
-	out: lat.#ObligationState & {
-		id: in.id
-
-		resources: {
-			for artifactID, artifact in in.artifacts {
-				if artifact.role == "generatedOutput" {
-					"\(artifactID)": {
-						id:         artifact.id
-						path:       artifact.path
-						role:       lat.#GeneratedOutputResourceRole
-						visibility: artifact.visibility
-					}
-				}
-				if artifact.role != "generatedOutput" {
-					"\(artifactID)": {
-						id:         artifact.id
-						path:       artifact.path
-						role:       artifact.role
-						visibility: artifact.visibility
-					}
-				}
-			}
-		}
-		operations: {
-			for actionID, action in in.actions {
-				"\(actionID)": (#ToLatticeOperation & {in: action}).out
-			}
-		}
-		gates:     in.checks
-		witnesses: in.evidence
-	}
-})
-
-#FromLatticeOperation: close({
-	in: lat.#Operation
-	out: #Action & {
-		id:          in.id
-		kind:        in.kind & #CodexActionKind
-		description: in.description
-
-		reads:   in.reads
-		writes:  in.writes
-		creates: in.creates
-
-		requiresChecks:   in.requiresGates
-		requiresEvidence: in.requiresWitnesses
-	}
-})
-
-#FromLatticeObligationState: close({
-	in: lat.#ObligationState
-	out: #CodexObligationState & {
-		id: in.id
-
-		artifacts: in.resources
-		actions: {
-			for operationID, operation in in.operations {
-				"\(operationID)": (#FromLatticeOperation & {in: operation}).out
-			}
-		}
-		checks:   in.gates
-		evidence: in.witnesses
-	}
-})
-
 #MakeClosedObligationState: {
 	in: #CodexObligationState
 	out: #ClosedObligationState & {
@@ -318,8 +242,6 @@ import (
 		}
 	}
 }
-
-#MakeClosedLatticeObligationState: lat.#MakeClosedObligationState
 
 #StateKeySet: close({
 	state: #ClosedObligationState
@@ -369,13 +291,6 @@ import (
 				requiresEvidence: authorityRefs.requiresEvidence & targetRefs.requiresEvidence
 			}
 		}
-	}
-
-	authorityLattice: (#ToLatticeObligationState & {in: authority}).out
-	targetLattice: (#ToLatticeObligationState & {in: target}).out
-	latticeProof: lat.#NoWideningProof & {
-		authority: authorityLattice
-		target:    targetLattice
 	}
 
 	compatibility: authority & target
