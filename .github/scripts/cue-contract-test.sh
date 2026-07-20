@@ -53,6 +53,9 @@ echo "$cases_json" | jq -c '.[]' | while read -r case; do
   exit 1
 done
 
+echo "==> Running LazyVim project delta regression matrix"
+bash ./contracts/test_lazyvim_project_delta.sh
+
 echo "==> Validating nested context-model module"
 cd "$REPO_ROOT/.codex/context-model"
 cue vet .

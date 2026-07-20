@@ -1,21 +1,36 @@
 package impl
 
+import "list"
+
 // Project-owned, data-only delta projected to a trusted project .lazy.lua.
 //
 // The project delta is authority. Generated Lua is a disposable projection.
 // Plugin installation mechanisms and executable locations remain outside this
 // contract.
 
-#ExecutableName: #NonEmptyString & =~"^[A-Za-z0-9._+-]+$"
+// v1 executable references are bare PATH-resolved command names. A command may
+// not be a path, dot entry, or option-like token.
+#ExecutableName: #NonEmptyString & =~"^[A-Za-z0-9_][A-Za-z0-9._+-]*$"
 
 #ExecutableCommand: [#ExecutableName, ...#NonEmptyString]
 
+#PluginRepositoryID: #NonEmptyString &
+	=~"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+
+#LSPServerID: #NonEmptyString & =~"^[A-Za-z_][A-Za-z0-9_-]*$"
+
+#FiletypeName: #NonEmptyString & =~"^[A-Za-z0-9][A-Za-z0-9._+-]*$"
+
+// Lua 5.1/LuaJIT numbers are IEEE-754 doubles. v1 admits only integers that
+// round-trip exactly through the deterministic CUE-to-Lua projection.
+#LuaNumber: int & >=-9007199254740991 & <=9007199254740991
+
 // Values accepted by the deterministic CUE-to-Lua renderer. Functions, CUE
-// bytes, references to runtime Lua values, and raw Lua expressions are not
-// representable here.
+// bytes, references to runtime Lua values, raw Lua expressions, null, and
+// non-round-trippable numbers are not representable here.
 #LuaValue:
 	bool |
-		number |
+		#LuaNumber |
 		string |
 		[...#LuaValue] |
 		{[string]: #LuaValue}
@@ -43,12 +58,19 @@ package impl
 		_invalidField: Field & =~"^(filetypes|commands|events|opts|optsExtend)$"
 	}
 
-	filetypes?: [...#NonEmptyString]
+	filetypes?: [...#FiletypeName]
 	commands?:  [...#NonEmptyString]
 	events?:    [...#NonEmptyString]
 
 	opts?:       #LuaObject
 	optsExtend?: [...#OptionPath]
+})
+
+#PluginPatchMap: close({
+	[Repository=!~"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"]: {
+		_invalidRepository: Repository & #PluginRepositoryID
+	}
+	[string]: #PluginPatch
 })
 
 #FormatterOverride: close({
@@ -73,12 +95,33 @@ package impl
 	}
 
 	settings?:    #LuaObject
-	filetypes?:   [...#NonEmptyString]
+	filetypes?:   [...#FiletypeName]
 	rootMarkers?: [...#NonEmptyString]
 
 	// The first element is an executable name resolved from project PATH.
 	// Remaining elements are arguments and may contain paths.
 	command?: #ExecutableCommand
+})
+
+#LSPOverrideMap: close({
+	[Server=!~"^[A-Za-z_][A-Za-z0-9_-]*$"]: {
+		_invalidServer: Server & #LSPServerID
+	}
+	[string]: #LSPOverride
+})
+
+#FiletypeFormatterMap: close({
+	[Filetype=!~"^[A-Za-z0-9][A-Za-z0-9._+-]*$"]: {
+		_invalidFiletype: Filetype & #FiletypeName
+	}
+	[string]: #FormatterOverride
+})
+
+#FiletypeLinterMap: close({
+	[Filetype=!~"^[A-Za-z0-9][A-Za-z0-9._+-]*$"]: {
+		_invalidFiletype: Filetype & #FiletypeName
+	}
+	[string]: #LinterOverride
 })
 
 #LazyVimProjectDelta: close({
@@ -94,20 +137,37 @@ package impl
 
 	// Keys are canonical lazy.nvim repository identifiers. The renderer sorts
 	// keys and emits one consolidated patch per repository.
-	pluginPatches?: [string]: #PluginPatch
+	pluginPatches?: #PluginPatchMap
 
 	overrides?: close({
 		[Field=!~"^(lsp|formatters|linters)$"]: {
 			_invalidField: Field & =~"^(lsp|formatters|linters)$"
 		}
 
-		lsp?: [string]:        #LSPOverride
-		formatters?: [string]: #FormatterOverride
-		linters?: [string]:    #LinterOverride
+		lsp?:        #LSPOverrideMap
+		formatters?: #FiletypeFormatterMap
+		linters?:    #FiletypeLinterMap
 	})
 
-	// Every entry must resolve as an executable from the project environment.
-	requiredExecutables?: [...#ExecutableName]
+	// Complete, duplicate-free PATH inventory for generated executable calls.
+	requiredExecutables: [...#ExecutableName] | *[]
+	for i, executable in requiredExecutables {
+		for j, other in requiredExecutables if i < j {
+			if executable == other {
+				_duplicateExecutable: executable & !=other
+			}
+		}
+	}
+
+	if overrides != _|_ {
+		if overrides.lsp != _|_ {
+			for _, server in overrides.lsp {
+				if server.command != _|_ {
+					_commandDeclared: list.Contains(requiredExecutables, server.command[0]) & true
+				}
+			}
+		}
+	}
 })
 
 // Concrete witness for schema validation. It also documents the intended
