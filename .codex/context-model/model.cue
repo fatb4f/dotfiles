@@ -306,6 +306,18 @@ import "strings"
 	_selectedFragments: [for selection in Selected.fragments {
 		[for knownID in _fragmentInventoryIDs if knownID == selection.fragmentID {knownID}] & [_, ...]
 	}]
+	_fragmentPrerequisiteRefs: [for _, fragment in Inventory.fragments {
+		for prerequisiteID in fragment.prerequisites {
+			[for knownID in _fragmentInventoryIDs if knownID == prerequisiteID {knownID}] & [_, ...]
+		}
+	}]
+	_selectedFragmentPrerequisites: [for selection in Selected.fragments {
+		for fragmentID, fragment in Inventory.fragments if fragmentID == selection.fragmentID {
+			for prerequisiteID in fragment.prerequisites {
+				[for selected in Selected.fragments if selected.fragmentID == prerequisiteID {selected}] & [_, ...]
+			}
+		}
+	}]
 	_selectedProviders: [for selection in Selected.providers {
 		[for knownID in _providerInventoryIDs if knownID == selection.providerID {knownID}] & [_, ...]
 	}]

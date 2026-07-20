@@ -2,7 +2,45 @@
 set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd -P)
+plugin_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
 prompt=
+revision=HEAD
+requested_cwd=
+
+find_repo_root() {
+	if [ -n "$requested_cwd" ]; then
+		if command -v git >/dev/null 2>&1; then
+			candidate=$(git -C "$requested_cwd" rev-parse --show-toplevel 2>/dev/null || :)
+			if [ -n "$candidate" ] &&
+				[ -f "$candidate/.codex/context-workbook/run-context-workbook" ]; then
+				CDPATH= cd -- "$candidate" && pwd -P
+				return
+			fi
+		fi
+		return 1
+	fi
+	if [ -n "${CONTEXT_WORKBOOK_REPO_ROOT:-}" ] &&
+		[ -f "$CONTEXT_WORKBOOK_REPO_ROOT/.codex/context-workbook/run-context-workbook" ]; then
+		CDPATH= cd -- "$CONTEXT_WORKBOOK_REPO_ROOT" && pwd -P
+		return
+	fi
+	if command -v git >/dev/null 2>&1; then
+		candidate=$(git -C "${PWD:-.}" rev-parse --show-toplevel 2>/dev/null || :)
+		if [ -n "$candidate" ] &&
+			[ -f "$candidate/.codex/context-workbook/run-context-workbook" ]; then
+			CDPATH= cd -- "$candidate" && pwd -P
+			return
+		fi
+	fi
+	candidate=$(CDPATH= cd -- "$plugin_root/../../.." 2>/dev/null && pwd -P || :)
+	if [ -n "$candidate" ] &&
+		[ -f "$candidate/.codex/context-workbook/run-context-workbook" ]; then
+		printf '%s\n' "$candidate"
+		return
+	fi
+	return 1
+}
+
 while [ "$#" -gt 0 ]; do
 	case $1 in
 	--prompt)
@@ -10,8 +48,14 @@ while [ "$#" -gt 0 ]; do
 		prompt=$2
 		shift 2
 		;;
-	--cwd|--candidate)
+	--candidate)
 		[ "$#" -ge 2 ] || exit 2
+		revision=$2
+		shift 2
+		;;
+	--cwd)
+		[ "$#" -ge 2 ] || exit 2
+		requested_cwd=$2
 		shift 2
 		;;
 	*)
@@ -22,27 +66,18 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$prompt" ] || {
-	printf 'resolve-agent-context: --prompt is required\n' >&2
+	printf '%s\n' 'resolve-agent-context: --prompt is required' >&2
 	exit 2
 }
 
-output=$(
-	printf '{"hook_event_name":"UserPromptSubmit","prompt":%s}\n' \
-		"$(printf '%s' "$prompt" | jq -Rs .)" |
-		AGENT_CONTEXT_RESOLVER_PACKET=1 "$script_dir/agent-context-resolver-hook"
-)
-
-[ -n "$output" ] || {
-	printf '{}\n'
-	exit 0
+repo_root=$(find_repo_root) || {
+	printf '%s\n' 'resolve-agent-context: canonical context workbook unavailable' >&2
+	exit 2
 }
+runner="$repo_root/.codex/context-workbook/run-context-workbook"
 
-printf '%s\n' "$output" | jq -er '
-	if . == {} then
-		{}
-	elif .schema == "agent.route-controller-packet.v1" then
-		.
-	else
-		error("unexpected resolver hook output shape")
-	end
-'
+exec sh "$runner" \
+	--repo-root "$repo_root" \
+	--prompt "$prompt" \
+	--revision "$revision" \
+	--output state

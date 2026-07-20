@@ -1,23 +1,16 @@
 {
   "name": "agent-context-resolver",
-  "version": "0.1.0+codex.20260707162457",
-  "description": "Resolve repository contract fragments and compile bounded route plans.",
-  "author": {
-    "name": "fatb4f"
-  },
+  "version": "0.2.0+context-workbook",
+  "description": "Establish bounded dotfiles context through the CUE-rooted Marimo and DSPy workbook.",
+  "author": {"name": "fatb4f"},
   "skills": "./skills/",
   "interface": {
     "displayName": "Agent Context Resolver",
-    "shortDescription": "Routes dotfiles prompts to bounded context fragments.",
-    "longDescription": "Resolves dotfiles prompts against generated contract fragments and emits bounded route plans without executing routes.",
+    "shortDescription": "Projects high-fidelity context from the canonical workbook.",
+    "longDescription": "Invokes the CUE-validated Marimo reactive DAG and DSPy context program, then emits a bounded prompt-only context packet without executing routes.",
     "developerName": "fatb4f",
     "category": "Developer Tools",
-    "capabilities": [
-      "Interactive",
-      "Read"
-    ],
-    "defaultPrompt": [
-      "Resolve context for this dotfiles change."
-    ]
+    "capabilities": ["Interactive", "Read"],
+    "defaultPrompt": ["Establish bounded context for this dotfiles change."]
   }
 }
