@@ -36,7 +36,7 @@ done
 	exit 2
 }
 
-exec "$runner" \
+exec sh "$runner" \
 	--repo-root "$repo_root" \
 	--prompt "$prompt" \
 	--revision "$revision" \
