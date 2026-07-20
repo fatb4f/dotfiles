@@ -2,7 +2,7 @@ package positive
 
 import model "github.com/fatb4f/dotfiles/context-model:contextmodel"
 
-minimal: model.#ContextState & {
+#Common: model.#ContextState & {
 	request: {
 		requestID: "issue-54"
 		prompt:    "Implement the provisional CUE context model."
@@ -50,6 +50,9 @@ minimal: model.#ContextState & {
 			derivedBy:   "dspy.context-establishment"
 		}
 	}
+}
+
+base: #Common & {
 	selected: {
 		fragments: [{
 			fragmentID:  "resolver.lifecycle"
@@ -75,5 +78,26 @@ minimal: model.#ContextState & {
 		reasons:               ["The objective and bounded mutation surface are explicit."]
 		blockingGapIDs:        []
 		unresolvedConflictIDs: []
+	}
+}
+
+minimal: base & {
+	projection: {
+		schema:        "dotfiles.context-packet.v0"
+		requestID:     "issue-54"
+		contextDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+		selected: {
+			fragmentIDs: ["resolver.lifecycle"]
+			files:       [".codex/context-model/model.cue"]
+			providerIDs: []
+			workflowIDs: ["context-establishment"]
+		}
+		evidenceIDs:      ["evidence.issue-54"]
+		unresolvedGapIDs: []
+		provenance: {
+			semanticRole:   "workflow"
+			artifactClass:  "generated_projection"
+			claimAuthority: "candidate"
+		}
 	}
 }

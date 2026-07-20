@@ -2,10 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR/.."
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
+
+cd "$REPO_ROOT/.github"
 
 echo "==> Running static validation checks"
 cue vet ./contracts
@@ -50,5 +52,33 @@ echo "$cases_json" | jq -c '.[]' | while read -r case; do
   echo "FAIL: unsupported validation command signature: $kind"
   exit 1
 done
+
+echo "==> Validating nested context-model module"
+cd "$REPO_ROOT/.codex/context-model"
+cue vet .
+cue export . -e rootSeed --out json >"$tmpdir/context-model-root-seed.json"
+cue vet ./fixtures/positive
+cue export ./fixtures/positive -e minimal --out json >"$tmpdir/context-model-positive.json"
+
+negative_count=0
+while IFS= read -r fixture_dir; do
+  negative_count=$((negative_count + 1))
+  fixture_id="${fixture_dir##*/}"
+  stdout="$tmpdir/context-model-$fixture_id.out"
+  stderr="$tmpdir/context-model-$fixture_id.err"
+
+  if cue vet "./$fixture_dir" >"$stdout" 2>"$stderr"; then
+    echo "FAIL: expected context-model fixture failure, but validation succeeded: $fixture_id"
+    cat "$stdout"
+    exit 1
+  fi
+
+  echo "PASS: expected context-model fixture failure observed: $fixture_id"
+done < <(find fixtures/negative -mindepth 1 -maxdepth 1 -type d -print | sort)
+
+if (( negative_count == 0 )); then
+  echo "FAIL: no negative context-model fixtures were discovered"
+  exit 1
+fi
 
 echo "==> All CUE contract validation cases passed"

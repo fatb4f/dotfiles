@@ -1,5 +1,7 @@
 package contextmodel
 
+import "strings"
+
 // Provisional root vocabulary for the dotfiles context-establishment workbook.
 // This package is intentionally local and replaceable. It is not a generalized
 // kernel and has no dependency on CUEstrap or kernel-spec runtime artifacts.
@@ -183,16 +185,13 @@ package contextmodel
 
 #SufficiencyState: "insufficient" | "provisional" | "sufficient"
 
+// These summary IDs are bound to the complete gap and conflict maps by
+// #ContextState. They are never independently authoritative.
 #ContextSufficiency: {
 	state:                 #SufficiencyState
 	reasons:               [...#NonEmptyString] & [_, ...]
 	blockingGapIDs:        [...#ID]
 	unresolvedConflictIDs: [...#ID]
-
-	if state == "sufficient" {
-		blockingGapIDs:        []
-		unresolvedConflictIDs: []
-	}
 }
 
 #ContextPacket: {
@@ -228,53 +227,126 @@ package contextmodel
 }
 
 #ContextState: {
-	schema:    "dotfiles.context-state.v0"
-	request:   #ContextRequest
-	inventory: #ContextInventory
-	observations: [#ID]: #SourceObservation
+	schema:              "dotfiles.context-state.v0"
+	Request=request:     #ContextRequest
+	Inventory=inventory: #ContextInventory
+	Observations=observations: [#ID]: #SourceObservation
 	providerObservations: [...#ProviderObservation]
-	evidence: [#ID]:   #Evidence
-	hypotheses: [#ID]: #ContextHypothesis
-	selected: {
+	Evidence=evidence: [#ID]:     #Evidence
+	Hypotheses=hypotheses: [#ID]: #ContextHypothesis
+	Selected=selected: {
 		fragments: [...#FragmentSelection]
 		files:     [...#FileSelection]
 		providers: [...#ProviderSelection]
 		workflows: [...#WorkflowSelection]
 	}
-	gaps: [#ID]:      #ContextGap
-	conflicts: [#ID]: #ContextConflict
-	sufficiency: #ContextSufficiency
-	projection?: #ContextPacket & {requestID: request.requestID}
+	Gaps=gaps: [#ID]:           #ContextGap
+	Conflicts=conflicts: [#ID]: #ContextConflict
+
+	// Concrete key inventories are required because CUE pattern fields are open:
+	// indexing an unknown key would otherwise yield the value constraint instead
+	// of bottom. Every reference below is checked against these materialized keys.
+	_fragmentInventoryIDs: [for fragmentID, _ in Inventory.fragments {fragmentID}]
+	_providerInventoryIDs: [for providerID, _ in Inventory.providers {providerID}]
+	_workflowInventoryIDs: [for workflowID, _ in Inventory.workflows {workflowID}]
+	_observationIDs:       [for observationID, _ in Observations {observationID}]
+	_evidenceIDs:          [for evidenceID, _ in Evidence {evidenceID}]
+	_gapIDs:               [for gapID, _ in Gaps {gapID}]
+
+	// Derive the complete blocking and unresolved sets from their maps. The
+	// sufficiency summary must unify with these exact derived lists.
+	_blockingGapIDs:        [for gapID, gap in Gaps if gap.blocksSufficiency {gapID}]
+	_unresolvedConflictIDs: [for conflictID, conflict in Conflicts if conflict.resolution == "unresolved" {conflictID}]
+	sufficiency: #ContextSufficiency & {
+		blockingGapIDs:        _blockingGapIDs
+		unresolvedConflictIDs: _unresolvedConflictIDs
+	}
+	if sufficiency.state == "sufficient" {
+		_blockingGapIDs:        []
+		_unresolvedConflictIDs: []
+	}
+
+	projection?: #ContextPacket & {
+		requestID: Request.requestID
+		PacketSelected=selected: {
+			fragmentIDs: [...#ID]
+			files:       [...#Path]
+			providerIDs: [...#ID]
+			workflowIDs: [...#ID]
+		}
+		PacketEvidenceIDs=evidenceIDs: [...#ID]
+		PacketGapIDs=unresolvedGapIDs: [...#ID]
+
+		// A projected selection must already be selected in the context state.
+		_selectedFragmentRefs: [for fragmentID in PacketSelected.fragmentIDs {
+			selection: [for item in Selected.fragments if item.fragmentID == fragmentID {item}] & [_, ...]
+			inventory: [for knownID in _fragmentInventoryIDs if knownID == fragmentID {knownID}] & [_, ...]
+		}]
+		_selectedFileRefs: [for path in PacketSelected.files {
+			selection: [for item in Selected.files if item.path == path {item}] & [_, ...]
+			allowed:   [for allowedPath in Request.allowedPaths if allowedPath == "." || path == allowedPath || strings.HasPrefix(path, allowedPath + "/") {allowedPath}] & [_, ...]
+		}]
+		_selectedProviderRefs: [for providerID in PacketSelected.providerIDs {
+			selection: [for item in Selected.providers if item.providerID == providerID {item}] & [_, ...]
+			inventory: [for knownID in _providerInventoryIDs if knownID == providerID {knownID}] & [_, ...]
+		}]
+		_selectedWorkflowRefs: [for workflowID in PacketSelected.workflowIDs {
+			selection: [for item in Selected.workflows if item.workflowID == workflowID {item}] & [_, ...]
+			inventory: [for knownID in _workflowInventoryIDs if knownID == workflowID {knownID}] & [_, ...]
+		}]
+		_evidenceRefs: [for evidenceID in PacketEvidenceIDs {
+			[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]
+		}]
+		_unresolvedGapRefs: [for gapID in PacketGapIDs {
+			[for knownID in _gapIDs if knownID == gapID {knownID}] & [_, ...]
+		}]
+	}
 
 	// Referential-integrity checks are derived values, not transport fields.
-	_selectedFragments: [for selection in selected.fragments {
-		inventory.fragments[selection.fragmentID]
+	_selectedFragments: [for selection in Selected.fragments {
+		[for knownID in _fragmentInventoryIDs if knownID == selection.fragmentID {knownID}] & [_, ...]
 	}]
-	_selectedProviders: [for selection in selected.providers {
-		inventory.providers[selection.providerID]
+	_selectedProviders: [for selection in Selected.providers {
+		[for knownID in _providerInventoryIDs if knownID == selection.providerID {knownID}] & [_, ...]
 	}]
-	_selectedWorkflows: [for selection in selected.workflows {
-		inventory.workflows[selection.workflowID]
+	_selectedWorkflows: [for selection in Selected.workflows {
+		[for knownID in _workflowInventoryIDs if knownID == selection.workflowID {knownID}] & [_, ...]
+	}]
+	_selectedFileBoundaries: [for selection in Selected.files {
+		[for allowedPath in Request.allowedPaths if allowedPath == "." || selection.path == allowedPath || strings.HasPrefix(selection.path, allowedPath + "/") {allowedPath}] & [_, ...]
 	}]
 	_providerObservationRefs: [for item in providerObservations {
-		provider:    inventory.providers[item.providerID]
-		observation: observations[item.observationID]
+		provider:    [for knownID in _providerInventoryIDs if knownID == item.providerID {knownID}] & [_, ...]
+		observation: [for knownID in _observationIDs if knownID == item.observationID {knownID}] & [_, ...]
 	}]
-	_evidenceObservationRefs: [for item in evidence {
+	_evidenceObservationRefs: [for _, item in Evidence {
 		for observationID in item.observationIDs {
-			observations[observationID]
+			[for knownID in _observationIDs if knownID == observationID {knownID}] & [_, ...]
 		}
 	}]
-	_hypothesisEvidenceRefs: [for item in hypotheses {
+	_hypothesisEvidenceRefs: [for _, item in Hypotheses {
 		for evidenceID in item.evidenceIDs {
-			evidence[evidenceID]
+			[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]
 		}
 	}]
-	_blockingGapRefs: [for gapID in sufficiency.blockingGapIDs {
-		gaps[gapID] & {blocksSufficiency: true}
-	}]
-	_unresolvedConflictRefs: [for conflictID in sufficiency.unresolvedConflictIDs {
-		conflicts[conflictID] & {resolution: "unresolved"}
+	_selectionEvidenceRefs: [
+		for selection in Selected.fragments {
+			for evidenceID in selection.evidenceIDs {[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]}
+		},
+		for selection in Selected.files {
+			for evidenceID in selection.evidenceIDs {[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]}
+		},
+		for selection in Selected.providers {
+			for evidenceID in selection.evidenceIDs {[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]}
+		},
+		for selection in Selected.workflows {
+			for evidenceID in selection.evidenceIDs {[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]}
+		},
+	]
+	_conflictEvidenceRefs: [for _, item in Conflicts {
+		for evidenceID in item.evidenceIDs {
+			[for knownID in _evidenceIDs if knownID == evidenceID {knownID}] & [_, ...]
+		}
 	}]
 }
 
