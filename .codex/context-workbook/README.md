@@ -17,7 +17,10 @@ This directory is the canonical executable program for Issue #54.
 uv sync --project .codex/context-workbook
 ```
 
-Production execution requires `CONTEXT_WORKBOOK_DSPY_MODEL` and the credentials required by that DSPy LM.
+Production execution defaults to `codex/gpt-5.6-sol`; the Codex CLI reuses its cached ChatGPT login.
+`CONTEXT_WORKBOOK_DSPY_MODEL` may override the model. Direct API-backed DSPy models require their
+provider credentials, while `codex/*` models require an authenticated Codex CLI session.
+`CONTEXT_WORKBOOK_CODEX` may select a specific Codex executable.
 Installed resolver adapters discover the workbook from the active Git worktree; automation may set
 `CONTEXT_WORKBOOK_REPO_ROOT` explicitly when the invocation directory is outside that worktree.
 

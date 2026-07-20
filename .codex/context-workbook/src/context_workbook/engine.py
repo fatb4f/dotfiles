@@ -485,13 +485,16 @@ class ContextEngine:
                 selected_paths=declared_paths,
                 code_intel=code_intel,
             )
-            decision = reasoner.establish(
-                request=request,
-                inventory=inventory,
-                observations=materialized.observations,
-                evidence=materialized.evidence,
-                code_intel=materialized.code_intel,
-            )
+            try:
+                decision = reasoner.establish(
+                    request=request,
+                    inventory=inventory,
+                    observations=materialized.observations,
+                    evidence=materialized.evidence,
+                    code_intel=materialized.code_intel,
+                )
+            except DspyUnavailable as error:
+                decision = fail_closed_decision(str(error))
             _validate_decision(
                 snapshot=snapshot,
                 request=request,

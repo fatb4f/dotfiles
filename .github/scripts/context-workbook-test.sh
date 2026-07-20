@@ -47,9 +47,10 @@ assert context["sufficiency"]["state"] == "sufficient"
 assert context["context"]["schema"] == "dotfiles.context-packet.v0"
 PY
 
-echo "==> Exercise production fail-closed path without a configured DSPy LM"
-env -u CONTEXT_WORKBOOK_DSPY_MODEL \
-  -u CONTEXT_WORKBOOK_RECORDED_DECISION \
+echo "==> Exercise production fail-closed path without an available Codex CLI"
+env -u CONTEXT_WORKBOOK_RECORDED_DECISION \
+  CONTEXT_WORKBOOK_DSPY_MODEL=codex/gpt-5.6-sol \
+  CONTEXT_WORKBOOK_CODEX=/nonexistent/context-workbook-codex \
   CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
   sh "$WORKBOOK_ROOT/run-context-workbook" \
   --repo-root "$REPO_ROOT" \

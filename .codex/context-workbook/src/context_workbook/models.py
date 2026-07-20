@@ -150,12 +150,12 @@ class Evidence(StrictModel):
 
 
 class ContextHypothesis(StrictModel):
-    kind: str
+    kind: str = Field(pattern=_ID.pattern)
     statement: str = Field(min_length=1)
     state: Literal["candidate", "accepted", "rejected", "superseded"]
     evidence_ids: list[str] = Field(alias="evidenceIDs", min_length=1, max_length=1)
     confidence: float = Field(ge=0, le=1)
-    derived_by: str = Field(alias="derivedBy")
+    derived_by: str = Field(alias="derivedBy", pattern=_ID.pattern)
 
 
 class ContextFragment(StrictModel):
@@ -359,3 +359,10 @@ class ContextDecision(StrictModel):
         alias="sufficiencyState"
     )
     sufficiency_reasons: list[str] = Field(alias="sufficiencyReasons", min_length=1)
+
+    @model_validator(mode="after")
+    def canonicalize_maps(self) -> "ContextDecision":
+        self.hypotheses = dict(sorted(self.hypotheses.items()))
+        self.gaps = dict(sorted(self.gaps.items()))
+        self.conflicts = dict(sorted(self.conflicts.items()))
+        return self

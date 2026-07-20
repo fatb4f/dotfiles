@@ -34,6 +34,13 @@ class CapturingProgram:
         return self.decision
 
 
+class UnavailableProgram:
+    def establish(self, **_: object) -> ContextDecision:
+        from context_workbook.dspy_program import DspyUnavailable
+
+        raise DspyUnavailable("ChatGPT session unavailable")
+
+
 class EngineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -439,13 +446,18 @@ class EngineTests(unittest.TestCase):
         self.assertEqual(facts["requestedRevision"], self.snapshot.resolved_revision)
         self.assertRegex(facts["resolvedRevision"], r"^[0-9a-f]{40}$")
 
-    def test_missing_model_uses_shared_fail_closed_program(self) -> None:
+    def test_missing_model_uses_chatgpt_authenticated_codex_default(self) -> None:
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("CONTEXT_WORKBOOK_DSPY_MODEL", None)
             reasoner = production_reasoner_or_fail_closed()
-        decision = reasoner.establish()
-        self.assertIn("gap.dspy-unavailable", decision.gaps)
-        self.assertEqual(decision.sufficiency_state, "insufficient")
+        self.assertEqual(type(reasoner).__name__, "DspyContextProgram")
+
+    def test_runtime_auth_failure_uses_shared_fail_closed_decision(self) -> None:
+        result = ContextEngine(root=REPO_ROOT).run(
+            request=self.request(), reasoner=UnavailableProgram()
+        )
+        self.assertIn("gap.dspy-unavailable", result.state.gaps)
+        self.assertEqual(result.state.sufficiency.state, "insufficient")
 
     def test_complete_gap_map_overrides_sufficiency_claim(self) -> None:
         value = self.decision.model_dump(by_alias=True)
