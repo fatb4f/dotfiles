@@ -26,17 +26,93 @@ import "strings"
 	serviceConfigDigest:  #Digest
 })
 
+#DspyCodeIntelRoute: close({
+	id:           #ID
+	language:     #ID
+	globs:        [...#NonEmptyString]
+	provider:     #ID
+	typeOverlays: [...#ID]
+})
+
+#DspyProviderRoutingDocument: close({
+	schema:     "code-intel.provider-routing.v1" | "factory.plugin-bundle.code-intel.lsp.provider-routing.v1"
+	reference?: true
+	authority?: false
+	routes:     [...#DspyCodeIntelRoute]
+})
+
+#DspyCodeIntelTool: close({
+	id:        #ID
+	server:    #ID
+	inputs:    close({[#ID]: #NonEmptyString})
+	outputs:   close({[#ID]: #NonEmptyString})
+	authority: false
+})
+
+#DspyToolRegistryDocument: close({
+	schema:          "factory.plugin-bundle.code-intel.mcp.tool-registry.v1"
+	reference:       true
+	authority:       false
+	defaultReadOnly: true
+	tools:           [...#DspyCodeIntelTool]
+})
+
+#DspyCodeIntelEntrypoint: close({
+	id:           #ID
+	language:     #ID
+	path:         #Path
+	domain:       #ID
+	provider:     #ID
+	typeOverlays: [...#ID]
+	authority:    #ID
+})
+
+#DspyCodeIntelProvider: close({
+	id:           #ID
+	kind:         #ProviderKind
+	paths:        [...#Path]
+	authority:    false
+	evidenceOnly: true
+})
+
+#DspyCodeIntelStep: close({
+	order:     int & >0
+	id:        #ID
+	goal:      #NonEmptyString
+	authority: #ID
+})
+
+#DspyCodeIntelAuthorityBoundary: close({
+	owns:       [...#NonEmptyString]
+	doesNotOwn: [...#NonEmptyString]
+})
+
+#DspyCodeIntelWorkflowDocument: close({
+	schema:      "factory.plugin-bundle.code-intel.lua-first-workflow.v1"
+	id:          #ID
+	intent:      #NonEmptyString
+	entrypoints: [...#DspyCodeIntelEntrypoint]
+	providers:   [...#DspyCodeIntelProvider]
+	steps:       [...#DspyCodeIntelStep]
+	authority:   #DspyCodeIntelAuthorityBoundary
+})
+
+#DspyCodeIntelDocument:
+	#DspyProviderRoutingDocument |
+		#DspyToolRegistryDocument |
+		#DspyCodeIntelWorkflowDocument
+
 #DspyInferenceInputs: close({
 	request:      close(#ContextRequest)
 	inventory:    close(#ContextInventory)
 	observations: close({[#ID]: close(#SourceObservation)})
 	evidence:     close({[#ID]: close(#Evidence)})
-	codeIntel:    close({[#Path]: _})
+	codeIntel:    close({[#Path]: #DspyCodeIntelDocument})
 })
 
 #DspyDecisionSelection: {
 	reason:      #NonEmptyString
-	evidenceIDs: #NonEmptyIDs
+	evidenceIDs: [#ID]
 }
 
 #DspyFragmentDecisionSelection: close({
@@ -62,13 +138,21 @@ import "strings"
 // This mirrors the strict Python ContextDecision transport. It intentionally
 // excludes observations, admitted state, sufficiency summaries, and projections.
 #ContextDecision: close({
-	hypotheses:         close({[#ID]: #ContextHypothesis})
-	fragments:          #DspyFragmentDecisionSelection
-	files:              #DspyFileDecisionSelection
-	providers:          #DspyProviderDecisionSelection
-	workflows:          #DspyWorkflowDecisionSelection
-	gaps:               close({[#ID]: #ContextGap})
-	conflicts:          close({[#ID]: #ContextConflict})
+	hypotheses: close({
+		[#ID]: #ContextHypothesis & {
+			evidenceIDs: [#ID]
+		}
+	})
+	fragments: #DspyFragmentDecisionSelection
+	files:     #DspyFileDecisionSelection
+	providers: #DspyProviderDecisionSelection
+	workflows: #DspyWorkflowDecisionSelection
+	gaps:      close({[#ID]: #ContextGap})
+	conflicts: close({
+		[#ID]: #ContextConflict & {
+			evidenceIDs: [#ID]
+		}
+	})
 	sufficiencyState:   "insufficient" | "provisional" | "sufficient"
 	sufficiencyReasons: [...#NonEmptyString] & [_, ...]
 })
@@ -182,6 +266,7 @@ import "strings"
 		correlation: request.correlation
 		inputDigest: request.inputDigest
 		runtime: {
+			serviceID:            "dspy-codexd"
 			dspyProgramDigest:    request.expected.dspyProgramDigest
 			decisionSchemaDigest: request.expected.decisionSchemaDigest
 			serviceConfigDigest:  request.expected.serviceConfigDigest
@@ -233,6 +318,7 @@ import "strings"
 	hooksEnabled:            false
 	shellEnabled:            false
 	unifiedExecEnabled:      false
+	toolsEnabled:            false
 	appsEnabled:             false
 	mcpEnabled:              false
 	webSearchEnabled:        false

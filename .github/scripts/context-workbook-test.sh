@@ -6,6 +6,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MODEL_ROOT="$REPO_ROOT/.codex/context-model"
 WORKBOOK_ROOT="$REPO_ROOT/.codex/context-workbook"
 DSPY_SERVICE_FIXTURES="$MODEL_ROOT/testdata/dspy-service-fixtures.json"
+DSPY_SERVICE_REVIEW_REGRESSIONS="$MODEL_ROOT/testdata/dspy-service-review-regressions.json"
 PYTHON_BIN="${CONTEXT_WORKBOOK_PYTHON:-python}"
 export PYTHONPATH="$WORKBOOK_ROOT/src${PYTHONPATH:+:$PYTHONPATH}"
 export CONTEXT_WORKBOOK_CUE="${CONTEXT_WORKBOOK_CUE:-cue}"
@@ -19,15 +20,22 @@ cleanup_fixture_work() {
 }
 trap cleanup_fixture_work EXIT
 
-"$PYTHON_BIN" - "$DSPY_SERVICE_FIXTURES" "$fixture_work" <<'PY2'
+"$PYTHON_BIN" - "$DSPY_SERVICE_FIXTURES" "$DSPY_SERVICE_REVIEW_REGRESSIONS" "$fixture_work" <<'PY2'
 import json
 import sys
 from pathlib import Path
 
 corpus_path = Path(sys.argv[1])
-output_root = Path(sys.argv[2])
+regressions_path = Path(sys.argv[2])
+output_root = Path(sys.argv[3])
 corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+regressions = json.loads(regressions_path.read_text(encoding="utf-8"))
 valid = corpus["valid"]
+for mutation in regressions["validServiceConfigMutations"]:
+    target = valid["serviceConfig"]
+    for part in mutation["path"][:-1]:
+        target = target[part]
+    target[mutation["path"][-1]] = mutation["value"]
 for name in ("completed", "failed"):
     (output_root / f"{name}.json").write_text(
         json.dumps(valid[name], sort_keys=True), encoding="utf-8"
@@ -35,15 +43,29 @@ for name in ("completed", "failed"):
 (output_root / "service-config.json").write_text(
     json.dumps(valid["serviceConfig"], sort_keys=True), encoding="utf-8"
 )
-invalid_root = output_root / "invalid"
-invalid_root.mkdir()
-for mutation in corpus["invalidMutations"]:
+invalid_exchange_root = output_root / "invalid-exchange"
+invalid_exchange_root.mkdir()
+for mutation in [
+    *corpus["invalidMutations"],
+    *regressions["invalidExchangeMutations"],
+]:
     value = json.loads(json.dumps(valid["completed"]))
     target = value
     for part in mutation["path"][:-1]:
         target = target[part]
     target[mutation["path"][-1]] = mutation["value"]
-    (invalid_root / f"{mutation['name']}.json").write_text(
+    (invalid_exchange_root / f"{mutation['name']}.json").write_text(
+        json.dumps(value, sort_keys=True), encoding="utf-8"
+    )
+invalid_config_root = output_root / "invalid-config"
+invalid_config_root.mkdir()
+for mutation in regressions["invalidServiceConfigMutations"]:
+    value = json.loads(json.dumps(valid["serviceConfig"]))
+    target = value
+    for part in mutation["path"][:-1]:
+        target = target[part]
+    target[mutation["path"][-1]] = mutation["value"]
+    (invalid_config_root / f"{mutation['name']}.json").write_text(
         json.dumps(value, sort_keys=True), encoding="utf-8"
     )
 PY2
@@ -54,10 +76,23 @@ PY2
   "$MODEL_ROOT" "$fixture_work/failed.json"
 "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyServiceConfig' \
   "$MODEL_ROOT" "$fixture_work/service-config.json"
-for invalid_fixture in "$fixture_work"/invalid/*.json; do
+"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyProviderRoutingDocument' \
+  "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/lsp/provider-routing.json"
+"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyToolRegistryDocument' \
+  "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/mcp/tool-registry.json"
+"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyCodeIntelWorkflowDocument' \
+  "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/workflows/lua-first/workflow.json"
+for invalid_fixture in "$fixture_work"/invalid-exchange/*.json; do
   if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
     "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
     echo "FAIL: invalid DSPy service fixture passed: $invalid_fixture" >&2
+    exit 1
+  fi
+done
+for invalid_fixture in "$fixture_work"/invalid-config/*.json; do
+  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyServiceConfig' \
+    "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
+    echo "FAIL: invalid DSPy service config fixture passed: $invalid_fixture" >&2
     exit 1
   fi
 done
