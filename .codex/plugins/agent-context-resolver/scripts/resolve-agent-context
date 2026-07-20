@@ -2,7 +2,12 @@
 set -eu
 
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd -P)
+plugin_root=$(CDPATH= cd -- "$script_dir/.." && pwd -P)
+repo_root=$(CDPATH= cd -- "$plugin_root/../../.." && pwd -P)
+runner="$repo_root/.codex/context-workbook/run-context-workbook"
 prompt=
+revision=HEAD
+
 while [ "$#" -gt 0 ]; do
 	case $1 in
 	--prompt)
@@ -10,7 +15,12 @@ while [ "$#" -gt 0 ]; do
 		prompt=$2
 		shift 2
 		;;
-	--cwd|--candidate)
+	--candidate)
+		[ "$#" -ge 2 ] || exit 2
+		revision=$2
+		shift 2
+		;;
+	--cwd)
 		[ "$#" -ge 2 ] || exit 2
 		shift 2
 		;;
@@ -22,27 +32,12 @@ while [ "$#" -gt 0 ]; do
 done
 
 [ -n "$prompt" ] || {
-	printf 'resolve-agent-context: --prompt is required\n' >&2
+	printf '%s\n' 'resolve-agent-context: --prompt is required' >&2
 	exit 2
 }
 
-output=$(
-	printf '{"hook_event_name":"UserPromptSubmit","prompt":%s}\n' \
-		"$(printf '%s' "$prompt" | jq -Rs .)" |
-		AGENT_CONTEXT_RESOLVER_PACKET=1 "$script_dir/agent-context-resolver-hook"
-)
-
-[ -n "$output" ] || {
-	printf '{}\n'
-	exit 0
-}
-
-printf '%s\n' "$output" | jq -er '
-	if . == {} then
-		{}
-	elif .schema == "agent.route-controller-packet.v1" then
-		.
-	else
-		error("unexpected resolver hook output shape")
-	end
-'
+exec "$runner" \
+	--repo-root "$repo_root" \
+	--prompt "$prompt" \
+	--revision "$revision" \
+	--output state
