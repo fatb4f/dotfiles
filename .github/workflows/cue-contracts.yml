@@ -14,6 +14,8 @@ jobs:
 
     env:
       CUE_REVISION: 806821e40fae070318600a264d311517e596353b
+      PYTHON_VERSION: "3.14"
+      UV_VERSION: "0.10.0"
 
     steps:
       - name: Checkout
@@ -24,21 +26,34 @@ jobs:
         with:
           go-version: stable
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
       - name: Install CUE
         run: |
           go install cuelang.org/go/cmd/cue@${CUE_REVISION}
           echo "$HOME/go/bin" >> "$GITHUB_PATH"
 
-      - name: Install matrix tooling
+      - name: Install matrix and workbook tooling
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
+          python -m pip install "uv==${UV_VERSION}"
+          uv sync --project .codex/context-workbook
 
       - name: Print tool versions
         run: |
           cue version
           jq --version
+          python --version
+          uv --version
 
       - name: Run CUE contract validation
+        run: bash .github/scripts/cue-contract-test.sh
+
+      - name: Run context workbook validation
         run: |
-          bash .github/scripts/cue-contract-test.sh
+          uv run --project .codex/context-workbook -- \
+            bash .github/scripts/context-workbook-test.sh
