@@ -57,15 +57,15 @@ def _dispatch(app: Any) -> int:
     else:
         if not isinstance(prompt, str) or not prompt:
             parser.error("--prompt, --request-file, or --hook is required")
-        config = load_workbook_config(
+        config, snapshot = load_workbook_config(
             root,
             os.environ.get("CONTEXT_WORKBOOK_CUE", "cue"),
             revision=args.revision,
         )
         request_payload = build_request(
             prompt=prompt,
-            revision=args.revision,
             config=config,
+            snapshot=snapshot,
         ).model_dump(by_alias=True)
 
     reasoner = _reasoner_from_args(args.recorded_decision)

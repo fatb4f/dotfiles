@@ -99,22 +99,23 @@ def load_workbook_config(
     cue_binary: str = "cue",
     *,
     revision: str = "HEAD",
-) -> WorkbookConfig:
+) -> tuple[WorkbookConfig, RepositorySnapshot]:
     snapshot = RepositorySnapshot.resolve(root, revision)
     with tempfile.TemporaryDirectory(prefix="context-workbook-cue-") as temporary:
         model_root = snapshot.materialize_cue_package(
             ".codex/context-model", Path(temporary)
         )
-        return _load_workbook_config(model_root, cue_binary)
+        return _load_workbook_config(model_root, cue_binary), snapshot
 
 
 def build_request(
     *,
     prompt: str,
-    revision: str,
     config: WorkbookConfig,
+    snapshot: RepositorySnapshot,
     requested_projection_ids: list[str] | None = None,
 ) -> ContextRequest:
+    revision = snapshot.resolved_revision
     request_id = f"request-{digest_value({'prompt': prompt, 'revision': revision})[7:23]}"
     return ContextRequest.model_validate(
         {

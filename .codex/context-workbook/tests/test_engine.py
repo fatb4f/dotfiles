@@ -38,7 +38,7 @@ class EngineTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         os.environ["CONTEXT_WORKBOOK_TEST_MODE"] = "1"
-        cls.config = load_workbook_config(REPO_ROOT)
+        cls.config, cls.snapshot = load_workbook_config(REPO_ROOT)
         cls.decision = ContextDecision.model_validate_json(FIXTURE.read_text(encoding="utf-8"))
         cls.empty_decision = ContextDecision.model_validate(
             {
@@ -77,8 +77,8 @@ class EngineTests(unittest.TestCase):
     ):
         return build_request(
             prompt=prompt,
-            revision="HEAD",
             config=self.config,
+            snapshot=self.snapshot,
             requested_projection_ids=projection_ids,
         )
 
@@ -346,17 +346,20 @@ class EngineTests(unittest.TestCase):
                 cwd=repository,
                 check=True,
             )
+            historical_config, historical_snapshot = load_workbook_config(
+                repository, revision=historical_revision
+            )
             request = build_request(
                 prompt="Inspect the local historical revision",
-                revision=historical_revision,
-                config=load_workbook_config(repository),
+                config=historical_config,
+                snapshot=historical_snapshot,
             )
             with self.assertRaisesRegex(EngineError, "unknown fragments"):
                 ContextEngine(root=repository).run(
                     request=request, reasoner=RecordedContextProgram(self.decision)
                 )
 
-    def test_requested_revision_controls_config_and_state_schema(self) -> None:
+    def test_resolved_revision_keeps_config_and_state_on_same_snapshot(self) -> None:
         with tempfile.TemporaryDirectory(prefix="context-workbook-authority-") as temporary:
             repository = Path(temporary) / "repository"
             subprocess.run(
@@ -374,13 +377,8 @@ class EngineTests(unittest.TestCase):
                 capture_output=True,
                 text=True,
             )
-            historical_revision = subprocess.run(
-                ["git", "rev-parse", "HEAD"],
-                cwd=repository,
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip()
+            historical_config, historical_snapshot = load_workbook_config(repository)
+            historical_revision = historical_snapshot.resolved_revision
 
             workbook = repository / ".codex/context-model/workbook.cue"
             current_workbook = workbook.read_text(encoding="utf-8").replace(
@@ -417,16 +415,16 @@ class EngineTests(unittest.TestCase):
                 check=True,
             )
 
-            historical_config = load_workbook_config(
-                repository, revision=historical_revision
-            )
             self.assertEqual(historical_config.max_selected_files, 32)
-            self.assertEqual(load_workbook_config(repository).max_selected_files, 1)
+            current_config, current_snapshot = load_workbook_config(repository)
+            self.assertEqual(current_config.max_selected_files, 1)
+            self.assertNotEqual(current_snapshot.resolved_revision, historical_revision)
             request = build_request(
                 prompt="Inspect one coherent historical authority snapshot",
-                revision=historical_revision,
                 config=historical_config,
+                snapshot=historical_snapshot,
             )
+            self.assertEqual(request.repository.revision, historical_revision)
 
             result = ContextEngine(root=repository).run(
                 request=request, reasoner=RecordedContextProgram(self.decision)
@@ -438,7 +436,7 @@ class EngineTests(unittest.TestCase):
             request=self.request(), reasoner=RecordedContextProgram(self.decision)
         )
         facts = result.state.observations["repository.current"].facts
-        self.assertEqual(facts["requestedRevision"], "HEAD")
+        self.assertEqual(facts["requestedRevision"], self.snapshot.resolved_revision)
         self.assertRegex(facts["resolvedRevision"], r"^[0-9a-f]{40}$")
 
     def test_missing_model_uses_shared_fail_closed_program(self) -> None:

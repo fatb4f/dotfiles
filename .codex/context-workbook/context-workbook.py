@@ -70,13 +70,13 @@ def _(
     root = Path(repo_root).resolve(strict=True)
     should_run = execution_mode == "browserless" or run_context.value
     if request_payload is None and should_run:
-        config = load_workbook_config(
+        config, snapshot = load_workbook_config(
             root, cue_binary, revision=revision_input.value
         )
         request = build_request(
             prompt=prompt_input.value,
-            revision=revision_input.value,
             config=config,
+            snapshot=snapshot,
         )
     elif request_payload is not None:
         request = ContextRequest.model_validate(request_payload)

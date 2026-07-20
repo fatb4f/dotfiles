@@ -46,6 +46,10 @@ class CliTests(unittest.TestCase):
         result = json.loads(process.stdout)
         self.assertEqual(result["schema"], "dotfiles.context-workbook-result.v0")
         self.assertEqual(result["state"]["sufficiency"]["state"], "sufficient")
+        self.assertRegex(
+            result["state"]["request"]["repository"]["revision"],
+            r"^[0-9a-f]{40}$",
+        )
         self.assertIn("hook", result)
         self.assertNotIn("codeIntel", result)
 
@@ -75,10 +79,11 @@ class CliTests(unittest.TestCase):
         self.assertEqual(resolver_only.returncode, 2)
         self.assertIn("code-intel projection was not requested", resolver_only.stderr)
 
+        config, snapshot = load_workbook_config(REPO_ROOT)
         request = build_request(
             prompt="Code-intel projection only",
-            revision="HEAD",
-            config=load_workbook_config(REPO_ROOT),
+            config=config,
+            snapshot=snapshot,
             requested_projection_ids=["code-intel"],
         )
         with tempfile.TemporaryDirectory(prefix="context-workbook-request-") as temporary:
