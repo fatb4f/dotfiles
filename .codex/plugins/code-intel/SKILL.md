@@ -1,25 +1,17 @@
 ---
 name: dotfiles-code-intel
-description: Read-only code-intelligence reference overlays for dotfiles work.
+description: Supply typed read-only code-intelligence evidence to the canonical context workbook.
 ---
 
 # Dotfiles Code Intel
 
-This installed plugin contains one operator skill and read-only reference material for dotfiles code-intelligence work.
+This plugin is an independently installable evidence adapter. It does not establish context by itself and does not import the resolver plugin.
 
 ## Contract boundary
 
-- Load reference/type overlays as read-only operator context.
-- Do not treat reference files as source authority.
-- Do not treat MCP output, LSP diagnostics, type stubs, or workflow JSON as source authority.
-- Do not import or depend on the agent-context-resolver bundle.
-- Do not place `contracts`, `generated`, `skills`, or `manifest.json` under the installed plugin root.
-- All CUE authority remains in factory/plugin-bundle contracts.
-- All dotfiles source authority remains in dotfiles source paths.
-
-## Reference layout
-
-- `reference/lsp/`: LSP provider and routing context.
-- `reference/tools/`: formatter and lint tool context.
-- `reference/types/`: Neovim and WezTerm type overlays.
-- `reference/workflows/`: Lua-first operator workflow context.
+- The canonical workbook ingests only the declared provider-routing, tool-registry, and workflow files.
+- Provider declarations, type overlays, diagnostics, MCP results, and LSP results remain evidence-only.
+- The plugin projection contains no prompt classifier, context synthesizer, route executor, or mutation authority.
+- CUE source and dotfiles source remain authoritative at their declared repository paths.
+- The dynamic `dotfiles.code-intel-context.v0` projection is produced from the same validated context state as the resolver hook packet.
+- Regenerate `reference/context-workbook-projection.json` from the CUE model and workbook program; never edit it as authority.
