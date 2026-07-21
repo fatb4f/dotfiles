@@ -14,7 +14,6 @@ jobs:
 
     env:
       CUE_REVISION: 806821e40fae070318600a264d311517e596353b
-      GO_VERSION: "1.26.5"
       PYTHON_VERSION: "3.14"
       UV_VERSION: "0.10.0"
       HYPOTHESIS_VERSION: "6.158.0"
@@ -27,7 +26,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: stable
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -48,7 +47,6 @@ jobs:
 
       - name: Print tool versions
         run: |
-          go version
           cue version
           jq --version
           python --version
@@ -73,9 +71,6 @@ jobs:
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-admission-test.sh
-
-      - name: Run committed Git snapshot hydrator qualification
-        run: bash .github/scripts/context-git-hydrator-test.sh
 
       - name: Run context graph property validation
         run: |
@@ -182,3 +177,36 @@ jobs:
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-workbook-test.sh hook
+
+  git-committed-snapshot:
+    runs-on: ubuntu-latest
+
+    env:
+      CUE_REVISION: 806821e40fae070318600a264d311517e596353b
+      GO_VERSION: "1.26.5"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Install pinned CUE and jq
+        run: |
+          go install cuelang.org/go/cmd/cue@${CUE_REVISION}
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Print hydrator tool versions
+        run: |
+          go version
+          cue version
+          jq --version
+
+      - name: Run committed Git snapshot hydrator qualification
+        run: bash .github/scripts/context-git-hydrator-test.sh
