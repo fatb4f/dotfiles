@@ -114,15 +114,20 @@ jobs:
             test_engine.EngineTests.test_request_boundary_filters_workflow_entries_and_provider_routes \
             test_engine.EngineTests.test_prompt_change_invalidates_dependent_nodes_only
 
-      - name: Run context workbook engine tests B
-        if: always()
+      - name: Run context workbook engine tests B1
         run: |
           cd .codex/context-workbook/tests
           PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_unknown_provider_fails_closed \
             test_engine.EngineTests.test_outside_file_fails_closed \
             test_engine.EngineTests.test_request_file_cannot_widen_configured_paths \
-            test_engine.EngineTests.test_requested_revision_controls_inventory_materialization \
+            test_engine.EngineTests.test_requested_revision_controls_inventory_materialization
+
+      - name: Run context workbook engine tests B2
+        if: always()
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_resolved_revision_keeps_config_and_state_on_same_snapshot \
             test_engine.EngineTests.test_repository_observation_records_resolved_commit \
             test_engine.EngineTests.test_missing_model_uses_chatgpt_authenticated_codex_default \
