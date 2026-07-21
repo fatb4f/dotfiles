@@ -13,6 +13,9 @@ printf '%s\n' "==> Run committed snapshot Go tests"
 (
   cd "$HYDRATOR_ROOT"
   go mod tidy
+  printf '%s\n' '==> BEGIN generated go.sum'
+  cat go.sum
+  printf '%s\n' '==> END generated go.sum'
   go mod verify
   go test ./...
   go build -trimpath -o "$WORK_DIR/context-git-hydrator" ./cmd/context-git-hydrator
