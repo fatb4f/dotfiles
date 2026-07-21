@@ -65,6 +65,13 @@ jobs:
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-authority-test.sh
 
+      - name: Run context graph admission validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-graph-admission-test.sh
+
       - name: Run context graph property validation
         run: |
           uv run --project .codex/context-workbook \
