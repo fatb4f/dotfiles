@@ -44,7 +44,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
           python -m pip install "uv==${UV_VERSION}"
-          uv sync --frozen --project .codex/context-workbook
+          uv sync --project .codex/context-workbook
 
       - name: Print tool versions
         run: |
