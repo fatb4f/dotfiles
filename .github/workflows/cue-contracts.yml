@@ -157,6 +157,19 @@ jobs:
           PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_complete_gap_map_overrides_sufficiency_claim
 
+      - name: Run direct CUE vet qualification
+        run: |
+          cd .codex/context-model
+          cue vet ./...
+
+      - name: Run direct pytest qualification
+        run: |
+          cd .codex/context-workbook
+          PYTHONPATH=src uv run \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- pytest
+
       - name: Check deterministic plugin projections
         run: |
           uv run --project .codex/context-workbook -- \
