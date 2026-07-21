@@ -1,4 +1,5 @@
 """CUE-derived evidence admission matrix and authority-transition oracle."""
+
 from __future__ import annotations
 
 import copy
@@ -60,9 +61,11 @@ class EvidenceAuthorityState(StrictModel):
     effective_authority: ClaimAuthority = Field(alias="effectiveAuthority")
 
     @model_validator(mode="after")
-    def payload_digest_is_bound(self) -> "EvidenceAuthorityState":
+    def state_is_digest_bound_and_non_demotion(self) -> "EvidenceAuthorityState":
         if self.evidence.payload_digest is None:
             raise ValueError("authority state requires evidence payloadDigest")
+        if AUTHORITY_RANK[self.effective_authority] < AUTHORITY_RANK[self.evidence.authority]:
+            raise ValueError("effective authority cannot be below evidence authority")
         return self
 
 
@@ -72,7 +75,9 @@ class CollectedEvidenceEnvelope(StrictModel):
     admission: None
 
     @model_validator(mode="after")
-    def effective_authority_starts_at_collected_authority(self) -> "CollectedEvidenceEnvelope":
+    def collection_is_bounded_for_every_evidence_kind(self) -> "CollectedEvidenceEnvelope":
+        if self.state.evidence.authority not in {"none", "candidate"}:
+            raise ValueError("collection evidence cannot claim controller or root authority")
         if self.state.effective_authority != self.state.evidence.authority:
             raise ValueError("collection cannot widen effective authority")
         return self
@@ -98,7 +103,9 @@ class EvidenceNoAdmissionTransition(StrictModel):
     admission: None
 
     @model_validator(mode="after")
-    def no_admission_preserves_state(self) -> "EvidenceNoAdmissionTransition":
+    def no_admission_preserves_intrinsic_state(self) -> "EvidenceNoAdmissionTransition":
+        if self.before.effective_authority != self.before.evidence.authority:
+            raise ValueError("no-admission transition starts from unadmitted authority")
         if self.before != self.after:
             raise ValueError("authority changed without admission")
         return self
@@ -113,6 +120,8 @@ class EvidenceAdmissionTransition(StrictModel):
 
     @model_validator(mode="after")
     def transition_is_bound_and_monotonic(self) -> "EvidenceAdmissionTransition":
+        if self.before.effective_authority != self.before.evidence.authority:
+            raise ValueError("admission transition starts from unadmitted authority")
         before = self.before.model_dump(by_alias=True, exclude_none=False)
         after = self.after.model_dump(by_alias=True, exclude_none=False)
         before_authority = before.pop("effectiveAuthority")
@@ -156,7 +165,7 @@ class EvidenceAdmissionBundle(StrictModel):
     admissions: dict[str, EvidenceAdmissionTransition]
 
     @model_validator(mode="after")
-    def admission_keys_match_ids(self) -> "EvidenceAdmissionBundle":
+    def bundle_is_admission_closed(self) -> "EvidenceAdmissionBundle":
         state_mismatches = [
             key for key, value in self.states.items() if key != value.evidence_id
         ]
@@ -174,13 +183,25 @@ class EvidenceAdmissionBundle(StrictModel):
                 "admission map key does not match admissionID: "
                 f"{admission_mismatches[0]}"
             )
-        missing_states = [
-            value.before.evidence_id
-            for value in self.admissions.values()
-            if value.before.evidence_id not in self.states
-        ]
-        if missing_states:
-            raise ValueError(f"admission state is missing: {missing_states[0]}")
+
+        admissions_by_state: dict[str, list[EvidenceAdmissionTransition]] = {}
+        for transition in self.admissions.values():
+            state_id = transition.after.evidence_id
+            stored_state = self.states.get(state_id)
+            if stored_state is None:
+                raise ValueError(f"admission state is missing: {state_id}")
+            if stored_state != transition.after:
+                raise ValueError(f"stored state does not match admission after-state: {state_id}")
+            admissions_by_state.setdefault(state_id, []).append(transition)
+
+        for state_id, state in self.states.items():
+            if AUTHORITY_RANK[state.effective_authority] > AUTHORITY_RANK[state.evidence.authority]:
+                qualifying = admissions_by_state.get(state_id, [])
+                if len(qualifying) != 1:
+                    raise ValueError(
+                        "elevated authority state requires exactly one admission: "
+                        f"{state_id}"
+                    )
         return self
 
 
@@ -202,6 +223,17 @@ class EvidenceAdmissionMatrix(StrictModel):
         if mismatches:
             raise ValueError(f"admission case map key does not match id: {mismatches[0]}")
         return self
+
+
+TRANSPORT_MODELS: dict[str, type[StrictModel]] = {
+    "#ContextEvidenceAuthorityState": EvidenceAuthorityState,
+    "#ContextCollectedEvidenceEnvelope": CollectedEvidenceEnvelope,
+    "#ContextEvidenceAdmissionRecord": EvidenceAdmissionRecord,
+    "#ContextEvidenceNoAdmissionTransition": EvidenceNoAdmissionTransition,
+    "#ContextEvidenceAdmissionTransition": EvidenceAdmissionTransition,
+    "#ContextEvidenceAuthorityProjection": EvidenceAuthorityProjection,
+    "#ContextEvidenceAdmissionBundle": EvidenceAdmissionBundle,
+}
 
 
 @lru_cache(maxsize=1)
@@ -238,9 +270,16 @@ def validate_admission_matrix_coverage(matrix: EvidenceAdmissionMatrix) -> None:
         )
 
 
-def minimal_evidence(authority: str = "candidate") -> dict[str, Any]:
+def minimal_evidence(
+    authority: str = "candidate",
+    *,
+    kind: str | None = None,
+) -> dict[str, Any]:
+    evidence_kind = kind or (
+        "source" if authority in {"controller", "root"} else "observation"
+    )
     return {
-        "kind": "observation",
+        "kind": evidence_kind,
         "subject": {"kind": "member", "id": "member.context-evidence"},
         "producer": {"kind": "member", "id": "member.context-hydrator"},
         "source": {
@@ -255,13 +294,21 @@ def minimal_evidence(authority: str = "candidate") -> dict[str, Any]:
     }
 
 
-def build_authority_state(authority: str) -> dict[str, Any]:
+def build_authority_state(
+    effective_authority: str,
+    *,
+    evidence_authority: str | None = None,
+    evidence_kind: str | None = None,
+    evidence_id: str = "evidence.context-admission",
+    snapshot_id: str | None = None,
+) -> dict[str, Any]:
+    intrinsic_authority = evidence_authority or effective_authority
     return {
         "schema": "kernel.context-evidence-authority-state.v0",
-        "evidenceID": "evidence.context-admission",
-        "snapshotID": "sha256:" + "2" * 64,
-        "evidence": minimal_evidence(),
-        "effectiveAuthority": authority,
+        "evidenceID": evidence_id,
+        "snapshotID": snapshot_id or "sha256:" + "2" * 64,
+        "evidence": minimal_evidence(intrinsic_authority, kind=evidence_kind),
+        "effectiveAuthority": effective_authority,
     }
 
 
@@ -270,7 +317,10 @@ def build_admission_transition(
     to_authority: str,
     scenario: str = "valid-admission",
 ) -> dict[str, Any]:
-    before = build_authority_state(from_authority)
+    before = build_authority_state(
+        from_authority,
+        evidence_authority=from_authority,
+    )
     after = copy.deepcopy(before)
     after["effectiveAuthority"] = to_authority
     if scenario == "no-admission":
@@ -314,8 +364,134 @@ def build_admission_transition(
     return value
 
 
+def build_collected_envelope(
+    *,
+    evidence_authority: str = "candidate",
+    evidence_kind: str | None = None,
+) -> dict[str, Any]:
+    state = build_authority_state(
+        evidence_authority,
+        evidence_authority=evidence_authority,
+        evidence_kind=evidence_kind,
+    )
+    return {
+        "schema": "kernel.context-evidence-collection.v0",
+        "state": state,
+        "admission": None,
+    }
+
+
+def build_authority_projection() -> dict[str, Any]:
+    state = build_authority_state("candidate", evidence_authority="candidate")
+    return {
+        "schema": "kernel.context-evidence-authority-projection.v0",
+        "projectionKind": "duckdb-materialization",
+        "source": state,
+        "projected": copy.deepcopy(state),
+    }
+
+
+def build_admission_bundle() -> dict[str, Any]:
+    transition = build_admission_transition("candidate", "controller")
+    return {
+        "schema": "kernel.context-evidence-admission-bundle.v0",
+        "states": {transition["after"]["evidenceID"]: transition["after"]},
+        "admissions": {transition["admission"]["admissionID"]: transition},
+    }
+
+
+def valid_transport_instances() -> dict[str, dict[str, Any]]:
+    transition = build_admission_transition("candidate", "controller")
+    return {
+        "#ContextEvidenceAuthorityState": build_authority_state(
+            "candidate", evidence_authority="candidate"
+        ),
+        "#ContextCollectedEvidenceEnvelope": build_collected_envelope(),
+        "#ContextEvidenceAdmissionRecord": copy.deepcopy(transition["admission"]),
+        "#ContextEvidenceNoAdmissionTransition": build_admission_transition(
+            "candidate", "candidate", "no-admission"
+        ),
+        "#ContextEvidenceAdmissionTransition": transition,
+        "#ContextEvidenceAuthorityProjection": build_authority_projection(),
+        "#ContextEvidenceAdmissionBundle": build_admission_bundle(),
+    }
+
+
+def unknown_field_transport_cases() -> dict[str, tuple[str, dict[str, Any]]]:
+    valid = valid_transport_instances()
+    cases: dict[str, tuple[str, dict[str, Any]]] = {}
+    for definition, instance in valid.items():
+        malformed = copy.deepcopy(instance)
+        malformed["unexpected"] = True
+        cases[f"{definition}.top-level"] = (definition, malformed)
+
+    transition = copy.deepcopy(valid["#ContextEvidenceAdmissionTransition"])
+    transition["admission"]["unexpected"] = True
+    cases["#ContextEvidenceAdmissionTransition.nested-admission"] = (
+        "#ContextEvidenceAdmissionTransition",
+        transition,
+    )
+    transition = copy.deepcopy(valid["#ContextEvidenceAdmissionTransition"])
+    transition["before"]["unexpected"] = True
+    cases["#ContextEvidenceAdmissionTransition.nested-before"] = (
+        "#ContextEvidenceAdmissionTransition",
+        transition,
+    )
+    transition = copy.deepcopy(valid["#ContextEvidenceAdmissionTransition"])
+    transition["after"]["evidence"]["source"]["unexpected"] = True
+    cases["#ContextEvidenceAdmissionTransition.nested-evidence-source"] = (
+        "#ContextEvidenceAdmissionTransition",
+        transition,
+    )
+    return cases
+
+
+def pydantic_accepts_transport(definition: str, value: dict[str, Any]) -> bool:
+    model = TRANSPORT_MODELS[definition]
+    try:
+        model.model_validate(value)
+    except ValueError:
+        return False
+    return True
+
+
+def execute_transport_unknown_field_cases() -> dict[str, Any]:
+    cases = unknown_field_transport_cases()
+    executed: dict[str, Any] = {}
+    for case_id, (definition, value) in sorted(cases.items()):
+        cue_accepted = cue_vet(definition, value).accepted
+        pydantic_accepted = pydantic_accepts_transport(definition, value)
+        if cue_accepted or pydantic_accepted:
+            raise AssertionError(
+                f"unknown-field transport case accepted: {case_id} "
+                f"cue={cue_accepted} pydantic={pydantic_accepted}"
+            )
+        executed[case_id] = {
+            "definition": definition,
+            "cueAccepted": cue_accepted,
+            "pydanticAccepted": pydantic_accepted,
+        }
+    expected_ids = set(cases)
+    report = {
+        "schema": "kernel.context-evidence-transport-unknown-field-report.v0",
+        "expectedCaseIDs": sorted(expected_ids),
+        "generatedCaseIDs": sorted(cases),
+        "executedCaseIDs": sorted(executed),
+        "reportedCaseIDs": sorted(executed),
+        "cases": executed,
+    }
+    for key in ("generatedCaseIDs", "executedCaseIDs", "reportedCaseIDs"):
+        if set(report[key]) != expected_ids:
+            raise AssertionError(f"unknown-field report set mismatch: {key}")
+    return report
+
+
 def pydantic_accepts_admission(value: dict[str, Any], scenario: str) -> bool:
-    model = EvidenceNoAdmissionTransition if scenario == "no-admission" else EvidenceAdmissionTransition
+    model = (
+        EvidenceNoAdmissionTransition
+        if scenario == "no-admission"
+        else EvidenceAdmissionTransition
+    )
     try:
         model.model_validate(value)
     except ValueError:
@@ -345,9 +521,14 @@ def execute_admission_matrix(matrix: EvidenceAdmissionMatrix) -> dict[str, Any]:
         pydantic_accepted = pydantic_accepts_admission(value, case.scenario)
         expected = case.expected == "accept"
         if cue_accepted != expected:
+            definition = (
+                "#ContextEvidenceNoAdmissionTransition"
+                if case.scenario == "no-admission"
+                else "#ContextEvidenceAdmissionTransition"
+            )
             raise AssertionError(
                 f"CUE admission outcome mismatch for {case_id}: "
-                f"expected={expected} diagnostics={cue_vet('#ContextEvidenceAdmissionTransition', value).diagnostics}"
+                f"expected={expected} diagnostics={cue_vet(definition, value).diagnostics}"
             )
         if pydantic_accepted != expected:
             raise AssertionError(f"Pydantic admission outcome mismatch for {case_id}")
