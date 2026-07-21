@@ -164,11 +164,20 @@ jobs:
 
       - name: Run direct pytest qualification
         run: |
-          cd .codex/context-workbook
-          PYTHONPATH=src uv run \
+          set -o pipefail
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
-            -- pytest
+            -- pytest 2>&1 | tee "$RUNNER_TEMP/context-workbook-pytest.log"
+
+      - name: Upload direct pytest qualification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-workbook-pytest
+          path: ${{ runner.temp }}/context-workbook-pytest.log
+          if-no-files-found: error
 
       - name: Check deterministic plugin projections
         run: |
