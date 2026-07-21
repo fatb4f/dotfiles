@@ -79,12 +79,34 @@ jobs:
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-workbook-test.sh dspy
 
-      - name: Run context workbook Python validation
+      - name: Compile context workbook
         run: |
           uv run --project .codex/context-workbook \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
-            -- bash .github/scripts/context-workbook-test.sh python
+            -- python -m compileall -q .codex/context-workbook
+
+      - name: Run context workbook unit tests
+        run: |
+          PYTHONPATH=.codex/context-workbook/src \
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- python -m unittest discover -s .codex/context-workbook/tests -v
+
+      - name: Check deterministic plugin projections
+        run: |
+          uv run --project .codex/context-workbook -- \
+            python -m context_workbook.projections --repo-root "$GITHUB_WORKSPACE" --check
+
+      - name: Prove legacy lexical routing is absent
+        run: |
+          if grep -E 'ascii_downcase|promptRoutes|contains\(\$term\)' \
+            .codex/plugins/agent-context-resolver/scripts/agent-context-resolver-hook \
+            .codex/plugins/agent-context-resolver/scripts/resolve-agent-context; then
+            echo "FAIL: legacy lexical routing remains in resolver adapters" >&2
+            exit 1
+          fi
 
       - name: Run context workbook hook validation
         run: |
