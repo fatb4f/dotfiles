@@ -12,6 +12,8 @@ trap 'rm -rf "$WORK_DIR"; rm -f "$PROJECTION_CUE"' EXIT
 printf '%s\n' "==> Run committed snapshot Go tests"
 (
   cd "$HYDRATOR_ROOT"
+  go mod tidy
+  go mod verify
   go test ./...
   go build -trimpath -o "$WORK_DIR/context-git-hydrator" ./cmd/context-git-hydrator
   go run ./internal/testfixture/cmd/context-git-fixture --output "$WORK_DIR/fixture"
