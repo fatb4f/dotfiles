@@ -41,11 +41,13 @@ import json
 import sys
 from pathlib import Path
 
+from context_workbook.context_graph_property_extensions import register_additional_mutators
 from context_workbook.context_graph_properties import (
     ContextGraphPropertyCatalog,
     validate_property_coverage,
 )
 
+register_additional_mutators()
 catalog = ContextGraphPropertyCatalog.model_validate_json(
     Path(sys.argv[1]).read_text(encoding="utf-8")
 )
