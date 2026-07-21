@@ -88,11 +88,11 @@ jobs:
 
       - name: Run context workbook unit tests
         run: |
-          PYTHONPATH=.codex/context-workbook/src \
-          uv run --project .codex/context-workbook \
-            --with "hypothesis==${HYPOTHESIS_VERSION}" \
-            --with "pytest==${PYTEST_VERSION}" \
-            -- python -m unittest discover -s .codex/context-workbook/tests -v
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src \
+          uv run --project .. \
+            -- python -m unittest -v \
+              test_cli test_models test_dspy_program test_engine
 
       - name: Check deterministic plugin projections
         run: |
