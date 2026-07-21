@@ -74,6 +74,14 @@ package contextmodel
 		"attestation" |
 		"validation-result"
 
+#ContextEvidenceAuthority: {
+	source:              #ClaimAuthority
+	observation:         "none" | "candidate"
+	diagnostic:          #ClaimAuthority
+	attestation:         #ClaimAuthority
+	"validation-result": #ClaimAuthority
+}
+
 #ContextEntityRef: close({
 	kind: #GraphEntityKind
 	id:   #GraphID
@@ -140,7 +148,7 @@ package contextmodel
 	producer: #ContextEntityRef | null
 	source:   #ContextSourceRef
 
-	authority:      #ClaimAuthority
+	authority:      #ContextEvidenceAuthority[kind]
 	payloadDigest?: #ContentDigest
 
 	diagnostics: [...close({
