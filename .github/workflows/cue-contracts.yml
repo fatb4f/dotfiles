@@ -123,13 +123,18 @@ jobs:
             test_engine.EngineTests.test_request_file_cannot_widen_configured_paths \
             test_engine.EngineTests.test_requested_revision_controls_inventory_materialization
 
-      - name: Run context workbook engine tests B2
-        if: always()
+      - name: Run context workbook engine snapshot tests
         run: |
           cd .codex/context-workbook/tests
           PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_resolved_revision_keeps_config_and_state_on_same_snapshot \
-            test_engine.EngineTests.test_repository_observation_records_resolved_commit \
+            test_engine.EngineTests.test_repository_observation_records_resolved_commit
+
+      - name: Run context workbook engine runtime tests
+        if: always()
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_missing_model_uses_chatgpt_authenticated_codex_default \
             test_engine.EngineTests.test_runtime_auth_failure_uses_shared_fail_closed_decision \
             test_engine.EngineTests.test_complete_gap_map_overrides_sufficiency_claim
