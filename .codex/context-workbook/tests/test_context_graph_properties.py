@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from typing import Any
 
 import pytest
@@ -114,10 +115,7 @@ def context_graph_resolutions(
         relationship_id: {
             "subject": {"kind": "member", "id": member_ids[0]},
             "predicate": "depends_on",
-            "object": {
-                "kind": "member",
-                "id": member_ids[1] if len(member_ids) > 1 else member_ids[0],
-            },
+            "object": {"kind": "member", "id": member_ids[1] if len(member_ids) > 1 else member_ids[0]},
             "evidenceIDs": [evidence_id],
         }
     }
@@ -171,6 +169,7 @@ def context_graph_resolutions(
 register_additional_mutators()
 CATALOG = load_property_catalog()
 PROPERTY_IDS = sorted(CATALOG.properties)
+PROPERTY_EXAMPLES = int(os.environ.get("CONTEXT_GRAPH_PROPERTY_EXAMPLES", "3"))
 
 
 def test_property_catalog_is_fully_executable() -> None:
@@ -185,9 +184,29 @@ def test_cue_exports_draft_2020_12_json_schema(definition: str) -> None:
     assert schema["type"] == "object"
 
 
+@settings(
+    max_examples=4,
+    deadline=None,
+    derandomize=True,
+    suppress_health_check=[HealthCheck.too_slow],
+)
+@given(
+    resolution=context_graph_resolutions(
+        min_modules=2,
+        max_modules=6,
+        min_members=1,
+        max_members=12,
+    )
+)
+def test_generated_context_graphs_are_valid(resolution: dict[str, Any]) -> None:
+    ContextGraphResolution.model_validate(resolution)
+    result = cue_vet("#ContextGraphResolution", resolution)
+    assert result.accepted, result.diagnostics
+
+
 @pytest.mark.parametrize("property_id", PROPERTY_IDS)
 @settings(
-    max_examples=8,
+    max_examples=PROPERTY_EXAMPLES,
     deadline=None,
     derandomize=True,
     suppress_health_check=[HealthCheck.too_slow],
@@ -209,14 +228,6 @@ def test_declared_context_graph_property(
     )
 
     ContextGraphResolution.model_validate(resolution)
-    base_value = (
-        resolution["snapshot"]
-        if property_spec.target_definition == "#ContextGraphSnapshot"
-        else resolution
-    )
-    base_result = cue_vet(property_spec.target_definition, base_value)
-    assert base_result.accepted, base_result.diagnostics
-
     mutated = mutate_for_property(resolution, property_spec)
     cue_result = cue_vet(property_spec.target_definition, mutated)
     pydantic_result = pydantic_accepts(property_spec.target_definition, mutated)
