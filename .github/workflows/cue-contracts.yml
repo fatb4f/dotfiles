@@ -72,9 +72,23 @@ jobs:
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-property-test.sh
 
-      - name: Run context workbook validation
+      - name: Run context workbook DSPy validation
         run: |
           uv run --project .codex/context-workbook \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
-            -- bash .github/scripts/context-workbook-test.sh
+            -- bash .github/scripts/context-workbook-test.sh dspy
+
+      - name: Run context workbook Python validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-workbook-test.sh python
+
+      - name: Run context workbook hook validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-workbook-test.sh hook
