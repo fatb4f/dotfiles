@@ -1,20 +1,28 @@
 package contextmodel
 
-// Admission changes effective semantic authority without mutating the collected
-// evidence object. The evidence's own authority remains bounded by the collection
-// policy; elevated authority exists only in a provenance-bound admitted state.
+// Authority-state values are transport fragments. An elevated effective state
+// becomes authoritative only when it is closed by an admission transition in
+// #ContextEvidenceAdmissionBundle.
 #ContextEvidenceAuthorityState: close({
 	schema:             "kernel.context-evidence-authority-state.v0"
 	evidenceID:         #GraphID
 	snapshotID:         #Digest
-	evidence:           #ContextEvidence & {payloadDigest: #ContentDigest}
+	Evidence=evidence:  #ContextEvidence & {payloadDigest: #ContentDigest}
 	effectiveAuthority: #ClaimAuthority
+
+	// Effective authority cannot be below the evidence's intrinsic authority.
+	_effectiveAuthorityAllowed: #ContextAuthorityTransitionExpectations[Evidence.authority][effectiveAuthority] & "accept"
 })
 
+// Collection is a separate trust boundary. Every collector, including a
+// source-fact collector, is restricted to none or candidate authority.
 #ContextCollectedEvidenceEnvelope: close({
 	schema: "kernel.context-evidence-collection.v0"
-	State=state: #ContextEvidenceAuthorityState & {
-		effectiveAuthority: State.evidence.authority
+	state: #ContextEvidenceAuthorityState & {
+		Collected=evidence: #ContextEvidence & {
+			authority: "none" | "candidate"
+		}
+		effectiveAuthority: Collected.authority
 	}
 	admission: null
 })
@@ -91,8 +99,11 @@ package contextmodel
 })
 
 #ContextEvidenceNoAdmissionTransition: close({
-	schema:        "kernel.context-evidence-no-admission-transition.v0"
-	Before=before: #ContextEvidenceAuthorityState
+	schema: "kernel.context-evidence-no-admission-transition.v0"
+	Before=before: #ContextEvidenceAuthorityState & {
+		BaseEvidence=evidence: #ContextEvidence & {payloadDigest: #ContentDigest}
+		effectiveAuthority:    BaseEvidence.authority
+	}
 	after: #ContextEvidenceAuthorityState & {
 		evidenceID:         Before.evidenceID
 		snapshotID:         Before.snapshotID
@@ -105,7 +116,10 @@ package contextmodel
 #ContextEvidenceAdmissionTransition: close({
 	schema:                    "kernel.context-evidence-admission-transition.v0"
 	PolicyDigest=policyDigest: #Digest
-	Before=before:             #ContextEvidenceAuthorityState
+	Before=before: #ContextEvidenceAuthorityState & {
+		BaseEvidence=evidence: #ContextEvidence & {payloadDigest: #ContentDigest}
+		effectiveAuthority:    BaseEvidence.authority
+	}
 	After=after: #ContextEvidenceAuthorityState & {
 		evidenceID: Before.evidenceID
 		snapshotID: Before.snapshotID
@@ -140,8 +154,22 @@ package contextmodel
 	admissions: [AdmissionID=#GraphID]: #ContextEvidenceAdmissionTransition & {
 		admission: admissionID: AdmissionID
 	}
+
+	// Every admission must materialize exactly its after-state in the state map.
 	_admissionStateRefs: [for _, transition in admissions {
-		[for stateID, _ in states if stateID == transition.before.evidenceID {stateID}] & [_, ...]
+		[for stateID, state in states if stateID == transition.after.evidenceID {
+			stateID:     stateID
+			_stateMatch: state & transition.after
+		}] & [_]
+	}]
+
+	// Every state that exceeds intrinsic evidence authority is backed by exactly
+	// one qualifying transition whose complete after-state is identical.
+	_elevatedStateAdmissionRefs: [for stateID, state in states if state.effectiveAuthority != state.evidence.authority {
+		[for admissionID, transition in admissions if transition.after.evidenceID == stateID {
+			admissionID: admissionID
+			_stateMatch: state & transition.after
+		}] & [_]
 	}]
 })
 
@@ -177,8 +205,6 @@ package contextmodel
 	"unknown-field":         true
 })
 
-// Exhaustive executable projection of all 4 × 4 authority pairs under every
-// valid and malformed admission scenario.
 contextEvidenceAdmissionMatrix: #ContextEvidenceAdmissionMatrix & {
 	cases: {
 		for fromAuthority, transitionExpectations in #ContextAuthorityTransitionExpectations {
