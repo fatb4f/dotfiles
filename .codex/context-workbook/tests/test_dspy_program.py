@@ -45,10 +45,11 @@ class CodexChatGPTLMTests(unittest.TestCase):
             "[[ ## decision_json ## ]]\n{}\n[[ ## completed ## ]]",
         )
 
-    def test_missing_codex_cli_fails_closed_at_initialization(self) -> None:
+    def test_missing_codex_cli_fails_closed_at_execution(self) -> None:
+        lm = CodexChatGPTLM("gpt-5.6-sol")
         with patch("context_workbook.dspy_program.shutil.which", return_value=None):
             with self.assertRaisesRegex(DspyUnavailable, "Codex CLI is required"):
-                CodexChatGPTLM("gpt-5.6-sol")
+                lm.forward(messages=[{"role": "user", "content": "Establish context"}])
 
     def test_decision_schema_is_supplied_to_dspy(self) -> None:
         fixture = (
