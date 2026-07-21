@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from hypothesis import HealthCheck, given, settings, strategies as st
 
+from context_workbook.context_graph_property_extensions import register_additional_mutators
 from context_workbook.context_graph_properties import (
     ContextGraphResolution,
     assert_expected,
@@ -22,9 +23,16 @@ def _digest(byte: int) -> str:
 
 
 @st.composite
-def context_graph_resolutions(draw: st.DrawFn) -> dict[str, Any]:
-    module_count = draw(st.integers(min_value=2, max_value=4))
-    member_count = draw(st.integers(min_value=2, max_value=8))
+def context_graph_resolutions(
+    draw: st.DrawFn,
+    *,
+    min_modules: int,
+    max_modules: int,
+    min_members: int,
+    max_members: int,
+) -> dict[str, Any]:
+    module_count = draw(st.integers(min_value=min_modules, max_value=max_modules))
+    member_count = draw(st.integers(min_value=min_members, max_value=max_members))
     snapshot_byte = draw(st.integers(min_value=4, max_value=250))
     observation_authority = draw(st.sampled_from(["none", "candidate"]))
 
@@ -106,7 +114,10 @@ def context_graph_resolutions(draw: st.DrawFn) -> dict[str, Any]:
         relationship_id: {
             "subject": {"kind": "member", "id": member_ids[0]},
             "predicate": "depends_on",
-            "object": {"kind": "member", "id": member_ids[1]},
+            "object": {
+                "kind": "member",
+                "id": member_ids[1] if len(member_ids) > 1 else member_ids[0],
+            },
             "evidenceIDs": [evidence_id],
         }
     }
@@ -157,6 +168,7 @@ def context_graph_resolutions(draw: st.DrawFn) -> dict[str, Any]:
     }
 
 
+register_additional_mutators()
 CATALOG = load_property_catalog()
 PROPERTY_IDS = sorted(CATALOG.properties)
 
@@ -180,12 +192,21 @@ def test_cue_exports_draft_2020_12_json_schema(definition: str) -> None:
     derandomize=True,
     suppress_health_check=[HealthCheck.too_slow],
 )
-@given(resolution=context_graph_resolutions())
+@given(data=st.data())
 def test_declared_context_graph_property(
     property_id: str,
-    resolution: dict[str, Any],
+    data: Any,
 ) -> None:
     property_spec = CATALOG.properties[property_id]
+    resolution = data.draw(
+        context_graph_resolutions(
+            min_modules=property_spec.generator.min_modules,
+            max_modules=property_spec.generator.max_modules,
+            min_members=property_spec.generator.min_members,
+            max_members=property_spec.generator.max_members,
+        ),
+        label=property_id,
+    )
 
     ContextGraphResolution.model_validate(resolution)
     base_value = (
