@@ -13,14 +13,13 @@ export CONTEXT_WORKBOOK_CUE="${CONTEXT_WORKBOOK_CUE:-cue}"
 
 cd "$REPO_ROOT"
 
-echo "==> Validate transport-neutral DSPy inference CUE fixtures"
-fixture_work="$(mktemp -d "${TMPDIR:-/tmp}/dspy-service-fixtures.XXXXXX")"
-cleanup_fixture_work() {
-  rm -rf -- "$fixture_work"
-}
-trap cleanup_fixture_work EXIT
+validate_dspy_contracts() (
+  set -euo pipefail
+  echo "==> Validate transport-neutral DSPy inference CUE fixtures"
+  fixture_work="$(mktemp -d "${TMPDIR:-/tmp}/dspy-service-fixtures.XXXXXX")"
+  trap 'rm -rf -- "$fixture_work"' EXIT
 
-"$PYTHON_BIN" - "$DSPY_SERVICE_FIXTURES" "$DSPY_SERVICE_REVIEW_REGRESSIONS" "$fixture_work" <<'PY2'
+  "$PYTHON_BIN" - "$DSPY_SERVICE_FIXTURES" "$DSPY_SERVICE_REVIEW_REGRESSIONS" "$fixture_work" <<'PY2'
 import copy
 import json
 import sys
@@ -83,71 +82,77 @@ for mutation in regressions["invalidExecutionSurfaceMutations"]:
     )
 PY2
 
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
-  "$MODEL_ROOT" "$fixture_work/completed.json"
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
-  "$MODEL_ROOT" "$fixture_work/failed.json"
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyBackendConfig' \
-  "$MODEL_ROOT" "$fixture_work/backend-config.json"
-for execution_surface in "$fixture_work"/execution-surfaces/*.json; do
-  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyExecutionSurfaceProjection' \
-    "$MODEL_ROOT" "$execution_surface"
-done
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyProviderRoutingDocument' \
-  "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/lsp/provider-routing.json"
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyToolRegistryDocument' \
-  "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/mcp/tool-registry.json"
-"$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyCodeIntelWorkflowDocument' \
-  "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/workflows/lua-first/workflow.json"
-for invalid_fixture in "$fixture_work"/invalid-exchange/*.json; do
-  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
-    "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
-    echo "FAIL: invalid DSPy inference fixture passed: $invalid_fixture" >&2
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
+    "$MODEL_ROOT" "$fixture_work/completed.json"
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
+    "$MODEL_ROOT" "$fixture_work/failed.json"
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyBackendConfig' \
+    "$MODEL_ROOT" "$fixture_work/backend-config.json"
+  for execution_surface in "$fixture_work"/execution-surfaces/*.json; do
+    "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyExecutionSurfaceProjection' \
+      "$MODEL_ROOT" "$execution_surface"
+  done
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyProviderRoutingDocument' \
+    "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/lsp/provider-routing.json"
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyToolRegistryDocument' \
+    "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/mcp/tool-registry.json"
+  "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyCodeIntelWorkflowDocument' \
+    "$MODEL_ROOT" "$REPO_ROOT/.codex/plugins/code-intel/reference/workflows/lua-first/workflow.json"
+  for invalid_fixture in "$fixture_work"/invalid-exchange/*.json; do
+    if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyInferenceExchange' \
+      "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
+      echo "FAIL: invalid DSPy inference fixture passed: $invalid_fixture" >&2
+      exit 1
+    fi
+  done
+  for invalid_fixture in "$fixture_work"/invalid-backend/*.json; do
+    if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyBackendConfig' \
+      "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
+      echo "FAIL: invalid DSPy backend config passed: $invalid_fixture" >&2
+      exit 1
+    fi
+  done
+  for invalid_fixture in "$fixture_work"/invalid-surface/*.json; do
+    if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyExecutionSurfaceProjection' \
+      "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
+      echo "FAIL: invalid DSPy execution surface passed: $invalid_fixture" >&2
+      exit 1
+    fi
+  done
+  echo "==> DSPy contract validation passed"
+)
+
+validate_python_workbook() {
+  echo "==> Compile context workbook"
+  "$PYTHON_BIN" -m compileall -q "$WORKBOOK_ROOT"
+
+  echo "==> Run context workbook unit tests"
+  "$PYTHON_BIN" -m unittest discover -s "$WORKBOOK_ROOT/tests" -v
+
+  echo "==> Check deterministic plugin projections"
+  "$PYTHON_BIN" -m context_workbook.projections --repo-root "$REPO_ROOT" --check
+
+  echo "==> Prove legacy lexical routing is absent"
+  if grep -E 'ascii_downcase|promptRoutes|contains\(\$term\)' \
+    "$REPO_ROOT/.codex/plugins/agent-context-resolver/scripts/agent-context-resolver-hook" \
+    "$REPO_ROOT/.codex/plugins/agent-context-resolver/scripts/resolve-agent-context"; then
+    echo "FAIL: legacy lexical routing remains in resolver adapters" >&2
     exit 1
   fi
-done
-for invalid_fixture in "$fixture_work"/invalid-backend/*.json; do
-  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyBackendConfig' \
-    "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
-    echo "FAIL: invalid DSPy backend config passed: $invalid_fixture" >&2
-    exit 1
-  fi
-done
-for invalid_fixture in "$fixture_work"/invalid-surface/*.json; do
-  if "$CONTEXT_WORKBOOK_CUE" vet -c -d '#DspyExecutionSurfaceProjection' \
-    "$MODEL_ROOT" "$invalid_fixture" >/dev/null 2>&1; then
-    echo "FAIL: invalid DSPy execution surface passed: $invalid_fixture" >&2
-    exit 1
-  fi
-done
+  echo "==> Python/workbook validation passed"
+}
 
-echo "==> Compile context workbook"
-"$PYTHON_BIN" -m compileall -q "$WORKBOOK_ROOT"
+validate_hook_paths() {
+  echo "==> Exercise resolver hook through the canonical workbook"
+  fixture="$WORKBOOK_ROOT/tests/fixtures/sufficient-decision.json"
+  hook_output="$({
+    printf '%s\n' '{"hook_event_name":"UserPromptSubmit","prompt":"Implement Issue 54"}'
+  } | CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
+      CONTEXT_WORKBOOK_TEST_MODE=1 \
+      CONTEXT_WORKBOOK_RECORDED_DECISION="$fixture" \
+      "$REPO_ROOT/.codex/plugins/agent-context-resolver/scripts/agent-context-resolver-hook")"
 
-echo "==> Run context workbook unit tests"
-"$PYTHON_BIN" -m unittest discover -s "$WORKBOOK_ROOT/tests" -v
-
-echo "==> Check deterministic plugin projections"
-"$PYTHON_BIN" -m context_workbook.projections --repo-root "$REPO_ROOT" --check
-
-echo "==> Prove legacy lexical routing is absent"
-if grep -E 'ascii_downcase|promptRoutes|contains\(\$term\)' \
-  "$REPO_ROOT/.codex/plugins/agent-context-resolver/scripts/agent-context-resolver-hook" \
-  "$REPO_ROOT/.codex/plugins/agent-context-resolver/scripts/resolve-agent-context"; then
-  echo "FAIL: legacy lexical routing remains in resolver adapters" >&2
-  exit 1
-fi
-
-echo "==> Exercise resolver hook through the canonical workbook"
-fixture="$WORKBOOK_ROOT/tests/fixtures/sufficient-decision.json"
-hook_output="$({
-  printf '%s\n' '{"hook_event_name":"UserPromptSubmit","prompt":"Implement Issue 54"}'
-} | CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
-    CONTEXT_WORKBOOK_TEST_MODE=1 \
-    CONTEXT_WORKBOOK_RECORDED_DECISION="$fixture" \
-    "$REPO_ROOT/.codex/plugins/agent-context-resolver/scripts/agent-context-resolver-hook")"
-
-HOOK_OUTPUT="$hook_output" "$PYTHON_BIN" - <<'PY2'
+  HOOK_OUTPUT="$hook_output" "$PYTHON_BIN" - <<'PY2'
 import json
 import os
 value = json.loads(os.environ["HOOK_OUTPUT"])
@@ -158,18 +163,18 @@ assert context["sufficiency"]["state"] == "sufficient"
 assert context["context"]["schema"] == "dotfiles.context-packet.v0"
 PY2
 
-echo "==> Exercise production fail-closed path without an available Codex CLI"
-env -u CONTEXT_WORKBOOK_RECORDED_DECISION \
-  CONTEXT_WORKBOOK_DSPY_MODEL=codex/gpt-5.6-sol \
-  CONTEXT_WORKBOOK_CODEX=/nonexistent/context-workbook-codex \
-  CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
-  sh "$WORKBOOK_ROOT/run-context-workbook" \
-  --repo-root "$REPO_ROOT" \
-  --prompt "No configured model" \
-  --revision HEAD \
-  --output state >"${TMPDIR:-/tmp}/context-workbook-fail-closed.json"
+  echo "==> Exercise production fail-closed path without an available Codex CLI"
+  env -u CONTEXT_WORKBOOK_RECORDED_DECISION \
+    CONTEXT_WORKBOOK_DSPY_MODEL=codex/gpt-5.6-sol \
+    CONTEXT_WORKBOOK_CODEX=/nonexistent/context-workbook-codex \
+    CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
+    sh "$WORKBOOK_ROOT/run-context-workbook" \
+    --repo-root "$REPO_ROOT" \
+    --prompt "No configured model" \
+    --revision HEAD \
+    --output state >"${TMPDIR:-/tmp}/context-workbook-fail-closed.json"
 
-FAIL_CLOSED_PATH="${TMPDIR:-/tmp}/context-workbook-fail-closed.json" "$PYTHON_BIN" - <<'PY2'
+  FAIL_CLOSED_PATH="${TMPDIR:-/tmp}/context-workbook-fail-closed.json" "$PYTHON_BIN" - <<'PY2'
 import json
 import os
 from pathlib import Path
@@ -179,5 +184,28 @@ assert value["sufficiency"]["state"] == "insufficient"
 assert value.get("projection") is None
 assert value["sufficiency"]["blockingGapIDs"] == ["gap.dspy-unavailable"]
 PY2
+  echo "==> Hook and fail-closed validation passed"
+}
 
-echo "==> Context workbook validation passed"
+phase="${1:-all}"
+case "$phase" in
+  dspy)
+    validate_dspy_contracts
+    ;;
+  python)
+    validate_python_workbook
+    ;;
+  hook)
+    validate_hook_paths
+    ;;
+  all)
+    validate_dspy_contracts
+    validate_python_workbook
+    validate_hook_paths
+    echo "==> Context workbook validation passed"
+    ;;
+  *)
+    echo "unknown context-workbook validation phase: $phase" >&2
+    exit 2
+    ;;
+esac
