@@ -130,13 +130,24 @@ jobs:
             test_engine.EngineTests.test_resolved_revision_keeps_config_and_state_on_same_snapshot \
             test_engine.EngineTests.test_repository_observation_records_resolved_commit
 
-      - name: Run context workbook engine runtime tests
+      - name: Run default reasoner engine test
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_missing_model_uses_chatgpt_authenticated_codex_default
+
+      - name: Run unavailable-runtime engine test
         if: always()
         run: |
           cd .codex/context-workbook/tests
           PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
-            test_engine.EngineTests.test_missing_model_uses_chatgpt_authenticated_codex_default \
-            test_engine.EngineTests.test_runtime_auth_failure_uses_shared_fail_closed_decision \
+            test_engine.EngineTests.test_runtime_auth_failure_uses_shared_fail_closed_decision
+
+      - name: Run gap-dominance engine test
+        if: always()
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_complete_gap_map_overrides_sufficiency_claim
 
       - name: Check deterministic plugin projections
