@@ -86,13 +86,25 @@ jobs:
             --with "pytest==${PYTEST_VERSION}" \
             -- python -m compileall -q .codex/context-workbook
 
-      - name: Run context workbook unit tests
+      - name: Run context workbook CLI tests
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src \
-          uv run --project .. \
-            -- python -m unittest -v \
-              test_cli test_models test_dspy_program test_engine
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_cli
+
+      - name: Run context workbook model tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_models
+
+      - name: Run context workbook DSPy program tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_dspy_program
+
+      - name: Run context workbook engine tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_engine
 
       - name: Check deterministic plugin projections
         run: |
