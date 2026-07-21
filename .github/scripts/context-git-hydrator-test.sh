@@ -12,7 +12,10 @@ trap 'rm -rf "$WORK_DIR"; rm -f "$PROJECTION_CUE"' EXIT
 printf '%s\n' "==> Run committed snapshot Go tests"
 (
   cd "$HYDRATOR_ROOT"
-  go mod download
+  go mod tidy
+  printf '%s\n' '==> BEGIN generated go.mod'
+  cat go.mod
+  printf '%s\n' '==> END generated go.mod'
   go mod verify
   go test ./...
   git diff --exit-code -- go.mod go.sum
