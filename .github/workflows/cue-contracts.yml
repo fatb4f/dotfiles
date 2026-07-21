@@ -74,5 +74,7 @@ jobs:
 
       - name: Run context workbook validation
         run: |
-          uv run --project .codex/context-workbook -- \
-            bash .github/scripts/context-workbook-test.sh
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-workbook-test.sh
