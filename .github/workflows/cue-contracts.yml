@@ -16,6 +16,8 @@ jobs:
       CUE_REVISION: 806821e40fae070318600a264d311517e596353b
       PYTHON_VERSION: "3.14"
       UV_VERSION: "0.10.0"
+      HYPOTHESIS_VERSION: "6.158.0"
+      PYTEST_VERSION: "9.1.1"
 
     steps:
       - name: Checkout
@@ -55,6 +57,13 @@ jobs:
 
       - name: Run normalized context graph validation
         run: bash .github/scripts/context-graph-test.sh
+
+      - name: Run context graph property validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-graph-property-test.sh
 
       - name: Run context workbook validation
         run: |
