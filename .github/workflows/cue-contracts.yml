@@ -16,6 +16,8 @@ jobs:
       CUE_REVISION: 806821e40fae070318600a264d311517e596353b
       PYTHON_VERSION: "3.14"
       UV_VERSION: "0.10.0"
+      HYPOTHESIS_VERSION: "6.158.0"
+      PYTEST_VERSION: "9.1.1"
 
     steps:
       - name: Checkout
@@ -53,7 +55,118 @@ jobs:
       - name: Run CUE contract validation
         run: bash .github/scripts/cue-contract-test.sh
 
-      - name: Run context workbook validation
+      - name: Run normalized context graph validation
+        run: bash .github/scripts/context-graph-test.sh
+
+      - name: Run context graph authority validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-graph-authority-test.sh
+
+      - name: Run context graph property validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-graph-property-test.sh
+
+      - name: Run context workbook DSPy validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-workbook-test.sh dspy
+
+      - name: Compile context workbook
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- python -m compileall -q .codex/context-workbook
+
+      - name: Run context workbook CLI tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_cli
+
+      - name: Run context workbook model tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_models
+
+      - name: Run context workbook DSPy program tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_dspy_program
+
+      - name: Run context workbook engine tests A
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_establishes_cue_valid_context_and_packet \
+            test_engine.EngineTests.test_requested_projection_ids_gate_projection_creation \
+            test_engine.EngineTests.test_request_boundary_scopes_all_reasoner_inputs \
+            test_engine.EngineTests.test_request_boundary_retains_fragment_prerequisite_closure \
+            test_engine.EngineTests.test_fragment_selection_requires_prerequisite_closure \
+            test_engine.EngineTests.test_cue_state_requires_fragment_prerequisite_closure \
+            test_engine.EngineTests.test_request_boundary_filters_workflow_entries_and_provider_routes \
+            test_engine.EngineTests.test_prompt_change_invalidates_dependent_nodes_only
+
+      - name: Run context workbook engine tests B1
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_unknown_provider_fails_closed \
+            test_engine.EngineTests.test_outside_file_fails_closed \
+            test_engine.EngineTests.test_request_file_cannot_widen_configured_paths \
+            test_engine.EngineTests.test_requested_revision_controls_inventory_materialization
+
+      - name: Run context workbook engine snapshot tests
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_resolved_revision_keeps_config_and_state_on_same_snapshot \
+            test_engine.EngineTests.test_repository_observation_records_resolved_commit
+
+      - name: Run default reasoner engine test
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_missing_model_uses_chatgpt_authenticated_codex_default
+
+      - name: Run unavailable-runtime engine test
+        if: always()
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_runtime_auth_failure_uses_shared_fail_closed_decision
+
+      - name: Run gap-dominance engine test
+        if: always()
+        run: |
+          cd .codex/context-workbook/tests
+          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+            test_engine.EngineTests.test_complete_gap_map_overrides_sufficiency_claim
+
+      - name: Check deterministic plugin projections
         run: |
           uv run --project .codex/context-workbook -- \
-            bash .github/scripts/context-workbook-test.sh
+            python -m context_workbook.projections --repo-root "$GITHUB_WORKSPACE" --check
+
+      - name: Prove legacy lexical routing is absent
+        run: |
+          if grep -E 'ascii_downcase|promptRoutes|contains\(\$term\)' \
+            .codex/plugins/agent-context-resolver/scripts/agent-context-resolver-hook \
+            .codex/plugins/agent-context-resolver/scripts/resolve-agent-context; then
+            echo "FAIL: legacy lexical routing remains in resolver adapters" >&2
+            exit 1
+          fi
+
+      - name: Run context workbook hook validation
+        run: |
+          uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- bash .github/scripts/context-workbook-test.sh hook
