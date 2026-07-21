@@ -165,11 +165,10 @@ jobs:
       - name: Run direct pytest qualification
         run: |
           set -o pipefail
-          cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. \
+          PYTHONPATH=.codex/context-workbook/src uv run --project .codex/context-workbook \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
-            -- pytest 2>&1 | tee "$RUNNER_TEMP/context-workbook-pytest.log"
+            -- pytest .codex/context-workbook/tests 2>&1 | tee "$RUNNER_TEMP/context-workbook-pytest.log"
 
       - name: Upload direct pytest qualification log
         if: always()
