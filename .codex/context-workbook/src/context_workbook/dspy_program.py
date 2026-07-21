@@ -42,11 +42,7 @@ class CodexChatGPTLM(_DspyBaseLM):  # type: ignore[misc]
             raise DspyUnavailable(
                 "DSPy is required for production context establishment; install the locked workbook project"
             )
-        codex_command = os.environ.get("CONTEXT_WORKBOOK_CODEX", "codex")
-        codex_binary = shutil.which(codex_command)
-        if codex_binary is None:
-            raise DspyUnavailable("Codex CLI is required for ChatGPT-authenticated context establishment")
-        self.codex_binary = codex_binary
+        self.codex_command = os.environ.get("CONTEXT_WORKBOOK_CODEX", "codex")
         self.codex_model = model
         super().__init__(model=f"codex/{model}", cache=False, max_tokens=8000)
 
@@ -71,13 +67,19 @@ class CodexChatGPTLM(_DspyBaseLM):  # type: ignore[misc]
     ):
         from litellm import ModelResponse  # type: ignore
 
+        codex_binary = shutil.which(self.codex_command)
+        if codex_binary is None:
+            raise DspyUnavailable(
+                "Codex CLI is required for ChatGPT-authenticated context establishment"
+            )
+
         environment = dict(os.environ)
         environment.pop("CODEX_API_KEY", None)
         environment.pop("OPENAI_API_KEY", None)
         with tempfile.TemporaryDirectory(prefix="context-workbook-codex-") as temporary:
             process = subprocess.run(
                 [
-                    self.codex_binary,
+                    codex_binary,
                     "exec",
                     "--ephemeral",
                     "--ignore-user-config",
