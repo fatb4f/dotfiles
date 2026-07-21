@@ -14,6 +14,7 @@ jobs:
 
     env:
       CUE_REVISION: 806821e40fae070318600a264d311517e596353b
+      GO_VERSION: "1.26.5"
       PYTHON_VERSION: "3.14"
       UV_VERSION: "0.10.0"
       HYPOTHESIS_VERSION: "6.158.0"
@@ -26,7 +27,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version: ${{ env.GO_VERSION }}
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -43,10 +44,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
           python -m pip install "uv==${UV_VERSION}"
-          uv sync --project .codex/context-workbook
+          uv sync --frozen --project .codex/context-workbook
 
       - name: Print tool versions
         run: |
+          go version
           cue version
           jq --version
           python --version
@@ -71,6 +73,9 @@ jobs:
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-admission-test.sh
+
+      - name: Run committed Git snapshot hydrator qualification
+        run: bash .github/scripts/context-git-hydrator-test.sh
 
       - name: Run context graph property validation
         run: |
