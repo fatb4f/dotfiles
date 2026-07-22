@@ -101,6 +101,9 @@ func ReportedPropertyIDs(report PropertyReport) ([]string, error) {
 	}
 	propertyIDs := make([]string, 0, len(report.Results))
 	for _, result := range report.Results {
+		if result.Status != PropertyStatusPassed {
+			return nil, fmt.Errorf("property %q was reported with status %q", result.PropertyID, result.Status)
+		}
 		propertyIDs = append(propertyIDs, result.PropertyID)
 	}
 	return propertyIDs, nil

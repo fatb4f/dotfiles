@@ -19,7 +19,10 @@ func Create(path string) (Repository, error) {
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return Repository{}, fmt.Errorf("create fixture repository root: %w", err)
 	}
-	if _, err := runGit(root, nil, "init", "--initial-branch=main"); err != nil {
+	if err := prepareGitEnvironment(root); err != nil {
+		return Repository{}, err
+	}
+	if _, err := runGit(root, nil, "init", "--object-format=sha1", "--initial-branch=main"); err != nil {
 		return Repository{}, err
 	}
 	for _, setting := range [][2]string{
@@ -117,6 +120,9 @@ func Create(path string) (Repository, error) {
 	if err != nil {
 		return Repository{}, err
 	}
+	if _, err := runGit(root, nil, "tag", "fixture-f", commitF); err != nil {
+		return Repository{}, err
+	}
 
 	return Repository{
 		Path: root,
@@ -189,6 +195,48 @@ func gitEnvironment(sequence int) []string {
 	}
 }
 
+func prepareGitEnvironment(root string) error {
+	stateRoot := gitEnvironmentRoot(root)
+	if err := os.RemoveAll(stateRoot); err != nil {
+		return fmt.Errorf("reset fixture Git environment: %w", err)
+	}
+	for _, directory := range []string{
+		filepath.Join(stateRoot, "home"),
+		filepath.Join(stateRoot, "xdg"),
+		filepath.Join(stateRoot, "templates"),
+	} {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			return fmt.Errorf("create fixture Git environment: %w", err)
+		}
+	}
+	return nil
+}
+
+func gitEnvironmentRoot(root string) string {
+	return filepath.Join(filepath.Dir(root), "."+filepath.Base(root)+"-git-environment")
+}
+
+func isolatedGitEnvironment(root string, environment []string) []string {
+	stateRoot := gitEnvironmentRoot(root)
+	result := []string{
+		"PATH=" + os.Getenv("PATH"),
+		"HOME=" + filepath.Join(stateRoot, "home"),
+		"XDG_CONFIG_HOME=" + filepath.Join(stateRoot, "xdg"),
+		"GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=" + os.DevNull,
+		"GIT_ATTR_NOSYSTEM=1",
+		"GIT_TEMPLATE_DIR=" + filepath.Join(stateRoot, "templates"),
+		"GIT_TERMINAL_PROMPT=0",
+		"LC_ALL=C",
+		"LANG=C",
+		"TZ=UTC",
+	}
+	if temporary := os.Getenv("TMPDIR"); temporary != "" {
+		result = append(result, "TMPDIR="+temporary)
+	}
+	return append(result, environment...)
+}
+
 func runGit(root string, environment []string, arguments ...string) (string, error) {
 	return runGitInput(root, "", environment, arguments...)
 }
@@ -196,7 +244,7 @@ func runGit(root string, environment []string, arguments ...string) (string, err
 func runGitInput(root, input string, environment []string, arguments ...string) (string, error) {
 	command := exec.Command("git", arguments...)
 	command.Dir = root
-	command.Env = append(os.Environ(), environment...)
+	command.Env = isolatedGitEnvironment(root, environment)
 	command.Stdin = strings.NewReader(input)
 	output, err := command.CombinedOutput()
 	if err != nil {

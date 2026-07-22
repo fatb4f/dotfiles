@@ -163,6 +163,8 @@ jobs:
           cue vet -c=false .
 
       - name: Run direct pytest qualification
+        env:
+          CONTEXT_GIT_ASSERTION_CANDIDATE_DIR: ${{ runner.temp }}/context-git-assertion-candidates
         run: |
           set -o pipefail
           PYTHONPATH=.codex/context-workbook/src uv run --project .codex/context-workbook \
@@ -177,6 +179,14 @@ jobs:
           name: context-workbook-pytest
           path: ${{ runner.temp }}/context-workbook-pytest.log
           if-no-files-found: error
+
+      - name: Upload Git snapshot assertion candidates
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-git-assertion-candidates
+          path: ${{ runner.temp }}/context-git-assertion-candidates
+          if-no-files-found: ignore
 
       - name: Check deterministic plugin projections
         run: |

@@ -22,7 +22,7 @@ type Config struct {
 }
 
 func DefaultConfig() Config {
-	return Config{Identity: DefaultHydratorIdentity, Digest: DefaultHydratorDigest}
+	return Config{Identity: DefaultHydratorIdentity, Digest: BuildHydratorDigest}
 }
 
 func HydrateCommitted(request Request, config Config) (Observation, error) {
@@ -34,6 +34,9 @@ func HydrateCommitted(request Request, config Config) (Observation, error) {
 	}
 	if !isSHA256Digest(config.Digest) {
 		return Observation{}, errors.New("hydrator digest must be a sha256 digest")
+	}
+	if config.Digest == UnboundHydratorDigest {
+		return Observation{}, errors.New("hydrator digest is unbound; inject release provenance at build time")
 	}
 
 	repository, err := git.PlainOpenWithOptions(request.Path, &git.PlainOpenOptions{DetectDotGit: true})
@@ -63,11 +66,14 @@ func HydrateCommitted(request Request, config Config) (Observation, error) {
 		return occurrences[i].Path < occurrences[j].Path
 	})
 
+	resolvedRevision := objectID(commit.Hash)
+	canonicalRevision := resolvedRevision.Hex
+
 	return Observation{
 		Schema:            ObservationSchema,
 		RepositoryID:      request.RepositoryID,
-		RequestedRevision: request.Revision,
-		ResolvedRevision:  objectID(commit.Hash),
+		RequestedRevision: canonicalRevision,
+		ResolvedRevision:  resolvedRevision,
 		RootTree:          objectID(tree.Hash),
 		Occurrences:       occurrences,
 		Hydrator: HydratorIdentity{
