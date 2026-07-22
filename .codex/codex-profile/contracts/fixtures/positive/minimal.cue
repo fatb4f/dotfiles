@@ -10,6 +10,15 @@ Source=source: profile.#SourceIdentity & {
 
 Coordinate=coordinate: profile.#SourceCoordinate & {source: Source, sourceOffset: 128}
 
+checkpoint: profile.#SourceCheckpoint & {
+	sourceID:         Source.sourceID
+	sourceGeneration: Source.generation
+	nextOffset:       256
+	anchorStart:      192
+	anchorEnd:        256
+	anchorDigest:     "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+}
+
 Adapter=adapter: profile.#AdapterIdentity & {
 	adapterID: "rollout.v0"
 	version:   "0.1.0"

@@ -2,12 +2,17 @@ package codexprofile
 
 #PropertyMutationClass:
 	"duplicate-coordinate" |
+		"same-path-source-incarnation" |
 		"replace-admitted-raw" |
 		"elevate-authority" |
 		"collapse-unavailable-to-null" |
 		"timestamp-ordering" |
 		"invalid-freshness" |
 		"invalid-token-arithmetic" |
+		"malformed-source-token-value" |
+		"duplicate-diagnostic-code" |
+		"replayed-strict-qualification" |
+		"adapter-version-evolution" |
 		"synthetic-lineage-over-native" |
 		"merge-journal-lifecycle" |
 		"non-collector-write" |
@@ -53,6 +58,16 @@ assertionCatalog: #ContractPropertyCatalog & {
 			changedTerms:     ["payload.digest"]
 			expectedResult:   "reject"
 			rejectionCode:    "raw.not-append-only"
+		}
+		"source.incarnation-generation": {
+			description:      "A same-path source replacement, truncation below the durable watermark, or checkpoint anchor mismatch receives a new source generation before reading."
+			targetDefinition: "#SourceIdentity"
+			preconditions:    ["A rollout path already has an admitted watermark."]
+			mutationClass:    "same-path-source-incarnation"
+			preservedTerms:   ["source.id"]
+			changedTerms:     ["source.generation"]
+			expectedResult:   "accept"
+			rejectionCode:    null
 		}
 		"authority.provenance-bounded": {
 			description:      "Observed facts retain their source authority and cannot self-promote to checkpoint or derived authority."
@@ -103,6 +118,46 @@ assertionCatalog: #ContractPropertyCatalog & {
 			changedTerms:     ["usage.cached", "usage.fresh"]
 			expectedResult:   "reject"
 			rejectionCode:    "usage.invalid-accounting"
+		}
+		"usage.malformed-source-token-value": {
+			description:      "Malformed token values from source evidence remain diagnostics and are not normalized as zero-valued usage."
+			targetDefinition: "#UsageObservation"
+			preconditions:    ["A source token usage object contains a present malformed token field."]
+			mutationClass:    "malformed-source-token-value"
+			preservedTerms:   ["source.coordinate"]
+			changedTerms:     ["usage.field"]
+			expectedResult:   "reject"
+			rejectionCode:    "usage.invalid-accounting"
+		}
+		"diagnostic.identity-scoped": {
+			description:      "Multiple diagnostics at one source coordinate with the same code remain separately admissible by scope or ordinal."
+			targetDefinition: "#RawObservationEnvelope"
+			preconditions:    ["One source coordinate emits more than one finding with the same diagnostic code."]
+			mutationClass:    "duplicate-diagnostic-code"
+			preservedTerms:   ["source.coordinate"]
+			changedTerms:     ["diagnostic.scope", "diagnostic.ordinal"]
+			expectedResult:   "accept"
+			rejectionCode:    null
+		}
+		"strict.persisted-qualification": {
+			description:      "Strict qualification reads persisted unresolved diagnostics for the active source and adapter version."
+			targetDefinition: "#UsageObservation"
+			preconditions:    ["A strict diagnostic has already been admitted for the active source and adapter version."]
+			mutationClass:    "replayed-strict-qualification"
+			preservedTerms:   ["source.coordinate", "adapter.identity"]
+			changedTerms:     ["qualification.invocation"]
+			expectedResult:   "reject"
+			rejectionCode:    "usage.invalid-accounting"
+		}
+		"usage.adapter-version-addressed": {
+			description:      "Normalized usage observations are addressed by adapter identity so corrected normalization can coexist with prior output."
+			targetDefinition: "#UsageObservation"
+			preconditions:    ["A source coordinate has already been normalized by a previous adapter version."]
+			mutationClass:    "adapter-version-evolution"
+			preservedTerms:   ["source.coordinate"]
+			changedTerms:     ["adapter.identity"]
+			expectedResult:   "accept"
+			rejectionCode:    null
 		}
 		"lineage.native-migration": {
 			description:      "Native context-window identity is retained; legacy numeric identity is represented only as window number."
