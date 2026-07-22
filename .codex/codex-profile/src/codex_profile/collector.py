@@ -9,7 +9,6 @@ from codex_profile.reporting import parse_event
 from codex_profile.sources.rollout import (
     candidate_rollout_files,
     iter_complete_records,
-    source_generation,
     stable_source_id,
 )
 from codex_profile.storage import IngestCounts, ProfileStorage
@@ -21,6 +20,7 @@ class CollectorResult:
     files_ingested: int
     counts: IngestCounts
     strict_diagnostics: int
+    active_sources: tuple[tuple[str, int], ...]
 
 
 def ingest_rollouts(
@@ -34,16 +34,23 @@ def ingest_rollouts(
     total = IngestCounts()
     strict_diagnostics = 0
     files_ingested = 0
+    active_sources: list[tuple[str, int]] = []
 
     for path in files:
         if not _matches_repo(path, repo):
             continue
         files_ingested += 1
         source_id = stable_source_id(path)
-        generation = source_generation(path)
+        generation = storage.resolve_source_generation(path, source_id)
+        active_sources.append((source_id, generation))
         watermark = storage.get_watermark(source_id, generation)
         state = storage.load_usage_state(source_id, generation)
-        for record in iter_complete_records(path, start_offset=watermark):
+        for record in iter_complete_records(
+            path,
+            start_offset=watermark,
+            source_id=source_id,
+            generation=generation,
+        ):
             adapted = adapt_rollout_record(record, state)
             state = adapted.state
             strict_diagnostics += sum(1 for item in adapted.diagnostics if item.strict)
@@ -59,6 +66,7 @@ def ingest_rollouts(
         files_ingested=files_ingested,
         counts=total,
         strict_diagnostics=strict_diagnostics,
+        active_sources=tuple(active_sources),
     )
 
 

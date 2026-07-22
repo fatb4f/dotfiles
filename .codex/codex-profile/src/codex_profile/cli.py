@@ -61,6 +61,7 @@ def _ingest(args: argparse.Namespace) -> int:
     try:
         result = ingest_rollouts(root=root, repo=args.repo, storage=storage)
         summary = storage.summary()
+        strict_diagnostics = storage.strict_diagnostic_count(result.active_sources)
     finally:
         storage.close()
 
@@ -71,8 +72,8 @@ def _ingest(args: argparse.Namespace) -> int:
     print(f"diagnostics_inserted: {result.counts.diagnostics_inserted}")
     print(f"raw_total: {summary['raw_observations']}")
     print(f"normalized_total: {summary['normalized_usage_observations']}")
-    if args.strict and result.strict_diagnostics:
-        print(f"strict_diagnostics: {result.strict_diagnostics}", file=sys.stderr)
+    if args.strict and strict_diagnostics:
+        print(f"strict_diagnostics: {strict_diagnostics}", file=sys.stderr)
         return 3
     return 0
 

@@ -30,19 +30,38 @@ class RolloutRecord:
         return self.source_offset + self.raw_byte_count + 1
 
 
+@dataclass(frozen=True)
+class SourceIncarnation:
+    identity: str
+    size: int
+
+
 def stable_source_id(path: Path) -> str:
     resolved = str(path.expanduser().resolve(strict=False))
     return "sha256:" + hashlib.sha256(f"rollout:{resolved}".encode("utf-8")).hexdigest()
 
 
+def source_incarnation(path: Path) -> SourceIncarnation:
+    stat = path.stat()
+    identity = f"dev:{stat.st_dev}:ino:{stat.st_ino}"
+    return SourceIncarnation(identity=identity, size=stat.st_size)
+
+
 def source_generation(path: Path) -> int:
-    del path
-    return 0
+    incarnation = source_incarnation(path)
+    digest = hashlib.sha256(f"{stable_source_id(path)}:{incarnation.identity}".encode("utf-8")).digest()
+    return int.from_bytes(digest[:8], "big")
 
 
-def iter_complete_records(path: Path, *, start_offset: int = 0) -> Iterator[RolloutRecord]:
-    source_id = stable_source_id(path)
-    generation = source_generation(path)
+def iter_complete_records(
+    path: Path,
+    *,
+    start_offset: int = 0,
+    source_id: str | None = None,
+    generation: int | None = None,
+) -> Iterator[RolloutRecord]:
+    resolved_source_id = stable_source_id(path) if source_id is None else source_id
+    resolved_generation = source_generation(path) if generation is None else generation
     with path.open("rb") as handle:
         handle.seek(start_offset)
         offset = start_offset
@@ -67,8 +86,8 @@ def iter_complete_records(path: Path, *, start_offset: int = 0) -> Iterator[Roll
                 error = str(exc)
             yield RolloutRecord(
                 path=path,
-                source_id=source_id,
-                source_generation=generation,
+                source_id=resolved_source_id,
+                source_generation=resolved_generation,
                 source_offset=offset,
                 raw=raw,
                 obj=obj,

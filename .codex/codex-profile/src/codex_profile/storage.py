@@ -2,12 +2,20 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import duckdb
 
-from codex_profile.adapters.usage import AdaptedRolloutRecord, UsageFields, UsageState
+from codex_profile.adapters.usage import (
+    ADAPTER_DIGEST,
+    ADAPTER_ID,
+    ADAPTER_VERSION,
+    AdaptedRolloutRecord,
+    UsageFields,
+    UsageState,
+)
 from codex_profile.reporting import TokenUsage
+from codex_profile.sources.rollout import iter_complete_records, source_incarnation
 
 
 COLLECTOR_WRITER = "collector"
@@ -60,12 +68,16 @@ class ProfileStorage:
               source_generation UBIGINT NOT NULL,
               source_kind TEXT NOT NULL,
               source_path TEXT NOT NULL,
+              source_identity TEXT,
+              last_size_bytes UBIGINT,
               first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
               last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
               PRIMARY KEY (source_id, source_generation)
             )
             """
         )
+        self._ensure_column("collector_sources", "source_identity", "TEXT")
+        self._ensure_column("collector_sources", "last_size_bytes", "UBIGINT")
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS collector_watermarks (
@@ -106,26 +118,7 @@ class ProfileStorage:
             )
             """
         )
-        self.connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS normalized_usage_observations (
-              source_id TEXT NOT NULL,
-              source_generation UBIGINT NOT NULL,
-              source_offset UBIGINT NOT NULL,
-              event_timestamp TEXT NOT NULL,
-              event_kind TEXT NOT NULL,
-              normalization_method TEXT NOT NULL,
-              usage_observation_index UBIGINT NOT NULL,
-              reported_input_tokens UBIGINT NOT NULL,
-              cached_input_tokens UBIGINT NOT NULL,
-              fresh_input_tokens UBIGINT NOT NULL,
-              output_tokens UBIGINT NOT NULL,
-              reasoning_output_tokens UBIGINT NOT NULL,
-              total_tokens UBIGINT NOT NULL,
-              PRIMARY KEY (source_id, source_generation, source_offset)
-            )
-            """
-        )
+        self._ensure_normalized_usage_schema()
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS collector_diagnostics (
@@ -133,7 +126,12 @@ class ProfileStorage:
               source_id TEXT NOT NULL,
               source_generation UBIGINT NOT NULL,
               source_offset UBIGINT NOT NULL,
+              adapter_id TEXT NOT NULL,
+              adapter_version TEXT NOT NULL,
+              adapter_digest TEXT NOT NULL,
               code TEXT NOT NULL,
+              diagnostic_scope TEXT NOT NULL,
+              diagnostic_ordinal UBIGINT NOT NULL,
               severity TEXT NOT NULL,
               message TEXT NOT NULL,
               created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -141,6 +139,37 @@ class ProfileStorage:
             )
             """
         )
+        self._ensure_column("collector_diagnostics", "adapter_id", f"TEXT DEFAULT '{ADAPTER_ID}'")
+        self._ensure_column("collector_diagnostics", "adapter_version", f"TEXT DEFAULT '{ADAPTER_VERSION}'")
+        self._ensure_column("collector_diagnostics", "adapter_digest", f"TEXT DEFAULT '{ADAPTER_DIGEST}'")
+        self._ensure_column("collector_diagnostics", "diagnostic_scope", "TEXT DEFAULT 'record'")
+        self._ensure_column("collector_diagnostics", "diagnostic_ordinal", "UBIGINT DEFAULT 0")
+
+    def resolve_source_generation(self, path: Path, source_id: str) -> int:
+        incarnation = source_incarnation(path)
+        row = self.connection.execute(
+            """
+            SELECT source_generation, source_identity
+            FROM collector_sources
+            WHERE source_id = ?
+            ORDER BY source_generation DESC
+            LIMIT 1
+            """,
+            [source_id],
+        ).fetchone()
+        if row is None:
+            return 0
+
+        generation = int(row[0])
+        previous_identity = row[1]
+        watermark = self.get_watermark(source_id, generation)
+        if previous_identity is not None and str(previous_identity) != incarnation.identity:
+            return generation + 1
+        if incarnation.size < watermark:
+            return generation + 1
+        if not self._source_content_still_matches(path, source_id, generation):
+            return generation + 1
+        return generation
 
     def get_watermark(self, source_id: str, source_generation: int) -> int:
         row = self.connection.execute(
@@ -209,16 +238,27 @@ class ProfileStorage:
 
         self.connection.execute("BEGIN TRANSACTION")
         try:
+            incarnation = source_incarnation(record.path)
             self.connection.execute(
                 """
                 INSERT INTO collector_sources (
-                  source_id, source_generation, source_kind, source_path
+                  source_id, source_generation, source_kind, source_path, source_identity, last_size_bytes
                 )
-                VALUES (?, ?, 'rollout', ?)
+                VALUES (?, ?, 'rollout', ?, ?, ?)
                 ON CONFLICT (source_id, source_generation)
-                DO UPDATE SET last_seen_at = now(), source_path = excluded.source_path
+                DO UPDATE SET
+                  last_seen_at = now(),
+                  source_path = excluded.source_path,
+                  source_identity = excluded.source_identity,
+                  last_size_bytes = excluded.last_size_bytes
                 """,
-                [record.source_id, record.source_generation, str(record.path)],
+                [
+                    record.source_id,
+                    record.source_generation,
+                    str(record.path),
+                    incarnation.identity,
+                    incarnation.size,
+                ],
             )
             self._insert_raw(adapted)
             if fail_after_raw:
@@ -227,7 +267,7 @@ class ProfileStorage:
             if adapted.normalized is not None:
                 self._insert_normalized(adapted)
                 normalized_inserted = 1
-            for diagnostic in adapted.diagnostics:
+            for ordinal, diagnostic in enumerate(adapted.diagnostics):
                 self.connection.execute(
                     """
                     INSERT INTO collector_diagnostics (
@@ -235,18 +275,31 @@ class ProfileStorage:
                       source_id,
                       source_generation,
                       source_offset,
+                      adapter_id,
+                      adapter_version,
+                      adapter_digest,
                       code,
+                      diagnostic_scope,
+                      diagnostic_ordinal,
                       severity,
                       message
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     [
-                        f"{record.source_id}:{record.source_generation}:{record.source_offset}:{diagnostic.code}",
+                        (
+                            f"{record.source_id}:{record.source_generation}:{record.source_offset}:"
+                            f"{ADAPTER_ID}:{ADAPTER_VERSION}:{diagnostic.code}:{ordinal}:{diagnostic.scope}"
+                        ),
                         record.source_id,
                         record.source_generation,
                         record.source_offset,
+                        ADAPTER_ID,
+                        ADAPTER_VERSION,
+                        ADAPTER_DIGEST,
                         diagnostic.code,
+                        diagnostic.scope,
+                        ordinal,
                         "strict" if diagnostic.strict else "advisory",
                         diagnostic.message,
                     ],
@@ -334,6 +387,9 @@ class ProfileStorage:
               source_id,
               source_generation,
               source_offset,
+              adapter_id,
+              adapter_version,
+              adapter_digest,
               event_timestamp,
               event_kind,
               normalization_method,
@@ -345,12 +401,15 @@ class ProfileStorage:
               reasoning_output_tokens,
               total_tokens
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             [
                 record.source_id,
                 record.source_generation,
                 record.source_offset,
+                ADAPTER_ID,
+                ADAPTER_VERSION,
+                ADAPTER_DIGEST,
                 normalized.event_timestamp.isoformat(),
                 normalized.event_kind,
                 normalized.method,
@@ -363,6 +422,27 @@ class ProfileStorage:
                 fields.total_tokens,
             ],
         )
+
+    def strict_diagnostic_count(self, active_sources: Sequence[tuple[str, int]]) -> int:
+        if not active_sources:
+            return 0
+        clauses = []
+        parameters: list[object] = [ADAPTER_ID, ADAPTER_VERSION]
+        for source_id, generation in active_sources:
+            clauses.append("(source_id = ? AND source_generation = ?)")
+            parameters.extend([source_id, generation])
+        row = self.connection.execute(
+            f"""
+            SELECT count(*)
+            FROM collector_diagnostics
+            WHERE severity = 'strict'
+              AND adapter_id = ?
+              AND adapter_version = ?
+              AND ({' OR '.join(clauses)})
+            """,
+            parameters,
+        ).fetchone()
+        return int(row[0]) if row else 0
 
     def table_count(self, table: str) -> int:
         if table not in {
@@ -415,6 +495,154 @@ class ProfileStorage:
     def _ensure_writer(self) -> None:
         if self.readonly:
             raise PermissionError("read-only storage handle cannot mutate DuckDB")
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        self.connection.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} {definition}")
+
+    def _table_exists(self, table: str) -> bool:
+        row = self.connection.execute(
+            """
+            SELECT count(*)
+            FROM information_schema.tables
+            WHERE table_name = ?
+            """,
+            [table],
+        ).fetchone()
+        return bool(row and row[0])
+
+    def _columns(self, table: str) -> set[str]:
+        rows = self.connection.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = ?
+            """,
+            [table],
+        ).fetchall()
+        return {str(row[0]) for row in rows}
+
+    def _ensure_normalized_usage_schema(self) -> None:
+        if not self._table_exists("normalized_usage_observations"):
+            self._create_normalized_usage_table("normalized_usage_observations")
+            return
+        if "adapter_id" in self._columns("normalized_usage_observations"):
+            return
+
+        replacement = "normalized_usage_observations_v2"
+        self.connection.execute(f"DROP TABLE IF EXISTS {replacement}")
+        self._create_normalized_usage_table(replacement)
+        self.connection.execute(
+            f"""
+            INSERT INTO {replacement} (
+              source_id,
+              source_generation,
+              source_offset,
+              adapter_id,
+              adapter_version,
+              adapter_digest,
+              event_timestamp,
+              event_kind,
+              normalization_method,
+              usage_observation_index,
+              reported_input_tokens,
+              cached_input_tokens,
+              fresh_input_tokens,
+              output_tokens,
+              reasoning_output_tokens,
+              total_tokens
+            )
+            SELECT
+              source_id,
+              source_generation,
+              source_offset,
+              ?,
+              ?,
+              ?,
+              event_timestamp,
+              event_kind,
+              normalization_method,
+              usage_observation_index,
+              reported_input_tokens,
+              cached_input_tokens,
+              fresh_input_tokens,
+              output_tokens,
+              reasoning_output_tokens,
+              total_tokens
+            FROM normalized_usage_observations
+            """,
+            [ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST],
+        )
+        self.connection.execute("DROP TABLE normalized_usage_observations")
+        self.connection.execute(f"ALTER TABLE {replacement} RENAME TO normalized_usage_observations")
+
+    def _create_normalized_usage_table(self, table: str) -> None:
+        self.connection.execute(
+            f"""
+            CREATE TABLE {table} (
+              source_id TEXT NOT NULL,
+              source_generation UBIGINT NOT NULL,
+              source_offset UBIGINT NOT NULL,
+              adapter_id TEXT NOT NULL,
+              adapter_version TEXT NOT NULL,
+              adapter_digest TEXT NOT NULL,
+              event_timestamp TEXT NOT NULL,
+              event_kind TEXT NOT NULL,
+              normalization_method TEXT NOT NULL,
+              usage_observation_index UBIGINT NOT NULL,
+              reported_input_tokens UBIGINT NOT NULL,
+              cached_input_tokens UBIGINT NOT NULL,
+              fresh_input_tokens UBIGINT NOT NULL,
+              output_tokens UBIGINT NOT NULL,
+              reasoning_output_tokens UBIGINT NOT NULL,
+              total_tokens UBIGINT NOT NULL,
+              PRIMARY KEY (
+                source_id,
+                source_generation,
+                source_offset,
+                adapter_id,
+                adapter_version,
+                adapter_digest
+              )
+            )
+            """
+        )
+
+    def _source_content_still_matches(self, path: Path, source_id: str, generation: int) -> bool:
+        rows = self.connection.execute(
+            """
+            (
+              SELECT source_offset, payload_digest
+              FROM raw_rollout_observations
+              WHERE source_id = ? AND source_generation = ?
+              ORDER BY source_offset ASC
+              LIMIT 1
+            )
+            UNION
+            (
+              SELECT source_offset, payload_digest
+              FROM raw_rollout_observations
+              WHERE source_id = ? AND source_generation = ?
+              ORDER BY source_offset DESC
+              LIMIT 1
+            )
+            """,
+            [source_id, generation, source_id, generation],
+        ).fetchall()
+        for offset, digest in rows:
+            try:
+                record = next(
+                    iter_complete_records(
+                        path,
+                        start_offset=int(offset),
+                        source_id=source_id,
+                        generation=generation,
+                    )
+                )
+            except (OSError, StopIteration):
+                return False
+            if record.source_offset != int(offset) or record.payload_digest != str(digest):
+                return False
+        return True
 
 
 def _field_values(fields: UsageFields | None) -> list[int | None]:
