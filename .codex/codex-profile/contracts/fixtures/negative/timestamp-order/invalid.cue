@@ -10,4 +10,22 @@ sourceB: profile.#SourceCoordinate & {
 	source:       {kind: "hook_journal", sourceID: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", generation: 0}
 	sourceOffset: 1
 }
-invalid: profile.#CrossSourceOrderClaim & {before: sourceA, after: sourceB, edges: []}
+sourceC: profile.#SourceCoordinate & {
+	source:       {kind: "checkpoint", sourceID: "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc", generation: 0}
+	sourceOffset: 1
+}
+sourceD: profile.#SourceCoordinate & {
+	source:       {kind: "wrapper_journal", sourceID: "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd", generation: 0}
+	sourceOffset: 1
+}
+
+invalid: profile.#CrossSourceOrderClaim & {
+	before: sourceA
+	after:  sourceB
+	edge: {
+		from:     sourceC
+		to:       sourceD
+		evidence: "turn_id"
+		value:    "turn-1"
+	}
+}

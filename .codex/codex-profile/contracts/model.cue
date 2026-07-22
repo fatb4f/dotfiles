@@ -11,6 +11,14 @@ import "time"
 #UUIDv7:         string & =~"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 #Timestamp:      time.Time
 
+#GitObjectID: close({
+	format: "sha1"
+	hex:    string & =~"^[0-9a-f]{40}$"
+}) | close({
+	format: "sha256"
+	hex:    string & =~"^[0-9a-f]{64}$"
+})
+
 #SourceKind: "rollout" | "checkpoint" | "hook_journal" | "wrapper_journal" | "app_server"
 #Authority:  "upstream_observation" | "explicit_checkpoint" | "local_observation" | "derived"
 
@@ -39,20 +47,22 @@ import "time"
 	digest:       #Digest
 })
 
-#Provenance: close({
-	authority:     #Authority
-	Source=source: #SourceCoordinate
-	adapter?:      #AdapterIdentity
+#UpstreamSourceCoordinate:     #SourceCoordinate & {source: {kind: "rollout" | "app_server"}}
+#CheckpointSourceCoordinate:   #SourceCoordinate & {source: {kind: "checkpoint"}}
+#LocalJournalSourceCoordinate: #SourceCoordinate & {source: {kind: "hook_journal" | "wrapper_journal"}}
 
-	if Source.source.kind == "rollout" || Source.source.kind == "app_server" {
-		authority: "upstream_observation"
-	}
-	if Source.source.kind == "checkpoint" {
-		authority: "explicit_checkpoint"
-	}
-	if Source.source.kind == "hook_journal" || Source.source.kind == "wrapper_journal" {
-		authority: "local_observation"
-	}
+#Provenance: close({
+	authority: "upstream_observation"
+	source:    #UpstreamSourceCoordinate
+	adapter?:  #AdapterIdentity
+}) | close({
+	authority: "explicit_checkpoint"
+	source:    #CheckpointSourceCoordinate
+	adapter?:  #AdapterIdentity
+}) | close({
+	authority: "local_observation"
+	source:    #LocalJournalSourceCoordinate
+	adapter?:  #AdapterIdentity
 })
 
 #RunContract: close({
@@ -82,29 +92,39 @@ import "time"
 #UnavailableDigest: close({state: "unavailable", reason: #NonEmptyString})
 #AvailableDigest:   #ObservedDigest | #UnavailableDigest
 
+#ObservedGitObjectID:    close({state: "observed", value: #GitObjectID})
+#UnavailableGitObjectID: close({state: "unavailable", reason: #NonEmptyString})
+#AvailableGitObjectID:   #ObservedGitObjectID | #UnavailableGitObjectID
+
 #ObservedUUID:    close({state: "observed", value: #UUIDv7})
 #UnavailableUUID: close({state: "unavailable", reason: #NonEmptyString})
 #AvailableUUID:   #ObservedUUID | #UnavailableUUID
 
 #RawObservationEnvelope: close({
-	schema:                "codex-raw-observation.v0"
-	observationID:         #UUIDv7
-	Coordinate=coordinate: #SourceCoordinate
-	observedAt:            #Timestamp
-	mediaType:             "application/json"
-	rawBytes:              uint
-	payloadDigest:         #Digest
-	rawJSON:               string
-	provenance:            #Provenance & {source: Coordinate}
+	schema:        "codex-raw-observation.v0"
+	observationID: #UUIDv7
+	coordinate:    #SourceCoordinate
+	observedAt:    #Timestamp
+	mediaType:     "application/json"
+	rawBytes:      uint
+	payloadDigest: #Digest
+	provenance:    #Provenance
+	retainedPayload?: close({
+		policyID:      #ID
+		redacted:      true
+		mediaType:     #NonEmptyString
+		content:       string
+		contentDigest: #Digest
+	})
 	admission: close({
 		operation:        "append"
-		deduplicationKey: Coordinate
+		deduplicationKey: coordinate
 	})
 })
 
 #RepositoryState: close({
 	repositoryID:   #ID
-	head:           #AvailableDigest
+	head:           #AvailableGitObjectID
 	worktreeDigest: #Digest
 	dirty:          bool
 })
@@ -263,7 +283,10 @@ import "time"
 #CrossSourceOrderClaim: close({
 	before: #SourceCoordinate
 	after:  #SourceCoordinate
-	edges:  [...#CorrelationEdge] & [_, ...]
+	edge: #CorrelationEdge & {
+		from: before
+		to:   after
+	}
 })
 
 #CohortContract: close({
@@ -294,12 +317,13 @@ import "time"
 // No implication couples telemetry state to recommendation. They are separate
 // axes, so degraded/unavailable telemetry may correctly recommend none.
 #PolicyAssessment: close({
-	schema:         "codex-policy-assessment.v0"
-	telemetryState: #TelemetryState
-	recommendation: #Recommendation
-	reasons:        [...#NonEmptyString]
-	projection:     #ProjectionIdentity
-	advisoryOnly:   true
+	schema:                "codex-policy-assessment.v0"
+	telemetryState:        #TelemetryState
+	recommendation:        #Recommendation
+	reasons:               [...#NonEmptyString]
+	projection:            #ProjectionIdentity
+	advisoryOnly:          true
+	blockNativeCompaction: false
 })
 
 #DuckDBWriteRequest: close({
