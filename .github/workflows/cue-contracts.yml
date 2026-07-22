@@ -55,6 +55,9 @@ jobs:
       - name: Run CUE contract validation
         run: bash .github/scripts/cue-contract-test.sh
 
+      - name: Run Codex profile contract validation
+        run: bash .github/scripts/codex-profile-test.sh
+
       - name: Run normalized context graph validation
         run: bash .github/scripts/context-graph-test.sh
 
