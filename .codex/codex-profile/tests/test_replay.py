@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import importlib.util
 import json
 import sys
 import tempfile
@@ -11,13 +10,12 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-PROFILE_PATH = REPO_ROOT / "tools/codex_corpus_profile.py"
+PACKAGE_SRC = REPO_ROOT / ".codex/codex-profile/src"
 FIXTURE_ROOT = REPO_ROOT / ".codex/codex-profile/fixtures"
-spec = importlib.util.spec_from_file_location("codex_corpus_profile_replay", PROFILE_PATH)
-assert spec and spec.loader
-profile_module = importlib.util.module_from_spec(spec)
-sys.modules[spec.name] = profile_module
-spec.loader.exec_module(profile_module)
+if str(PACKAGE_SRC) not in sys.path:
+    sys.path.insert(0, str(PACKAGE_SRC))
+
+from codex_profile import reporting as profile_module
 
 
 class ReplayFixtureTests(unittest.TestCase):
