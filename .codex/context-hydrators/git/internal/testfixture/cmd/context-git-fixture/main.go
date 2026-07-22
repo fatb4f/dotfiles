@@ -26,7 +26,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	if err := testfixture.WriteManifest(filepath.Join(*output, "manifest.json"), repository, hydrator.DeclaredPropertyIDs); err != nil {
+	if err := testfixture.WriteManifest(filepath.Join(*output, "manifest.json"), repository, hydrator.GeneratedPropertyIDs()); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}

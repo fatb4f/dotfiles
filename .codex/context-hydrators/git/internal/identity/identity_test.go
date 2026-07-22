@@ -2,7 +2,7 @@ package identity
 
 import "testing"
 
-func TestContentAndOccurrenceIdentityAreDistinct(t *testing.T) {
+func TestContentOccurrenceAndSnapshotOccurrenceIdentityAreDistinct(t *testing.T) {
 	t.Parallel()
 
 	blob := ObjectID{Format: "sha1", Hex: "1111111111111111111111111111111111111111"}
@@ -12,13 +12,16 @@ func TestContentAndOccurrenceIdentityAreDistinct(t *testing.T) {
 	if ContentID(blob) != ContentID(blob) {
 		t.Fatal("content identity must be stable")
 	}
-	if OccurrenceID("repo.fixture", revisionA, "a.txt") == OccurrenceID("repo.fixture", revisionA, "b.txt") {
-		t.Fatal("rename must change snapshot occurrence identity")
+	if OccurrenceID("repo.fixture", "a.txt") == OccurrenceID("repo.fixture", "b.txt") {
+		t.Fatal("rename must change occurrence identity")
 	}
-	if OccurrenceID("repo.fixture", revisionA, "a.txt") == OccurrenceID("repo.fixture", revisionB, "a.txt") {
+	if OccurrenceID("repo.fixture", "a.txt") != OccurrenceID("repo.fixture", "a.txt") {
+		t.Fatal("unchanged path must preserve occurrence identity across revisions")
+	}
+	if SnapshotOccurrenceID("repo.fixture", revisionA, "a.txt") == SnapshotOccurrenceID("repo.fixture", revisionB, "a.txt") {
 		t.Fatal("snapshot occurrence identity must bind the resolved revision")
 	}
-	if PathID("repo.fixture", "a.txt") != PathID("repo.fixture", "a.txt") {
-		t.Fatal("path identity must be stable across revisions")
+	if OccurrenceID("repo.fixture", "a.txt") == SnapshotOccurrenceID("repo.fixture", revisionA, "a.txt") {
+		t.Fatal("stable occurrence identity and snapshot occurrence identity must remain distinct")
 	}
 }

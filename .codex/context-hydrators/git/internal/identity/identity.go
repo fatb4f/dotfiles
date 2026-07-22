@@ -17,14 +17,15 @@ func ContentID(object ObjectID) string {
 	return "git-object:" + object.Format + ":" + object.Hex
 }
 
-// PathID is stable for one repository path across committed revisions. It is
-// deliberately distinct from OccurrenceID, which is snapshot-bound.
-func PathID(repositoryID, path string) string {
+// OccurrenceID identifies one normalized path occurrence in one repository.
+// It remains stable across committed revisions while that path is preserved.
+func OccurrenceID(repositoryID, path string) string {
 	return digest(repositoryID + "\x00" + path)
 }
 
-// OccurrenceID binds one path occurrence to one exact committed revision.
-func OccurrenceID(repositoryID string, revision ObjectID, path string) string {
+// SnapshotOccurrenceID binds one path occurrence to one exact committed
+// revision. It is provenance identity, not the stable graph-member identity.
+func SnapshotOccurrenceID(repositoryID string, revision ObjectID, path string) string {
 	return digest(repositoryID + "\x00" + revision.Format + "\x00" + revision.Hex + "\x00" + path)
 }
 

@@ -52,7 +52,7 @@ import (
 	repositoryID:      #GraphID
 	requestedRevision: #NonEmptyString
 	resolvedRevision:  #GitObjectID
-	rootTree:           #GitObjectID
+	rootTree:          #GitObjectID
 
 	Occurrences=occurrences: [...#GitCommittedOccurrence]
 
@@ -69,11 +69,11 @@ import (
 #GitCommittedSnapshotProjection: close({
 	schema: "kernel.git-committed-snapshot-projection.v0"
 
-	Observation=observation: #GitCommittedSnapshotObservation
+	Observation=observation:   #GitCommittedSnapshotObservation
 	SchemaDigest=schemaDigest: #Digest
 	PolicyDigest=policyDigest: #Digest
 
-	_observationJSON:   json.Marshal(Observation)
+	_observationJSON:  json.Marshal(Observation)
 	observationDigest: "sha256:" + hex.Encode(sha256.Sum256(_observationJSON))
 
 	_moduleID:        "sha256:" + hex.Encode(sha256.Sum256("git-module\u0000" + Observation.repositoryID))
@@ -111,10 +111,10 @@ import (
 				kind:              "repository-root"
 				rootPath:          "."
 				source: {
-					kind:       "git-tree"
-					repository: Observation.repositoryID
-					revision:   Observation.resolvedRevision.format + ":" + Observation.resolvedRevision.hex
-					path:       "."
+					kind:          "git-tree"
+					repository:    Observation.repositoryID
+					revision:      Observation.resolvedRevision.format + ":" + Observation.resolvedRevision.hex
+					path:          "."
 					contentDigest: "git-" + Observation.rootTree.format + ":" + Observation.rootTree.hex
 				}
 			}
@@ -123,6 +123,9 @@ import (
 		members: {
 			for occurrence in Observation.occurrences {
 				let occurrenceID = "sha256:" + hex.Encode(sha256.Sum256(
+					Observation.repositoryID + "\u0000" + occurrence.path,
+				))
+				let snapshotOccurrenceID = "sha256:" + hex.Encode(sha256.Sum256(
 					Observation.repositoryID + "\u0000" + Observation.resolvedRevision.format + "\u0000" + Observation.resolvedRevision.hex + "\u0000" + occurrence.path,
 				))
 				"\(occurrenceID)": {
@@ -144,13 +147,11 @@ import (
 						contentDigest: "git-" + occurrence.objectID.format + ":" + occurrence.objectID.hex
 					}
 					properties: {
-						contentIdentity: "git-object:" + occurrence.objectID.format + ":" + occurrence.objectID.hex
-						pathIdentity: "sha256:" + hex.Encode(sha256.Sum256(
-							Observation.repositoryID + "\u0000" + occurrence.path,
-						))
-						occurrenceIdentity: occurrenceID
-						gitMode:             occurrence.mode
-						gitKind:             occurrence.kind
+						contentIdentity:            "git-object:" + occurrence.objectID.format + ":" + occurrence.objectID.hex
+						occurrenceIdentity:         occurrenceID
+						snapshotOccurrenceIdentity: snapshotOccurrenceID
+						gitMode:                    occurrence.mode
+						gitKind:                    occurrence.kind
 					}
 				}
 			}
@@ -161,23 +162,23 @@ import (
 				"contains\u0000" + _moduleID + "\u0000" + _rootNamespaceID,
 			))
 			"\(rootRelationshipID)": {
-				subject: {kind: "module", id: _moduleID}
-				predicate: "contains"
-				object: {kind: "namespace", id: _rootNamespaceID}
+				subject:     {kind: "module", id: _moduleID}
+				predicate:   "contains"
+				object:      {kind: "namespace", id: _rootNamespaceID}
 				evidenceIDs: [_evidenceID]
 			}
 
 			for occurrence in Observation.occurrences if pathpkg.Dir(occurrence.path) == "." {
 				let occurrenceID = "sha256:" + hex.Encode(sha256.Sum256(
-					Observation.repositoryID + "\u0000" + Observation.resolvedRevision.format + "\u0000" + Observation.resolvedRevision.hex + "\u0000" + occurrence.path,
+					Observation.repositoryID + "\u0000" + occurrence.path,
 				))
 				let relationshipID = "sha256:" + hex.Encode(sha256.Sum256(
 					"contains\u0000" + _rootNamespaceID + "\u0000" + occurrenceID,
 				))
 				"\(relationshipID)": {
-					subject: {kind: "namespace", id: _rootNamespaceID}
-					predicate: "contains"
-					object: {kind: "member", id: occurrenceID}
+					subject:     {kind: "namespace", id: _rootNamespaceID}
+					predicate:   "contains"
+					object:      {kind: "member", id: occurrenceID}
 					evidenceIDs: [_evidenceID]
 				}
 			}
@@ -185,18 +186,18 @@ import (
 			for occurrence in Observation.occurrences if pathpkg.Dir(occurrence.path) != "." {
 				let parentPath = pathpkg.Dir(occurrence.path)
 				let parentID = "sha256:" + hex.Encode(sha256.Sum256(
-					Observation.repositoryID + "\u0000" + Observation.resolvedRevision.format + "\u0000" + Observation.resolvedRevision.hex + "\u0000" + parentPath,
+					Observation.repositoryID + "\u0000" + parentPath,
 				))
 				let occurrenceID = "sha256:" + hex.Encode(sha256.Sum256(
-					Observation.repositoryID + "\u0000" + Observation.resolvedRevision.format + "\u0000" + Observation.resolvedRevision.hex + "\u0000" + occurrence.path,
+					Observation.repositoryID + "\u0000" + occurrence.path,
 				))
 				let relationshipID = "sha256:" + hex.Encode(sha256.Sum256(
 					"contains\u0000" + parentID + "\u0000" + occurrenceID,
 				))
 				"\(relationshipID)": {
-					subject: {kind: "member", id: parentID}
-					predicate: "contains"
-					object: {kind: "member", id: occurrenceID}
+					subject:     {kind: "member", id: parentID}
+					predicate:   "contains"
+					object:      {kind: "member", id: occurrenceID}
 					evidenceIDs: [_evidenceID]
 				}
 			}
@@ -204,8 +205,8 @@ import (
 
 		evidence: {
 			"\(_evidenceID)": {
-				kind: "observation"
-				subject: {kind: "module", id: _moduleID}
+				kind:     "observation"
+				subject:  {kind: "module", id: _moduleID}
 				producer: null
 				source: {
 					kind:          "git-committed-snapshot"
@@ -214,9 +215,9 @@ import (
 					path:          "."
 					contentDigest: observationDigest
 				}
-				authority:      "candidate"
+				authority:     "candidate"
 				payloadDigest: observationDigest
-				diagnostics: []
+				diagnostics:   []
 				properties: {
 					requestedRevision: Observation.requestedRevision
 					resolvedRevision:  Observation.resolvedRevision.format + ":" + Observation.resolvedRevision.hex
@@ -231,8 +232,8 @@ import (
 			authorityDigest: PolicyDigest
 			schemaDigest:    SchemaDigest
 			hydratorDigest:  Observation.hydrator.digest
-			baseRevision:   Observation.resolvedRevision.format + ":" + Observation.resolvedRevision.hex
-			baseTree:       Observation.rootTree.format + ":" + Observation.rootTree.hex
+			baseRevision:    Observation.resolvedRevision.format + ":" + Observation.resolvedRevision.hex
+			baseTree:        Observation.rootTree.format + ":" + Observation.rootTree.hex
 		}
 	}
 
@@ -259,12 +260,121 @@ import (
 // This manifest is consumed by the Go/CUE qualification runner. Its concrete
 // key set is the declared side of the declared=generated=executed=reported gate.
 gitCommittedSnapshotProperties: close({
-	"determinism": true
-	"rename-content-preserved": true
-	"content-edit-content-changed": true
-	"unrelated-entry-preserved": true
+	"determinism":                   true
+	"rename-content-preserved":      true
+	"content-edit-content-changed":  true
+	"unrelated-entry-preserved":     true
 	"mode-change-content-preserved": true
-	"symlink-not-traversed": true
-	"submodule-not-traversed": true
-	"revision-bound": true
+	"symlink-not-traversed":         true
+	"submodule-not-traversed":       true
+	"revision-bound":                true
 })
+
+#GitCommittedSnapshotMutationKind:
+	"environment-perturbation" |
+		"rename-only" |
+		"content-edit" |
+		"unrelated-entry-addition" |
+		"mode-only-change" |
+		"symlink-traversal-attempt" |
+		"submodule-traversal-attempt" |
+		"selector-target-move"
+
+#GitCommittedSnapshotInvariantTerm:
+	"normalized-observation-bytes" |
+		"content-identity" |
+		"occurrence-identity" |
+		"snapshot-occurrence-identity" |
+		"occurrence-metadata" |
+		"opaque-entry" |
+		"resolved-revision"
+
+#GitCommittedSnapshotProperty: close({
+	id:            #GitCommittedSnapshotPropertyID
+	description:   #NonEmptyString
+	mutation:      #GitCommittedSnapshotMutationKind
+	preconditions: [...#GraphID]
+	preserves:     [...#GitCommittedSnapshotInvariantTerm]
+	changes:       [...#GitCommittedSnapshotInvariantTerm]
+})
+
+#GitCommittedSnapshotPropertyCatalog: close({
+	schema: "kernel.git-committed-snapshot-properties.v0"
+	properties: [ID=#GitCommittedSnapshotPropertyID]: #GitCommittedSnapshotProperty & {
+		id: ID
+	}
+})
+
+gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
+	properties: {
+		"determinism": {
+			description:   "Controlled environment perturbations preserve byte-identical normalized observations for the same request and resolved commit."
+			mutation:      "environment-perturbation"
+			preconditions: ["same-repository", "same-request", "same-resolved-revision", "same-hydrator-identity"]
+			preserves:     ["normalized-observation-bytes"]
+			changes:       []
+		}
+		"rename-content-preserved": {
+			description:   "A rename-only mutation preserves Git object content identity while changing stable and snapshot occurrence identities."
+			mutation:      "rename-only"
+			preconditions: ["same-repository", "same-object-id", "different-normalized-path", "different-resolved-revision"]
+			preserves:     ["content-identity"]
+			changes:       ["occurrence-identity", "snapshot-occurrence-identity"]
+		}
+		"content-edit-content-changed": {
+			description:   "A content edit at one path changes content and snapshot occurrence identity while preserving stable occurrence identity."
+			mutation:      "content-edit"
+			preconditions: ["same-repository", "same-normalized-path", "different-object-id", "different-resolved-revision"]
+			preserves:     ["occurrence-identity"]
+			changes:       ["content-identity", "snapshot-occurrence-identity"]
+		}
+		"unrelated-entry-preserved": {
+			description:   "Adding an unrelated entry preserves content and stable occurrence identity for every unaffected path."
+			mutation:      "unrelated-entry-addition"
+			preconditions: ["same-repository", "same-unaffected-path", "same-unaffected-object-id", "different-resolved-revision"]
+			preserves:     ["content-identity", "occurrence-identity"]
+			changes:       ["snapshot-occurrence-identity"]
+		}
+		"mode-change-content-preserved": {
+			description:   "A mode-only change preserves content and stable occurrence identity while changing occurrence metadata and snapshot occurrence identity."
+			mutation:      "mode-only-change"
+			preconditions: ["same-repository", "same-normalized-path", "same-object-id", "different-mode", "different-resolved-revision"]
+			preserves:     ["content-identity", "occurrence-identity"]
+			changes:       ["occurrence-metadata", "snapshot-occurrence-identity"]
+		}
+		"symlink-not-traversed": {
+			description:   "A symlink remains one opaque committed occurrence and is never traversed."
+			mutation:      "symlink-traversal-attempt"
+			preconditions: ["symlink-mode-kind-compatible"]
+			preserves:     ["opaque-entry"]
+			changes:       []
+		}
+		"submodule-not-traversed": {
+			description:   "A gitlink remains one opaque committed occurrence and is never traversed."
+			mutation:      "submodule-traversal-attempt"
+			preconditions: ["submodule-mode-kind-compatible"]
+			preserves:     ["opaque-entry"]
+			changes:       []
+		}
+		"revision-bound": {
+			description:   "Hydration binds an exact resolved commit so a later selector target move cannot change the bound observation."
+			mutation:      "selector-target-move"
+			preconditions: ["selector-resolves-to-commit", "exact-commit-request"]
+			preserves:     ["resolved-revision", "normalized-observation-bytes"]
+			changes:       []
+		}
+	}
+}
+
+// Both directions are evaluated by CUE so the simple declaration manifest used
+// by the Go equality gate cannot drift from the assertion-bearing catalog.
+_gitCommittedSnapshotCatalogCoversManifest: {
+	for ID, _ in gitCommittedSnapshotProperties {
+		"\(ID)": gitCommittedSnapshotPropertyCatalog.properties[ID]
+	}
+}
+_gitCommittedSnapshotManifestCoversCatalog: {
+	for ID, _ in gitCommittedSnapshotPropertyCatalog.properties {
+		"\(ID)": gitCommittedSnapshotProperties[ID]
+	}
+}
