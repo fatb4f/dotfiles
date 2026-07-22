@@ -60,7 +60,7 @@ assertionCatalog: #ContractPropertyCatalog & {
 			rejectionCode:    "raw.not-append-only"
 		}
 		"source.incarnation-generation": {
-			description:      "A same-path source replacement or truncation below the durable watermark receives a new source generation before reading."
+			description:      "A same-path source replacement, truncation below the durable watermark, or checkpoint anchor mismatch receives a new source generation before reading."
 			targetDefinition: "#SourceIdentity"
 			preconditions:    ["A rollout path already has an admitted watermark."]
 			mutationClass:    "same-path-source-incarnation"

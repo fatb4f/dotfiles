@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Sequence
@@ -15,10 +16,11 @@ from codex_profile.adapters.usage import (
     UsageState,
 )
 from codex_profile.reporting import TokenUsage
-from codex_profile.sources.rollout import iter_complete_records, source_incarnation
+from codex_profile.sources.rollout import RolloutRecord, source_incarnation, stable_source_id
 
 
 COLLECTOR_WRITER = "collector"
+ANCHOR_BYTE_WINDOW = 4096
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,24 @@ class IngestCounts:
             normalized_inserted=self.normalized_inserted + other.normalized_inserted,
             diagnostics_inserted=self.diagnostics_inserted + other.diagnostics_inserted,
         )
+
+
+@dataclass(frozen=True)
+class SourceCheckpoint:
+    source_id: str
+    source_generation: int
+    next_offset: int
+    anchor_start: int
+    anchor_end: int
+    anchor_digest: str
+
+
+@dataclass(frozen=True)
+class ResolvedSource:
+    source_id: str
+    source_generation: int
+    start_offset: int
+    state: UsageState
 
 
 class ProfileStorage:
@@ -84,11 +104,17 @@ class ProfileStorage:
               source_id TEXT NOT NULL,
               source_generation UBIGINT NOT NULL,
               next_offset UBIGINT NOT NULL,
+              anchor_start UBIGINT NOT NULL,
+              anchor_end UBIGINT NOT NULL,
+              anchor_digest TEXT NOT NULL,
               updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
               PRIMARY KEY (source_id, source_generation)
             )
             """
         )
+        self._ensure_column("collector_watermarks", "anchor_start", "UBIGINT")
+        self._ensure_column("collector_watermarks", "anchor_end", "UBIGINT")
+        self._ensure_column("collector_watermarks", "anchor_digest", "TEXT")
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS raw_rollout_observations (
@@ -145,7 +171,21 @@ class ProfileStorage:
         self._ensure_column("collector_diagnostics", "diagnostic_scope", "TEXT DEFAULT 'record'")
         self._ensure_column("collector_diagnostics", "diagnostic_ordinal", "UBIGINT DEFAULT 0")
 
+    def resolve_source(self, path: Path) -> ResolvedSource:
+        source_id = stable_source_id(path)
+        generation, start_offset = self._resolve_source_generation_and_offset(path, source_id)
+        return ResolvedSource(
+            source_id=source_id,
+            source_generation=generation,
+            start_offset=start_offset,
+            state=self.load_usage_state(source_id, generation),
+        )
+
     def resolve_source_generation(self, path: Path, source_id: str) -> int:
+        generation, _ = self._resolve_source_generation_and_offset(path, source_id)
+        return generation
+
+    def _resolve_source_generation_and_offset(self, path: Path, source_id: str) -> tuple[int, int]:
         incarnation = source_incarnation(path)
         row = self.connection.execute(
             """
@@ -158,29 +198,61 @@ class ProfileStorage:
             [source_id],
         ).fetchone()
         if row is None:
-            return 0
+            return 0, 0
 
         generation = int(row[0])
         previous_identity = row[1]
-        watermark = self.get_watermark(source_id, generation)
+        checkpoint = self.get_source_checkpoint(source_id, generation)
+        if checkpoint is None:
+            if self._watermark_exists(source_id, generation):
+                return generation + 1, 0
+            return generation, 0
         if previous_identity is not None and str(previous_identity) != incarnation.identity:
-            return generation + 1
-        if incarnation.size < watermark:
-            return generation + 1
-        if not self._source_content_still_matches(path, source_id, generation):
-            return generation + 1
-        return generation
+            return generation + 1, 0
+        if incarnation.size < checkpoint.next_offset:
+            return generation + 1, 0
+        if not self._checkpoint_anchor_matches(path, checkpoint):
+            return generation + 1, 0
+        return generation, checkpoint.next_offset
 
     def get_watermark(self, source_id: str, source_generation: int) -> int:
+        checkpoint = self.get_source_checkpoint(source_id, source_generation)
+        return checkpoint.next_offset if checkpoint else 0
+
+    def get_source_checkpoint(self, source_id: str, source_generation: int) -> SourceCheckpoint | None:
         row = self.connection.execute(
             """
-            SELECT next_offset
+            SELECT next_offset, anchor_start, anchor_end, anchor_digest
             FROM collector_watermarks
             WHERE source_id = ? AND source_generation = ?
             """,
             [source_id, source_generation],
         ).fetchone()
-        return int(row[0]) if row else 0
+        if row is None:
+            return None
+        next_offset = int(row[0])
+        anchor_start, anchor_end, anchor_digest = row[1], row[2], row[3]
+        if anchor_start is None or anchor_end is None or anchor_digest is None:
+            return None
+        return SourceCheckpoint(
+            source_id=source_id,
+            source_generation=source_generation,
+            next_offset=next_offset,
+            anchor_start=int(anchor_start),
+            anchor_end=int(anchor_end),
+            anchor_digest=str(anchor_digest),
+        )
+
+    def _watermark_exists(self, source_id: str, source_generation: int) -> bool:
+        row = self.connection.execute(
+            """
+            SELECT 1
+            FROM collector_watermarks
+            WHERE source_id = ? AND source_generation = ?
+            """,
+            [source_id, source_generation],
+        ).fetchone()
+        return row is not None
 
     def load_usage_state(self, source_id: str, source_generation: int) -> UsageState:
         cumulative = self.connection.execute(
@@ -233,7 +305,7 @@ class ProfileStorage:
             [record.source_id, record.source_generation, record.source_offset],
         ).fetchone()
         if exists:
-            self._advance_watermark(record.source_id, record.source_generation, record.next_offset)
+            self._advance_watermark(record)
             return IngestCounts()
 
         self.connection.execute("BEGIN TRANSACTION")
@@ -304,25 +376,57 @@ class ProfileStorage:
                         diagnostic.message,
                     ],
                 )
-            self._advance_watermark(record.source_id, record.source_generation, record.next_offset)
+            self._advance_watermark(record)
             self.connection.execute("COMMIT")
         except Exception:
             self.connection.execute("ROLLBACK")
             raise
         return IngestCounts(1, normalized_inserted, len(adapted.diagnostics))
 
-    def _advance_watermark(self, source_id: str, source_generation: int, next_offset: int) -> None:
+    def _advance_watermark(self, record: RolloutRecord) -> None:
         self._ensure_writer()
+        checkpoint = _source_checkpoint(
+            record.path,
+            record.source_id,
+            record.source_generation,
+            record.next_offset,
+        )
         self.connection.execute(
             """
-            INSERT INTO collector_watermarks (source_id, source_generation, next_offset)
-            VALUES (?, ?, ?)
+            INSERT INTO collector_watermarks (
+              source_id,
+              source_generation,
+              next_offset,
+              anchor_start,
+              anchor_end,
+              anchor_digest
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (source_id, source_generation)
             DO UPDATE SET
               next_offset = greatest(collector_watermarks.next_offset, excluded.next_offset),
+              anchor_start = CASE
+                WHEN excluded.next_offset >= collector_watermarks.next_offset THEN excluded.anchor_start
+                ELSE collector_watermarks.anchor_start
+              END,
+              anchor_end = CASE
+                WHEN excluded.next_offset >= collector_watermarks.next_offset THEN excluded.anchor_end
+                ELSE collector_watermarks.anchor_end
+              END,
+              anchor_digest = CASE
+                WHEN excluded.next_offset >= collector_watermarks.next_offset THEN excluded.anchor_digest
+                ELSE collector_watermarks.anchor_digest
+              END,
               updated_at = now()
             """,
-            [source_id, source_generation, next_offset],
+            [
+                checkpoint.source_id,
+                checkpoint.source_generation,
+                checkpoint.next_offset,
+                checkpoint.anchor_start,
+                checkpoint.anchor_end,
+                checkpoint.anchor_digest,
+            ],
         )
 
     def _insert_raw(self, adapted: AdaptedRolloutRecord) -> None:
@@ -607,42 +711,11 @@ class ProfileStorage:
             """
         )
 
-    def _source_content_still_matches(self, path: Path, source_id: str, generation: int) -> bool:
-        rows = self.connection.execute(
-            """
-            (
-              SELECT source_offset, payload_digest
-              FROM raw_rollout_observations
-              WHERE source_id = ? AND source_generation = ?
-              ORDER BY source_offset ASC
-              LIMIT 1
-            )
-            UNION
-            (
-              SELECT source_offset, payload_digest
-              FROM raw_rollout_observations
-              WHERE source_id = ? AND source_generation = ?
-              ORDER BY source_offset DESC
-              LIMIT 1
-            )
-            """,
-            [source_id, generation, source_id, generation],
-        ).fetchall()
-        for offset, digest in rows:
-            try:
-                record = next(
-                    iter_complete_records(
-                        path,
-                        start_offset=int(offset),
-                        source_id=source_id,
-                        generation=generation,
-                    )
-                )
-            except (OSError, StopIteration):
-                return False
-            if record.source_offset != int(offset) or record.payload_digest != str(digest):
-                return False
-        return True
+    def _checkpoint_anchor_matches(self, path: Path, checkpoint: SourceCheckpoint) -> bool:
+        try:
+            return _digest_file_range(path, checkpoint.anchor_start, checkpoint.anchor_end) == checkpoint.anchor_digest
+        except OSError:
+            return False
 
 
 def _field_values(fields: UsageFields | None) -> list[int | None]:
@@ -657,3 +730,27 @@ def _field_values(fields: UsageFields | None) -> list[int | None]:
         values["reasoning_output_tokens"],
         values["total_tokens"],
     ]
+
+
+def _source_checkpoint(path: Path, source_id: str, source_generation: int, next_offset: int) -> SourceCheckpoint:
+    anchor_end = next_offset
+    anchor_start = max(0, anchor_end - ANCHOR_BYTE_WINDOW)
+    return SourceCheckpoint(
+        source_id=source_id,
+        source_generation=source_generation,
+        next_offset=next_offset,
+        anchor_start=anchor_start,
+        anchor_end=anchor_end,
+        anchor_digest=_digest_file_range(path, anchor_start, anchor_end),
+    )
+
+
+def _digest_file_range(path: Path, start: int, end: int) -> str:
+    if end < start:
+        raise OSError(f"invalid anchor range: {start}:{end}")
+    with path.open("rb") as handle:
+        handle.seek(start)
+        data = handle.read(end - start)
+    if len(data) != end - start:
+        raise OSError(f"incomplete anchor range: {start}:{end}")
+    return "sha256:" + hashlib.sha256(data).hexdigest()

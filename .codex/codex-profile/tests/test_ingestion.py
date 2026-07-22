@@ -75,13 +75,17 @@ class IngestionTests(unittest.TestCase):
             token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2)),
         ])
         storage = self.storage()
+        source_id = stable_source_id(self.rollout)
         try:
             first = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            checkpoint = storage.get_source_checkpoint(source_id, 0)
             second = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
             self.assertEqual(first.counts.raw_inserted, 2)
             self.assertEqual(first.counts.normalized_inserted, 1)
+            self.assertEqual(second.active_sources, ((source_id, 0),))
             self.assertEqual(second.counts.raw_inserted, 0)
             self.assertEqual(second.counts.normalized_inserted, 0)
+            self.assertEqual(storage.get_source_checkpoint(source_id, 0), checkpoint)
             self.assertEqual(storage.table_count("raw_rollout_observations"), 2)
             self.assertEqual(storage.table_count("normalized_usage_observations"), 1)
         finally:
@@ -90,11 +94,13 @@ class IngestionTests(unittest.TestCase):
     def test_incremental_append_admits_exactly_one_new_record(self) -> None:
         write_jsonl(self.rollout, [session_meta()])
         storage = self.storage()
+        source_id = stable_source_id(self.rollout)
         try:
             ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
             with self.rollout.open("a", encoding="utf-8") as handle:
                 handle.write(json.dumps(token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2))) + "\n")
             result = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            self.assertEqual(result.active_sources, ((source_id, 0),))
             self.assertEqual(result.counts.raw_inserted, 1)
             self.assertEqual(result.counts.normalized_inserted, 1)
             self.assertEqual(storage.table_count("raw_rollout_observations"), 2)
@@ -119,6 +125,15 @@ class IngestionTests(unittest.TestCase):
             self.assertEqual(second.counts.raw_inserted, 1)
             self.assertGreater(storage.get_watermark(source_id, 1), 0)
             self.assertEqual(storage.table_count("raw_rollout_observations"), 3)
+            same_offset = storage.connection.execute(
+                """
+                SELECT count(*)
+                FROM raw_rollout_observations
+                WHERE source_id = ? AND source_offset = 0
+                """,
+                [source_id],
+            ).fetchone()
+            self.assertEqual(int(same_offset[0]), 2)
         finally:
             storage.close()
 
@@ -141,6 +156,57 @@ class IngestionTests(unittest.TestCase):
             self.assertEqual(result.counts.raw_inserted, 3)
             self.assertEqual(result.counts.normalized_inserted, 2)
             self.assertEqual(storage.table_count("raw_rollout_observations"), 4)
+        finally:
+            storage.close()
+
+    def test_truncate_then_regrow_uses_anchor_mismatch_generation(self) -> None:
+        write_jsonl(self.rollout, [
+            session_meta(),
+            token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2)),
+        ])
+        storage = self.storage()
+        source_id = stable_source_id(self.rollout)
+        try:
+            ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            old_watermark = storage.get_watermark(source_id, 0)
+            with self.rollout.open("w", encoding="utf-8") as handle:
+                for row in [
+                    {
+                        "timestamp": "2026-07-18T00:00:00Z",
+                        "type": "session_meta",
+                        "payload": {"cwd": "/home/_404/src/dotfiles", "replacement": True},
+                    },
+                    token_event("2026-07-18T00:03:00Z", last=usage(20, 15, 5)),
+                    token_event("2026-07-18T00:04:00Z", last=usage(7, 6, 1)),
+                ]:
+                    handle.write(json.dumps(row, sort_keys=True) + "\n")
+            self.assertGreater(self.rollout.stat().st_size, old_watermark)
+
+            result = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            self.assertEqual(result.active_sources, ((source_id, 1),))
+            self.assertEqual(result.counts.raw_inserted, 3)
+            self.assertEqual(storage.table_count("raw_rollout_observations"), 5)
+        finally:
+            storage.close()
+
+    def test_incomplete_replacement_does_not_advance_new_watermark(self) -> None:
+        write_jsonl(self.rollout, [session_meta()])
+        storage = self.storage()
+        source_id = stable_source_id(self.rollout)
+        try:
+            ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            replacement = self.sessions / "replacement.jsonl"
+            replacement.write_text(
+                json.dumps(token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2))),
+                encoding="utf-8",
+            )
+            replacement.replace(self.rollout)
+
+            result = ingest_rollouts(root=self.root, repo="", storage=storage)
+            self.assertEqual(result.active_sources, ((source_id, 1),))
+            self.assertEqual(result.counts.raw_inserted, 0)
+            self.assertEqual(storage.get_watermark(source_id, 1), 0)
+            self.assertEqual(storage.table_count("raw_rollout_observations"), 1)
         finally:
             storage.close()
 
@@ -192,18 +258,25 @@ class IngestionTests(unittest.TestCase):
         storage = self.storage()
         source_id = stable_source_id(self.rollout)
         try:
+            first = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            self.assertEqual(first.counts.raw_inserted, 1)
+            checkpoint = storage.get_source_checkpoint(source_id, 0)
+            failed_offset = storage.get_watermark(source_id, 0)
+            with self.rollout.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps(token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2))) + "\n")
+
             with self.assertRaises(RuntimeError):
                 ingest_rollouts(
                     root=self.root,
                     repo="dotfiles",
                     storage=storage,
-                    fail_after_raw_at=(source_id, 0, 0),
+                    fail_after_raw_at=(source_id, 0, failed_offset),
                 )
-            self.assertEqual(storage.table_count("raw_rollout_observations"), 0)
-            self.assertEqual(storage.get_watermark(source_id, 0), 0)
+            self.assertEqual(storage.table_count("raw_rollout_observations"), 1)
+            self.assertEqual(storage.get_source_checkpoint(source_id, 0), checkpoint)
             result = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
             self.assertEqual(result.counts.raw_inserted, 1)
-            self.assertGreater(storage.get_watermark(source_id, 0), 0)
+            self.assertGreater(storage.get_watermark(source_id, 0), failed_offset)
         finally:
             storage.close()
 

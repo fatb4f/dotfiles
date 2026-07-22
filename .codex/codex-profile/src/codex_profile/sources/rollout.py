@@ -48,9 +48,7 @@ def source_incarnation(path: Path) -> SourceIncarnation:
 
 
 def source_generation(path: Path) -> int:
-    incarnation = source_incarnation(path)
-    digest = hashlib.sha256(f"{stable_source_id(path)}:{incarnation.identity}".encode("utf-8")).digest()
-    return int.from_bytes(digest[:8], "big")
+    return 0
 
 
 def iter_complete_records(

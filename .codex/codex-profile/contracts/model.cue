@@ -21,10 +21,11 @@ import "time"
 
 #SourceKind: "rollout" | "checkpoint" | "hook_journal" | "wrapper_journal" | "app_server"
 #Authority:  "upstream_observation" | "explicit_checkpoint" | "local_observation" | "derived"
+#SourceID:   #Digest
 
 #SourceIdentity: close({
 	kind:       #SourceKind
-	sourceID:   #Digest
+	sourceID:   #SourceID
 	generation: uint
 	segmentID?: #UUIDv7
 })
@@ -33,6 +34,15 @@ import "time"
 #SourceCoordinate: close({
 	source:       #SourceIdentity
 	sourceOffset: uint
+})
+
+#SourceCheckpoint: close({
+	sourceID:         #SourceID
+	sourceGeneration: uint
+	nextOffset:       uint
+	anchorStart:      uint & <=nextOffset
+	anchorEnd:        nextOffset
+	anchorDigest:     #Digest
 })
 
 #AdapterIdentity: close({

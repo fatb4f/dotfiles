@@ -9,7 +9,6 @@ from codex_profile.reporting import parse_event
 from codex_profile.sources.rollout import (
     candidate_rollout_files,
     iter_complete_records,
-    stable_source_id,
 )
 from codex_profile.storage import IngestCounts, ProfileStorage
 
@@ -40,14 +39,14 @@ def ingest_rollouts(
         if not _matches_repo(path, repo):
             continue
         files_ingested += 1
-        source_id = stable_source_id(path)
-        generation = storage.resolve_source_generation(path, source_id)
+        resolved = storage.resolve_source(path)
+        source_id = resolved.source_id
+        generation = resolved.source_generation
         active_sources.append((source_id, generation))
-        watermark = storage.get_watermark(source_id, generation)
-        state = storage.load_usage_state(source_id, generation)
+        state = resolved.state
         for record in iter_complete_records(
             path,
-            start_offset=watermark,
+            start_offset=resolved.start_offset,
             source_id=source_id,
             generation=generation,
         ):
