@@ -264,3 +264,26 @@ jobs:
           name: context-git-hydrator-reports
           path: ${{ runner.temp }}/context-git-hydrator-qualification
           if-no-files-found: error
+
+      - name: Run Git index and worktree overlay qualification
+        env:
+          CONTEXT_GIT_OVERLAY_QUALIFICATION_DIR: ${{ runner.temp }}/context-git-overlay-qualification
+        run: |
+          set -o pipefail
+          bash .github/scripts/context-git-overlay-test.sh 2>&1 | tee "$RUNNER_TEMP/context-git-overlay-qualification.log"
+
+      - name: Upload Git overlay qualification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-git-overlay-qualification
+          path: ${{ runner.temp }}/context-git-overlay-qualification.log
+          if-no-files-found: error
+
+      - name: Upload Git overlay qualification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-git-overlay-reports
+          path: ${{ runner.temp }}/context-git-overlay-qualification
+          if-no-files-found: error

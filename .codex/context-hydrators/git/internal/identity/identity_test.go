@@ -25,3 +25,15 @@ func TestContentOccurrenceAndSnapshotOccurrenceIdentityAreDistinct(t *testing.T)
 		t.Fatal("stable occurrence identity and snapshot occurrence identity must remain distinct")
 	}
 }
+
+func TestLayerOccurrenceIdentitySeparatesMutableLayers(t *testing.T) {
+	revision := ObjectID{Format: "sha1", Hex: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	index := LayerOccurrenceID("repo.fixture", revision, "index", "same.txt")
+	worktree := LayerOccurrenceID("repo.fixture", revision, "worktree", "same.txt")
+	if index == worktree {
+		t.Fatal("index and worktree layer identities collapsed")
+	}
+	if index != LayerOccurrenceID("repo.fixture", revision, "index", "same.txt") {
+		t.Fatal("layer occurrence identity is not deterministic")
+	}
+}
