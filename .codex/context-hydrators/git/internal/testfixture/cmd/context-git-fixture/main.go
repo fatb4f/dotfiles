@@ -30,4 +30,8 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+	if err := testfixture.WriteManifest(filepath.Join(*output, "overlay-manifest.json"), repository, hydrator.OverlayGeneratedPropertyIDs()); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }

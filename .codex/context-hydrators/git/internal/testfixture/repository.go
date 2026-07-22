@@ -123,6 +123,12 @@ func Create(path string) (Repository, error) {
 	if _, err := runGit(root, nil, "tag", "fixture-f", commitF); err != nil {
 		return Repository{}, err
 	}
+	// Materialize only the gitlink mount point. Overlay tests use this empty
+	// directory to prove that the collector treats submodules as opaque without
+	// storing or traversing a nested .git fixture.
+	if err := os.MkdirAll(filepath.Join(root, "vendor/dependency"), 0o755); err != nil {
+		return Repository{}, fmt.Errorf("materialize opaque gitlink mount point: %w", err)
+	}
 
 	return Repository{
 		Path: root,
@@ -135,6 +141,36 @@ func Create(path string) (Repository, error) {
 			"F": commitF,
 		},
 	}, nil
+}
+
+// RunGit executes Git inside the isolated, deterministic fixture environment.
+func RunGit(repository Repository, arguments ...string) (string, error) {
+	return runGit(repository.Path, nil, arguments...)
+}
+
+// WriteWorktreeFile changes a fixture worktree without staging it.
+func WriteWorktreeFile(repository Repository, relative, content string, mode os.FileMode) error {
+	return writeFile(repository.Path, relative, content, mode)
+}
+
+// RemoveWorktreePath removes one fixture path without touching the index.
+func RemoveWorktreePath(repository Repository, relative string) error {
+	if err := os.RemoveAll(filepath.Join(repository.Path, filepath.FromSlash(relative))); err != nil {
+		return fmt.Errorf("remove fixture path %s: %w", relative, err)
+	}
+	return nil
+}
+
+// CreateWorktreeSymlink creates a structural symlink fixture.
+func CreateWorktreeSymlink(repository Repository, target, relative string) error {
+	absolute := filepath.Join(repository.Path, filepath.FromSlash(relative))
+	if err := os.MkdirAll(filepath.Dir(absolute), 0o755); err != nil {
+		return fmt.Errorf("create symlink fixture parent: %w", err)
+	}
+	if err := os.Symlink(target, absolute); err != nil {
+		return fmt.Errorf("create fixture symlink %s: %w", relative, err)
+	}
+	return nil
 }
 
 func UpdateRef(repository Repository, refName, commit string) error {
