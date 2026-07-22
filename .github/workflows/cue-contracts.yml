@@ -157,6 +157,27 @@ jobs:
           PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
             test_engine.EngineTests.test_complete_gap_map_overrides_sufficiency_claim
 
+      - name: Run direct CUE vet qualification
+        run: |
+          cd .codex/context-model
+          cue vet -c=false .
+
+      - name: Run direct pytest qualification
+        run: |
+          set -o pipefail
+          PYTHONPATH=.codex/context-workbook/src uv run --project .codex/context-workbook \
+            --with "hypothesis==${HYPOTHESIS_VERSION}" \
+            --with "pytest==${PYTEST_VERSION}" \
+            -- pytest .codex/context-workbook/tests 2>&1 | tee "$RUNNER_TEMP/context-workbook-pytest.log"
+
+      - name: Upload direct pytest qualification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-workbook-pytest
+          path: ${{ runner.temp }}/context-workbook-pytest.log
+          if-no-files-found: error
+
       - name: Check deterministic plugin projections
         run: |
           uv run --project .codex/context-workbook -- \
@@ -177,3 +198,46 @@ jobs:
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-workbook-test.sh hook
+
+  git-committed-snapshot:
+    runs-on: ubuntu-latest
+
+    env:
+      CUE_REVISION: 806821e40fae070318600a264d311517e596353b
+      GO_VERSION: "1.26.5"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pinned Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+
+      - name: Install pinned CUE and jq
+        run: |
+          go install cuelang.org/go/cmd/cue@${CUE_REVISION}
+          echo "$HOME/go/bin" >> "$GITHUB_PATH"
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+      - name: Print hydrator tool versions
+        run: |
+          go version
+          cue version
+          jq --version
+
+      - name: Run committed Git snapshot hydrator qualification
+        run: |
+          set -o pipefail
+          bash .github/scripts/context-git-hydrator-test.sh 2>&1 | tee "$RUNNER_TEMP/context-git-hydrator-qualification.log"
+
+      - name: Upload committed snapshot qualification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-git-hydrator-qualification
+          path: ${{ runner.temp }}/context-git-hydrator-qualification.log
+          if-no-files-found: error
