@@ -18,12 +18,16 @@ package contextmodel
 // source-fact collector, is restricted to none or candidate authority.
 #ContextCollectedEvidenceEnvelope: close({
 	schema: "kernel.context-evidence-collection.v0"
-	state: #ContextEvidenceAuthorityState & {
-		Collected=evidence: #ContextEvidence & {
-			authority: "none" | "candidate"
-		}
-		effectiveAuthority: Collected.authority
-	}
+	// Keep collection authority as two concrete alternatives. Expressing the
+	// equality through a plain disjunction leaves effectiveAuthority ambiguous
+	// in CUE even after a concrete evidence value is unified downstream.
+	state: (#ContextEvidenceAuthorityState & {
+		evidence:           #ContextEvidence & {authority: "none"}
+		effectiveAuthority: "none"
+	}) | (#ContextEvidenceAuthorityState & {
+		evidence:           #ContextEvidence & {authority: "candidate"}
+		effectiveAuthority: "candidate"
+	})
 	admission: null
 })
 

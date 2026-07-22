@@ -18,8 +18,11 @@ func main() {
 }
 
 func run(arguments []string, stdout, stderr io.Writer) error {
+	if len(arguments) > 0 && arguments[0] == "validate-observation" {
+		return validateObservation(arguments[1:], stdout, stderr)
+	}
 	if len(arguments) == 0 || arguments[0] != "committed" {
-		return errors.New("usage: context-git-hydrator committed --request request.json")
+		return errors.New("usage: context-git-hydrator committed --request request.json | validate-observation --observation observation.json")
 	}
 
 	flags := flag.NewFlagSet("committed", flag.ContinueOnError)
@@ -43,6 +46,35 @@ func run(arguments []string, stdout, stderr io.Writer) error {
 		return err
 	}
 	observation, err := hydrator.HydrateCommitted(request, hydrator.DefaultConfig())
+	if err != nil {
+		return err
+	}
+	payload, err := hydrator.MarshalCanonical(observation)
+	if err != nil {
+		return err
+	}
+	if _, err := stdout.Write(payload); err != nil {
+		return fmt.Errorf("write observation: %w", err)
+	}
+	return nil
+}
+
+func validateObservation(arguments []string, stdout, stderr io.Writer) error {
+	flags := flag.NewFlagSet("validate-observation", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	observationPath := flags.String("observation", "", "path to a committed snapshot observation JSON document")
+	if err := flags.Parse(arguments); err != nil {
+		return err
+	}
+	if flags.NArg() != 0 || *observationPath == "" {
+		return errors.New("usage: context-git-hydrator validate-observation --observation observation.json")
+	}
+	file, err := os.Open(*observationPath)
+	if err != nil {
+		return fmt.Errorf("open observation: %w", err)
+	}
+	defer file.Close()
+	observation, err := hydrator.DecodeObservation(file)
 	if err != nil {
 		return err
 	}

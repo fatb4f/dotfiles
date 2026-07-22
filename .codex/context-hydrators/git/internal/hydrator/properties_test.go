@@ -106,6 +106,17 @@ func executablePropertyCases() []executableProperty {
 		{ID: "symlink-not-traversed", Run: assertSymlinkNotTraversedProperty},
 		{ID: "submodule-not-traversed", Run: assertSubmoduleNotTraversedProperty},
 		{ID: "revision-bound", Run: assertRevisionBoundProperty},
+		{ID: "unknown-field-rejected", Run: assertUnknownFieldRejectedProperty},
+		{ID: "duplicate-path-rejected", Run: assertDuplicatePathRejectedProperty},
+		{ID: "unsorted-path-rejected", Run: assertUnsortedPathRejectedProperty},
+		{ID: "incompatible-mode-rejected", Run: assertIncompatibleModeRejectedProperty},
+		{ID: "non-normalized-path-rejected", Run: assertNonNormalizedPathRejectedProperty},
+		{ID: "noncanonical-revision-rejected", Run: assertNoncanonicalRevisionRejectedProperty},
+		{ID: "malformed-object-id-rejected", Run: assertMalformedObjectIDRejectedProperty},
+		{ID: "malformed-digest-rejected", Run: assertMalformedDigestRejectedProperty},
+		{ID: "opaque-symlink-descendant-rejected", Run: assertOpaqueSymlinkDescendantRejectedProperty},
+		{ID: "opaque-submodule-descendant-rejected", Run: assertOpaqueSubmoduleDescendantRejectedProperty},
+		{ID: "elevated-authority-rejected", Run: assertElevatedAuthorityRejectedProperty},
 	}
 }
 
@@ -273,6 +284,111 @@ func assertRevisionBoundProperty(t *testing.T, fixture testfixture.Repository) {
 	}
 	if !bytes.Equal(beforeJSON, afterJSON) {
 		t.Fatal("exact-commit hydration changed when branch moved")
+	}
+}
+
+func assertUnknownFieldRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	t.Helper()
+	valid := hydrateFixture(t, fixture, fixture.Commits["F"])
+	payload, err := json.Marshal(valid)
+	if err != nil {
+		t.Fatalf("marshal valid observation: %v", err)
+	}
+	var document map[string]any
+	if err := json.Unmarshal(payload, &document); err != nil {
+		t.Fatalf("decode valid observation map: %v", err)
+	}
+	document["unknown"] = true
+	payload, err = json.Marshal(document)
+	if err != nil {
+		t.Fatalf("marshal unknown-field mutation: %v", err)
+	}
+	if _, err := DecodeObservation(bytes.NewReader(payload)); err == nil {
+		t.Fatal("typed observation adapter accepted an unknown field")
+	}
+}
+
+func assertDuplicatePathRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	observation.Occurrences = append(observation.Occurrences, observation.Occurrences[0])
+	sort.Slice(observation.Occurrences, func(i, j int) bool { return observation.Occurrences[i].Path < observation.Occurrences[j].Path })
+	assertObservationRejected(t, observation)
+}
+
+func assertUnsortedPathRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	for left, right := 0, len(observation.Occurrences)-1; left < right; left, right = left+1, right-1 {
+		observation.Occurrences[left], observation.Occurrences[right] = observation.Occurrences[right], observation.Occurrences[left]
+	}
+	assertObservationRejected(t, observation)
+}
+
+func assertIncompatibleModeRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	for index := range observation.Occurrences {
+		if observation.Occurrences[index].Kind == "blob" {
+			observation.Occurrences[index].Mode = "160000"
+			break
+		}
+	}
+	assertObservationRejected(t, observation)
+}
+
+func assertNonNormalizedPathRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	observation.Occurrences[0].Path = "docs/../escape"
+	assertObservationRejected(t, observation)
+}
+
+func assertNoncanonicalRevisionRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	observation.RequestedRevision = "main"
+	assertObservationRejected(t, observation)
+}
+
+func assertMalformedObjectIDRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	observation.Occurrences[0].ObjectID.Hex = "not-hex"
+	assertObservationRejected(t, observation)
+}
+
+func assertMalformedDigestRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	observation.Hydrator.Digest = "sha256:short"
+	assertObservationRejected(t, observation)
+}
+
+func assertOpaqueSymlinkDescendantRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	child := observation.Occurrences[0]
+	child.Path = "guide-link/child"
+	observation.Occurrences = append(observation.Occurrences, child)
+	sort.Slice(observation.Occurrences, func(i, j int) bool { return observation.Occurrences[i].Path < observation.Occurrences[j].Path })
+	assertObservationRejected(t, observation)
+}
+
+func assertOpaqueSubmoduleDescendantRejectedProperty(t *testing.T, fixture testfixture.Repository) {
+	observation := hydrateFixture(t, fixture, fixture.Commits["F"])
+	child := observation.Occurrences[0]
+	child.Path = "vendor/dependency/child"
+	observation.Occurrences = append(observation.Occurrences, child)
+	sort.Slice(observation.Occurrences, func(i, j int) bool { return observation.Occurrences[i].Path < observation.Occurrences[j].Path })
+	assertObservationRejected(t, observation)
+}
+
+func assertElevatedAuthorityRejectedProperty(t *testing.T, _ testfixture.Repository) {
+	if err := ValidateCollectionAuthority("candidate"); err != nil {
+		t.Fatalf("candidate collection authority rejected: %v", err)
+	}
+	if err := ValidateCollectionAuthority("controller"); err == nil {
+		t.Fatal("collection adapter accepted controller authority without admission")
+	}
+}
+
+func assertObservationRejected(t *testing.T, observation Observation) {
+	t.Helper()
+	if err := ValidateObservation(observation); err == nil {
+		t.Fatal("typed observation adapter accepted an invariant mutation")
 	}
 }
 

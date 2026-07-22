@@ -24,6 +24,17 @@ var generatedPropertyIDs = []string{
 	"symlink-not-traversed",
 	"submodule-not-traversed",
 	"revision-bound",
+	"unknown-field-rejected",
+	"duplicate-path-rejected",
+	"unsorted-path-rejected",
+	"incompatible-mode-rejected",
+	"non-normalized-path-rejected",
+	"noncanonical-revision-rejected",
+	"malformed-object-id-rejected",
+	"malformed-digest-rejected",
+	"opaque-symlink-descendant-rejected",
+	"opaque-submodule-descendant-rejected",
+	"elevated-authority-rejected",
 }
 
 // GeneratedPropertyIDs returns the independently maintained property set emitted

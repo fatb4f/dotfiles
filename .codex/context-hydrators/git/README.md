@@ -67,6 +67,10 @@ CONTEXT_GIT_HYDRATOR_PROPERTY_REPORT="$PWD/property-report.json" \
   go test -count=1 -json ./... >go-test.jsonl
 ```
 
+The repository qualification writes stable `property-report.json` and
+`qualification-report.json` files under
+`${CONTEXT_GIT_QUALIFICATION_DIR:-${TMPDIR:-/tmp}/context-git-hydrator-qualification}`.
+
 From the repository root:
 
 ```bash
@@ -83,4 +87,10 @@ The qualification script:
 - derives declared, generated, executed, and reported property sets independently;
 - rejects failed property results and validates the closed qualification report.
 
-Hypothesis strategies cover the CUE invariant mutation surface. If an invalid mutation is unexpectedly accepted, the reverse oracle shrinks the case and emits a closed assertion-candidate artifact for review in the next DAG generation.
+Hypothesis strategies cover every cataloged invariant across positive,
+negative, boundary, metamorphic, and controlled-environment cases. Differential
+checks compare CUE, the typed Go adapter, hydrator execution, projection
+references, and normalized serialization where applicable. If an invalid
+mutation is unexpectedly accepted, the reverse oracle preserves the original
+and minimized fixtures in a non-authoritative, review-pending regression queue;
+it never promotes the candidate into the property catalog.

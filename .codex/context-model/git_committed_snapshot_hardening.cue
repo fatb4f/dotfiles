@@ -27,7 +27,7 @@ import (
 	]
 }
 
-#GitCommittedSnapshotFuzzPropertyID:
+#GitCommittedSnapshotFuzzPropertyID: #GitCommittedSnapshotPropertyID & (
 	"unknown-field-rejected" |
 		"duplicate-path-rejected" |
 		"unsorted-path-rejected" |
@@ -38,33 +38,59 @@ import (
 		"malformed-digest-rejected" |
 		"opaque-symlink-descendant-rejected" |
 		"opaque-submodule-descendant-rejected" |
-		"elevated-authority-rejected"
+		"elevated-authority-rejected")
 
 gitCommittedSnapshotFuzzProperties: close({
-	"unknown-field-rejected":               true
-	"duplicate-path-rejected":              true
-	"unsorted-path-rejected":               true
-	"incompatible-mode-rejected":           true
-	"non-normalized-path-rejected":         true
-	"noncanonical-revision-rejected":       true
-	"malformed-object-id-rejected":         true
-	"malformed-digest-rejected":            true
-	"opaque-symlink-descendant-rejected":   true
-	"opaque-submodule-descendant-rejected": true
-	"elevated-authority-rejected":          true
+	"unknown-field-rejected":               gitCommittedSnapshotPropertyCatalog.properties["unknown-field-rejected"]
+	"duplicate-path-rejected":              gitCommittedSnapshotPropertyCatalog.properties["duplicate-path-rejected"]
+	"unsorted-path-rejected":               gitCommittedSnapshotPropertyCatalog.properties["unsorted-path-rejected"]
+	"incompatible-mode-rejected":           gitCommittedSnapshotPropertyCatalog.properties["incompatible-mode-rejected"]
+	"non-normalized-path-rejected":         gitCommittedSnapshotPropertyCatalog.properties["non-normalized-path-rejected"]
+	"noncanonical-revision-rejected":       gitCommittedSnapshotPropertyCatalog.properties["noncanonical-revision-rejected"]
+	"malformed-object-id-rejected":         gitCommittedSnapshotPropertyCatalog.properties["malformed-object-id-rejected"]
+	"malformed-digest-rejected":            gitCommittedSnapshotPropertyCatalog.properties["malformed-digest-rejected"]
+	"opaque-symlink-descendant-rejected":   gitCommittedSnapshotPropertyCatalog.properties["opaque-symlink-descendant-rejected"]
+	"opaque-submodule-descendant-rejected": gitCommittedSnapshotPropertyCatalog.properties["opaque-submodule-descendant-rejected"]
+	"elevated-authority-rejected":          gitCommittedSnapshotPropertyCatalog.properties["elevated-authority-rejected"]
+})
+
+#GitCommittedSnapshotCandidateFixture: close({
+	documentJSON:   #NonEmptyString
+	documentDigest: #Digest
+	_digestMatch:   documentDigest & ("sha256:" + hex.Encode(sha256.Sum256(documentJSON)))
 })
 
 #GitCommittedSnapshotAssertionCandidate: close({
-	schema:         "kernel.git-committed-snapshot-assertion-candidate.v0"
-	propertyID:     #GitCommittedSnapshotFuzzPropertyID
-	mutationID:     #GraphID
-	documentKind:   "observation" | "projection"
-	expected:       "reject"
-	observed:       "accept"
-	documentJSON:   #NonEmptyString
-	documentDigest: #Digest
+	schema:                 "kernel.git-committed-snapshot-assertion-candidate.v1"
+	proposedPropertyID:     #GraphID
+	targetSchemaDefinition: "#GitCommittedSnapshotObservation" | "#GitCommittedSnapshotProjection"
+	mutationClass:          #GitCommittedSnapshotMutationKind
+	documentKind:           "observation" | "projection"
+	toolIdentities: [close({
+		name:    #GraphID
+		version: #NonEmptyString
+	}), ...close({
+		name:    #GraphID
+		version: #NonEmptyString
+	})]
+	originalFixture:        #GitCommittedSnapshotCandidateFixture
+	minimizedFixture:       #GitCommittedSnapshotCandidateFixture
+	preservedTerms:         [...#GitCommittedSnapshotInvariantTerm]
+	changedTerms:           [...#GitCommittedSnapshotInvariantTerm]
+	affectedOracleSurfaces: ["cue-validation" | "typed-validation" | "hydrator-execution" | "normalized-serialization", ...("cue-validation" | "typed-validation" | "hydrator-execution" | "normalized-serialization")]
+	expected:               "reject"
+	observed:               "accept"
+})
 
-	_digestMatch: documentDigest & ("sha256:" + hex.Encode(sha256.Sum256(documentJSON)))
+#GitCommittedSnapshotRegressionQueue: close({
+	schema:    "kernel.git-committed-snapshot-regression-queue.v0"
+	authority: "none"
+	review: close({
+		status:     "pending"
+		reviewedBy: null
+		promotion:  null
+	})
+	candidates: [#GitCommittedSnapshotAssertionCandidate, ...#GitCommittedSnapshotAssertionCandidate]
 })
 
 #GitCommittedSnapshotQualificationReport: close({

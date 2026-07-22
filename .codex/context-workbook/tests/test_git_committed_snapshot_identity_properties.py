@@ -241,7 +241,7 @@ identityProjection: #GitCommittedSnapshotProjection & {{
     observation: {{
         schema: "kernel.git-committed-snapshot-observation.v0"
         repositoryID: "repo.fixture"
-        requestedRevision: "main"
+        requestedRevision: "{revision_hex}"
         resolvedRevision: {{format: "sha1", hex: "{revision_hex}"}}
         rootTree: {{format: "sha1", hex: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}
         occurrences: [{{

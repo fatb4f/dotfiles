@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+const testHydratorDigest = "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+
 func TestMain(m *testing.M) {
 	BuildHydratorDigest = testHydratorDigest
 	os.Exit(m.Run())

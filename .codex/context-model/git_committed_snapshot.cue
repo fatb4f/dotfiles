@@ -255,19 +255,41 @@ import (
 		"mode-change-content-preserved" |
 		"symlink-not-traversed" |
 		"submodule-not-traversed" |
-		"revision-bound"
+		"revision-bound" |
+		"unknown-field-rejected" |
+		"duplicate-path-rejected" |
+		"unsorted-path-rejected" |
+		"incompatible-mode-rejected" |
+		"non-normalized-path-rejected" |
+		"noncanonical-revision-rejected" |
+		"malformed-object-id-rejected" |
+		"malformed-digest-rejected" |
+		"opaque-symlink-descendant-rejected" |
+		"opaque-submodule-descendant-rejected" |
+		"elevated-authority-rejected"
 
 // This manifest is consumed by the Go/CUE qualification runner. Its concrete
 // key set is the declared side of the declared=generated=executed=reported gate.
 gitCommittedSnapshotProperties: close({
-	"determinism":                   true
-	"rename-content-preserved":      true
-	"content-edit-content-changed":  true
-	"unrelated-entry-preserved":     true
-	"mode-change-content-preserved": true
-	"symlink-not-traversed":         true
-	"submodule-not-traversed":       true
-	"revision-bound":                true
+	"determinism":                          true
+	"rename-content-preserved":             true
+	"content-edit-content-changed":         true
+	"unrelated-entry-preserved":            true
+	"mode-change-content-preserved":        true
+	"symlink-not-traversed":                true
+	"submodule-not-traversed":              true
+	"revision-bound":                       true
+	"unknown-field-rejected":               true
+	"duplicate-path-rejected":              true
+	"unsorted-path-rejected":               true
+	"incompatible-mode-rejected":           true
+	"non-normalized-path-rejected":         true
+	"noncanonical-revision-rejected":       true
+	"malformed-object-id-rejected":         true
+	"malformed-digest-rejected":            true
+	"opaque-symlink-descendant-rejected":   true
+	"opaque-submodule-descendant-rejected": true
+	"elevated-authority-rejected":          true
 })
 
 #GitCommittedSnapshotMutationKind:
@@ -278,7 +300,18 @@ gitCommittedSnapshotProperties: close({
 		"mode-only-change" |
 		"symlink-traversal-attempt" |
 		"submodule-traversal-attempt" |
-		"selector-target-move"
+		"selector-target-move" |
+		"unknown-field-insertion" |
+		"duplicate-path-insertion" |
+		"path-order-perturbation" |
+		"mode-kind-incompatibility" |
+		"path-normalization-escape" |
+		"symbolic-revision-insertion" |
+		"object-id-corruption" |
+		"digest-corruption" |
+		"symlink-descendant-insertion" |
+		"submodule-descendant-insertion" |
+		"authority-elevation-without-admission"
 
 #GitCommittedSnapshotInvariantTerm:
 	"normalized-observation-bytes" |
@@ -287,7 +320,24 @@ gitCommittedSnapshotProperties: close({
 		"snapshot-occurrence-identity" |
 		"occurrence-metadata" |
 		"opaque-entry" |
-		"resolved-revision"
+		"resolved-revision" |
+		"closed-structure" |
+		"unique-paths" |
+		"canonical-order" |
+		"mode-kind-compatibility" |
+		"normalized-path" |
+		"canonical-revision" |
+		"object-identity" |
+		"hydrator-provenance" |
+		"collection-authority"
+
+#GitCommittedSnapshotStrategyCoverage: close({
+	positive:    [#GraphID, ...#GraphID]
+	negative:    [#GraphID, ...#GraphID]
+	boundary:    [#GraphID, ...#GraphID]
+	metamorphic: [#GraphID, ...#GraphID]
+	environment: [#GraphID, ...#GraphID]
+})
 
 #GitCommittedSnapshotProperty: close({
 	id:            #GitCommittedSnapshotPropertyID
@@ -296,12 +346,21 @@ gitCommittedSnapshotProperties: close({
 	preconditions: [...#GraphID]
 	preserves:     [...#GitCommittedSnapshotInvariantTerm]
 	changes:       [...#GitCommittedSnapshotInvariantTerm]
+	expected:      "accept" | "reject"
+	strategies:    #GitCommittedSnapshotStrategyCoverage
 })
 
 #GitCommittedSnapshotPropertyCatalog: close({
 	schema: "kernel.git-committed-snapshot-properties.v0"
 	properties: [ID=#GitCommittedSnapshotPropertyID]: #GitCommittedSnapshotProperty & {
 		id: ID
+		strategies: {
+			positive:    ["schema-derived-valid"]
+			negative:    ["invariant-targeted-invalid"]
+			boundary:    ["lower-and-upper-bounds"]
+			metamorphic: ["property-" + ID]
+			environment: ["controlled-process-environment"]
+		}
 	}
 })
 
@@ -313,6 +372,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["same-repository", "same-request", "same-resolved-revision", "same-hydrator-identity"]
 			preserves:     ["normalized-observation-bytes"]
 			changes:       []
+			expected:      "accept"
 		}
 		"rename-content-preserved": {
 			description:   "A rename-only mutation preserves Git object content identity while changing stable and snapshot occurrence identities."
@@ -320,6 +380,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["same-repository", "same-object-id", "different-normalized-path", "different-resolved-revision"]
 			preserves:     ["content-identity"]
 			changes:       ["occurrence-identity", "snapshot-occurrence-identity"]
+			expected:      "accept"
 		}
 		"content-edit-content-changed": {
 			description:   "A content edit at one path changes content and snapshot occurrence identity while preserving stable occurrence identity."
@@ -327,6 +388,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["same-repository", "same-normalized-path", "different-object-id", "different-resolved-revision"]
 			preserves:     ["occurrence-identity"]
 			changes:       ["content-identity", "snapshot-occurrence-identity"]
+			expected:      "accept"
 		}
 		"unrelated-entry-preserved": {
 			description:   "Adding an unrelated entry preserves content and stable occurrence identity for every unaffected path."
@@ -334,6 +396,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["same-repository", "same-unaffected-path", "same-unaffected-object-id", "different-resolved-revision"]
 			preserves:     ["content-identity", "occurrence-identity"]
 			changes:       ["snapshot-occurrence-identity"]
+			expected:      "accept"
 		}
 		"mode-change-content-preserved": {
 			description:   "A mode-only change preserves content and stable occurrence identity while changing occurrence metadata and snapshot occurrence identity."
@@ -341,6 +404,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["same-repository", "same-normalized-path", "same-object-id", "different-mode", "different-resolved-revision"]
 			preserves:     ["content-identity", "occurrence-identity"]
 			changes:       ["occurrence-metadata", "snapshot-occurrence-identity"]
+			expected:      "accept"
 		}
 		"symlink-not-traversed": {
 			description:   "A symlink remains one opaque committed occurrence and is never traversed."
@@ -348,6 +412,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["symlink-mode-kind-compatible"]
 			preserves:     ["opaque-entry"]
 			changes:       []
+			expected:      "accept"
 		}
 		"submodule-not-traversed": {
 			description:   "A gitlink remains one opaque committed occurrence and is never traversed."
@@ -355,6 +420,7 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["submodule-mode-kind-compatible"]
 			preserves:     ["opaque-entry"]
 			changes:       []
+			expected:      "accept"
 		}
 		"revision-bound": {
 			description:   "Hydration binds an exact resolved commit so a later selector target move cannot change the bound observation."
@@ -362,6 +428,95 @@ gitCommittedSnapshotPropertyCatalog: #GitCommittedSnapshotPropertyCatalog & {
 			preconditions: ["selector-resolves-to-commit", "exact-commit-request"]
 			preserves:     ["resolved-revision", "normalized-observation-bytes"]
 			changes:       []
+			expected:      "accept"
+		}
+		"unknown-field-rejected": {
+			description:   "Closed observation and projection boundaries reject unknown fields."
+			mutation:      "unknown-field-insertion"
+			preconditions: ["valid-closed-document"]
+			preserves:     ["closed-structure"]
+			changes:       []
+			expected:      "reject"
+		}
+		"duplicate-path-rejected": {
+			description:   "Two committed occurrences cannot claim the same normalized path."
+			mutation:      "duplicate-path-insertion"
+			preconditions: ["valid-observation", "existing-path"]
+			preserves:     ["unique-paths"]
+			changes:       []
+			expected:      "reject"
+		}
+		"unsorted-path-rejected": {
+			description:   "Committed occurrences must remain in canonical path order."
+			mutation:      "path-order-perturbation"
+			preconditions: ["valid-observation", "multiple-paths"]
+			preserves:     ["canonical-order"]
+			changes:       []
+			expected:      "reject"
+		}
+		"incompatible-mode-rejected": {
+			description:   "A Git occurrence mode must agree with its declared kind."
+			mutation:      "mode-kind-incompatibility"
+			preconditions: ["valid-observation", "known-git-mode"]
+			preserves:     ["mode-kind-compatibility"]
+			changes:       []
+			expected:      "reject"
+		}
+		"non-normalized-path-rejected": {
+			description:   "Occurrence paths reject absolute, escaping, and non-normalized forms."
+			mutation:      "path-normalization-escape"
+			preconditions: ["valid-observation", "existing-path"]
+			preserves:     ["normalized-path"]
+			changes:       []
+			expected:      "reject"
+		}
+		"noncanonical-revision-rejected": {
+			description:   "Normalized observations bind requestedRevision to the exact resolved commit hex."
+			mutation:      "symbolic-revision-insertion"
+			preconditions: ["valid-observation", "resolved-commit"]
+			preserves:     ["canonical-revision", "resolved-revision"]
+			changes:       []
+			expected:      "reject"
+		}
+		"malformed-object-id-rejected": {
+			description:   "Git object identifiers reject empty, uppercase, short, and non-hex encodings."
+			mutation:      "object-id-corruption"
+			preconditions: ["valid-observation", "existing-object-id"]
+			preserves:     ["object-identity"]
+			changes:       []
+			expected:      "reject"
+		}
+		"malformed-digest-rejected": {
+			description:   "Hydrator provenance requires a canonical sha256 digest."
+			mutation:      "digest-corruption"
+			preconditions: ["valid-observation", "bound-hydrator"]
+			preserves:     ["hydrator-provenance"]
+			changes:       []
+			expected:      "reject"
+		}
+		"opaque-symlink-descendant-rejected": {
+			description:   "A symlink is opaque and cannot contain another committed occurrence."
+			mutation:      "symlink-descendant-insertion"
+			preconditions: ["valid-observation", "symlink-occurrence"]
+			preserves:     ["opaque-entry"]
+			changes:       []
+			expected:      "reject"
+		}
+		"opaque-submodule-descendant-rejected": {
+			description:   "A submodule is opaque and cannot contain another committed occurrence."
+			mutation:      "submodule-descendant-insertion"
+			preconditions: ["valid-observation", "submodule-occurrence"]
+			preserves:     ["opaque-entry"]
+			changes:       []
+			expected:      "reject"
+		}
+		"elevated-authority-rejected": {
+			description:   "Collection cannot elevate evidence beyond candidate authority without admission."
+			mutation:      "authority-elevation-without-admission"
+			preconditions: ["valid-projection", "no-admission-record"]
+			preserves:     ["collection-authority"]
+			changes:       []
+			expected:      "reject"
 		}
 	}
 }

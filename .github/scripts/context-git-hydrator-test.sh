@@ -6,8 +6,10 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 HYDRATOR_ROOT="$REPO_ROOT/.codex/context-hydrators/git"
 MODEL_ROOT="$REPO_ROOT/.codex/context-model"
 WORK_DIR="$(mktemp -d)"
+QUALIFICATION_DIR="${CONTEXT_GIT_QUALIFICATION_DIR:-${TMPDIR:-/tmp}/context-git-hydrator-qualification}"
 PROJECTION_CUE="$MODEL_ROOT/git_committed_snapshot_qualification.cue"
 trap 'rm -rf "$WORK_DIR"; rm -f "$PROJECTION_CUE"' EXIT
+mkdir -p "$QUALIFICATION_DIR"
 
 HYDRATOR_BUILD_DIGEST="$(python - "$HYDRATOR_ROOT" <<'PY'
 from __future__ import annotations
@@ -29,8 +31,10 @@ print("sha256:" + digest.hexdigest())
 PY
 )"
 HYDRATOR_LDFLAGS="-X github.com/fatb4f/dotfiles/.codex/context-hydrators/git/internal/hydrator.BuildHydratorDigest=$HYDRATOR_BUILD_DIGEST"
-PROPERTY_REPORT="$WORK_DIR/property-report.json"
+PROPERTY_REPORT="$QUALIFICATION_DIR/property-report.json"
+QUALIFICATION_REPORT="$QUALIFICATION_DIR/qualification-report.json"
 GO_TEST_LOG="$WORK_DIR/go-test.jsonl"
+rm -f "$PROPERTY_REPORT" "$QUALIFICATION_REPORT"
 
 printf '%s\n' "==> Run committed snapshot Go tests"
 (
@@ -239,10 +243,12 @@ jq -n \
   --arg resolvedRevision "$commit_f" \
   --arg hydratorDigest "$HYDRATOR_BUILD_DIGEST" \
   '{schema:"kernel.git-committed-snapshot-qualification-report.v1",resolvedRevision:$resolvedRevision,hydratorDigest:$hydratorDigest,fixtureCommits:$manifest[0].repository.commits,declaredPropertyIDs:($declared|split("\n")|map(select(length>0))),generatedPropertyIDs:($generated|split("\n")|map(select(length>0))),executedPropertyIDs:($executed|split("\n")|map(select(length>0))),reportedPropertyIDs:($reported|split("\n")|map(select(length>0))),propertyReport:$propertyReport[0]}' \
-  >"$WORK_DIR/qualification-report.json"
+  >"$QUALIFICATION_REPORT"
 (
   cd "$MODEL_ROOT"
-  cue vet . "$WORK_DIR/qualification-report.json" -d '#GitCommittedSnapshotQualificationReport'
+  cue vet . "$QUALIFICATION_REPORT" -d '#GitCommittedSnapshotQualificationReport'
 )
 
+printf '%s\n' "Property report: $PROPERTY_REPORT"
+printf '%s\n' "Qualification report: $QUALIFICATION_REPORT"
 printf '%s\n' "==> Committed snapshot hydrator qualification passed"

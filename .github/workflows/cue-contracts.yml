@@ -240,6 +240,8 @@ jobs:
           jq --version
 
       - name: Run committed Git snapshot hydrator qualification
+        env:
+          CONTEXT_GIT_QUALIFICATION_DIR: ${{ runner.temp }}/context-git-hydrator-qualification
         run: |
           set -o pipefail
           bash .github/scripts/context-git-hydrator-test.sh 2>&1 | tee "$RUNNER_TEMP/context-git-hydrator-qualification.log"
@@ -250,4 +252,12 @@ jobs:
         with:
           name: context-git-hydrator-qualification
           path: ${{ runner.temp }}/context-git-hydrator-qualification.log
+          if-no-files-found: error
+
+      - name: Upload committed snapshot qualification reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: context-git-hydrator-reports
+          path: ${{ runner.temp }}/context-git-hydrator-qualification
           if-no-files-found: error
