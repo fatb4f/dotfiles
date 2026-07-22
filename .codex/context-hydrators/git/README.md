@@ -31,10 +31,10 @@ Example request:
 ## Identity
 
 - `contentIdentity`: Git object format and object ID.
-- `pathIdentity`: repository plus normalized path; stable for an unchanged path across revisions.
-- `occurrenceIdentity`: repository plus resolved revision plus path; bound to one exact committed snapshot.
+- `occurrenceIdentity`: repository plus normalized path; stable while that repository path is preserved across revisions.
+- `snapshotOccurrenceIdentity`: repository plus resolved revision plus normalized path; bound to one exact committed snapshot.
 
-A rename therefore preserves blob content identity while changing path and occurrence identity. A new commit changes snapshot-bound occurrence identity even when the path is unaffected; cross-revision preservation properties use `pathIdentity` plus content identity.
+A rename preserves content identity while changing both occurrence identities. A content edit, unrelated addition, or mode-only change preserves the stable occurrence identity for unaffected paths while changing the revision-bound snapshot occurrence identity. Graph member keys and containment endpoints use the stable occurrence identity; source and provenance fields retain the exact resolved revision.
 
 ## Qualification
 
@@ -42,6 +42,13 @@ From this module:
 
 ```bash
 go test ./...
+```
+
+To preserve the executable property report as a CI artifact:
+
+```bash
+CONTEXT_GIT_HYDRATOR_PROPERTY_REPORT="$PWD/property-report.json" \
+  go test ./internal/hydrator -run TestDeclaredGeneratedExecutedReportedPropertySetEquality
 ```
 
 From the repository root:
