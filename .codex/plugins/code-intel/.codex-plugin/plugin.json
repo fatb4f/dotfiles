@@ -1,6 +1,6 @@
 {
   "name": "code-intel",
-  "version": "0.2.0+codex.20260722180922",
+  "version": "0.2.0+codex.20260722182120",
   "description": "Read-only code-intelligence evidence, including temporary CUE and Go language-server adapters.",
   "author": {
     "name": "fatb4f"
