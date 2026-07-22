@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "cue_lsp": {
+      "type": "stdio",
+      "command": "./scripts/lsp-mcp-server",
+      "args": ["cue-lsp"]
+    },
+    "gopls": {
+      "type": "stdio",
+      "command": "./scripts/lsp-mcp-server",
+      "args": ["gopls"]
+    }
+  }
+}
