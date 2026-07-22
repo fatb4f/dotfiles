@@ -6,6 +6,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 
 PACKAGE_SRC = Path(__file__).resolve().parents[1] / "src"
@@ -14,7 +15,14 @@ if str(PACKAGE_SRC) not in sys.path:
 
 from codex_profile.cli import main as cli_main
 from codex_profile.collector import ingest_rollouts
-from codex_profile.adapters.usage import adapt_rollout_record
+from codex_profile.adapters.usage import (
+    ADAPTER_DIGEST,
+    ADAPTER_ID,
+    ADAPTER_VERSION,
+    LEGACY_ADAPTER_DIGEST,
+    LEGACY_ADAPTER_VERSION,
+    adapt_rollout_record,
+)
 from codex_profile.sources.rollout import iter_complete_records, stable_source_id
 from codex_profile.storage import ProfileStorage
 
@@ -235,6 +243,49 @@ class IngestionTests(unittest.TestCase):
         finally:
             storage.close()
 
+    def test_rotation_between_yield_and_admission_restarts_at_replacement(self) -> None:
+        write_jsonl(self.rollout, [
+            session_meta(),
+            token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2)),
+        ])
+        replacement = self.root / "replacement.jsonl"
+        write_jsonl(replacement, [
+            {**session_meta(), "replacement": True},
+            token_event("2026-07-18T00:02:00Z", last=usage(20, 15, 5)),
+        ])
+        storage = self.storage()
+        source_id = stable_source_id(self.rollout)
+        records_adapted = 0
+
+        def rotate_before_second_admission(record, state=None):
+            nonlocal records_adapted
+            records_adapted += 1
+            adapted = adapt_rollout_record(record, state)
+            if records_adapted == 2:
+                replacement.replace(self.rollout)
+            return adapted
+
+        try:
+            with patch("codex_profile.collector.adapt_rollout_record", side_effect=rotate_before_second_admission):
+                result = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+
+            self.assertEqual(result.active_sources, ((source_id, 0), (source_id, 1)))
+            counts = storage.connection.execute(
+                """
+                SELECT source_generation, count(*)
+                FROM raw_rollout_observations
+                WHERE source_id = ?
+                GROUP BY source_generation
+                ORDER BY source_generation
+                """,
+                [source_id],
+            ).fetchall()
+            self.assertEqual(counts, [(0, 1), (1, 2)])
+            self.assertEqual(storage.get_watermark(source_id, 0), len(json.dumps(session_meta(), sort_keys=True)) + 1)
+            self.assertEqual(storage.summary()["tokens"]["total"], 20)
+        finally:
+            storage.close()
+
     def test_incomplete_tail_is_ignored_until_completed(self) -> None:
         self.rollout.write_text(json.dumps(session_meta()) + "\n", encoding="utf-8")
         partial = json.dumps(token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2)))
@@ -443,6 +494,85 @@ class IngestionTests(unittest.TestCase):
         self.assertEqual(summary["tokens"]["fresh_input"], 5)
         self.assertTrue((out / "summary.md").exists())
         self.assertTrue((out / "summary.csv").exists())
+
+    def test_legacy_normalized_rows_are_reprojected_under_active_adapter(self) -> None:
+        write_jsonl(self.rollout, [
+            session_meta(),
+            token_event("2026-07-18T00:01:00Z", last=usage(10, 8, 2, cached=3)),
+        ])
+        storage = self.storage()
+        try:
+            ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            storage.connection.execute(
+                """
+                CREATE TABLE normalized_usage_observations_legacy AS
+                SELECT
+                  source_id,
+                  source_generation,
+                  source_offset,
+                  event_timestamp,
+                  event_kind,
+                  normalization_method,
+                  usage_observation_index,
+                  reported_input_tokens,
+                  cached_input_tokens,
+                  fresh_input_tokens,
+                  output_tokens,
+                  reasoning_output_tokens,
+                  total_tokens
+                FROM normalized_usage_observations
+                """
+            )
+            storage.connection.execute("DROP TABLE normalized_usage_observations")
+            storage.connection.execute(
+                "ALTER TABLE normalized_usage_observations_legacy RENAME TO normalized_usage_observations"
+            )
+            storage.connection.execute("DROP TABLE adapter_projection_admissions")
+        finally:
+            storage.close()
+
+        storage = self.storage()
+        try:
+            migrated = storage.connection.execute(
+                """
+                SELECT adapter_id, adapter_version, adapter_digest, count(*)
+                FROM normalized_usage_observations
+                GROUP BY adapter_id, adapter_version, adapter_digest
+                """
+            ).fetchall()
+            self.assertEqual(
+                migrated,
+                [(ADAPTER_ID, LEGACY_ADAPTER_VERSION, LEGACY_ADAPTER_DIGEST, 1)],
+            )
+            self.assertEqual(storage.summary()["normalized_usage_observations"], 0)
+            self.assertEqual(storage.summary()["tokens"]["total"], 0)
+
+            replayed = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            self.assertEqual(replayed.counts.raw_inserted, 0)
+            self.assertEqual(replayed.counts.normalized_inserted, 1)
+            versions = storage.connection.execute(
+                """
+                SELECT adapter_id, adapter_version, adapter_digest, count(*)
+                FROM normalized_usage_observations
+                GROUP BY adapter_id, adapter_version, adapter_digest
+                ORDER BY adapter_version
+                """
+            ).fetchall()
+            self.assertEqual(
+                versions,
+                [
+                    (ADAPTER_ID, LEGACY_ADAPTER_VERSION, LEGACY_ADAPTER_DIGEST, 1),
+                    (ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST, 1),
+                ],
+            )
+            self.assertEqual(storage.summary()["normalized_usage_observations"], 1)
+            self.assertEqual(storage.summary()["tokens"]["total"], 10)
+
+            idempotent = ingest_rollouts(root=self.root, repo="dotfiles", storage=storage)
+            self.assertEqual(idempotent.counts.normalized_inserted, 0)
+            self.assertEqual(storage.table_count("normalized_usage_observations"), 2)
+        finally:
+            storage.close()
 
 
 if __name__ == "__main__":

@@ -22,6 +22,10 @@ from codex_profile.sources.rollout import RolloutRecord
 
 
 ADAPTER_ID = "rollout-usage-adapter"
+LEGACY_ADAPTER_VERSION = "0.1.0"
+LEGACY_ADAPTER_DIGEST = "sha256:" + hashlib.sha256(
+    f"{ADAPTER_ID}:{LEGACY_ADAPTER_VERSION}".encode("utf-8")
+).hexdigest()
 ADAPTER_VERSION = "0.2.0"
 ADAPTER_DIGEST = "sha256:" + hashlib.sha256(f"{ADAPTER_ID}:{ADAPTER_VERSION}".encode("utf-8")).hexdigest()
 

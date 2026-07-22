@@ -11,16 +11,22 @@ from codex_profile.adapters.usage import (
     ADAPTER_DIGEST,
     ADAPTER_ID,
     ADAPTER_VERSION,
+    LEGACY_ADAPTER_DIGEST,
+    LEGACY_ADAPTER_VERSION,
     AdaptedRolloutRecord,
     UsageFields,
     UsageState,
 )
 from codex_profile.reporting import TokenUsage
-from codex_profile.sources.rollout import RolloutRecord, source_incarnation, stable_source_id
+from codex_profile.sources.rollout import (
+    RolloutRecord,
+    SourceIncarnationMismatch,
+    source_incarnation,
+    stable_source_id,
+)
 
 
 COLLECTOR_WRITER = "collector"
-ANCHOR_BYTE_WINDOW = 4096
 
 
 @dataclass(frozen=True)
@@ -51,6 +57,7 @@ class SourceCheckpoint:
 class ResolvedSource:
     source_id: str
     source_generation: int
+    source_identity: str
     start_offset: int
     state: UsageState
 
@@ -144,7 +151,11 @@ class ProfileStorage:
             )
             """
         )
-        self._ensure_normalized_usage_schema()
+        migrated_legacy_normalized = self._ensure_normalized_usage_schema()
+        migrated_legacy_diagnostics = (
+            self._table_exists("collector_diagnostics")
+            and "adapter_id" not in self._columns("collector_diagnostics")
+        )
         self.connection.execute(
             """
             CREATE TABLE IF NOT EXISTS collector_diagnostics (
@@ -165,27 +176,32 @@ class ProfileStorage:
             )
             """
         )
+        migrated_version = LEGACY_ADAPTER_VERSION if migrated_legacy_diagnostics else ADAPTER_VERSION
+        migrated_digest = LEGACY_ADAPTER_DIGEST if migrated_legacy_diagnostics else ADAPTER_DIGEST
         self._ensure_column("collector_diagnostics", "adapter_id", f"TEXT DEFAULT '{ADAPTER_ID}'")
-        self._ensure_column("collector_diagnostics", "adapter_version", f"TEXT DEFAULT '{ADAPTER_VERSION}'")
-        self._ensure_column("collector_diagnostics", "adapter_digest", f"TEXT DEFAULT '{ADAPTER_DIGEST}'")
+        self._ensure_column("collector_diagnostics", "adapter_version", f"TEXT DEFAULT '{migrated_version}'")
+        self._ensure_column("collector_diagnostics", "adapter_digest", f"TEXT DEFAULT '{migrated_digest}'")
         self._ensure_column("collector_diagnostics", "diagnostic_scope", "TEXT DEFAULT 'record'")
         self._ensure_column("collector_diagnostics", "diagnostic_ordinal", "UBIGINT DEFAULT 0")
+        self._ensure_projection_schema(migrated_legacy_normalized)
 
     def resolve_source(self, path: Path) -> ResolvedSource:
         source_id = stable_source_id(path)
-        generation, start_offset = self._resolve_source_generation_and_offset(path, source_id)
+        generation, start_offset, source_identity = self._resolve_source_generation_and_offset(path, source_id)
+        projection_required = self._projection_required(source_id, generation)
         return ResolvedSource(
             source_id=source_id,
             source_generation=generation,
-            start_offset=start_offset,
-            state=self.load_usage_state(source_id, generation),
+            source_identity=source_identity,
+            start_offset=0 if projection_required else start_offset,
+            state=UsageState() if projection_required else self.load_usage_state(source_id, generation),
         )
 
     def resolve_source_generation(self, path: Path, source_id: str) -> int:
-        generation, _ = self._resolve_source_generation_and_offset(path, source_id)
+        generation, _, _ = self._resolve_source_generation_and_offset(path, source_id)
         return generation
 
-    def _resolve_source_generation_and_offset(self, path: Path, source_id: str) -> tuple[int, int]:
+    def _resolve_source_generation_and_offset(self, path: Path, source_id: str) -> tuple[int, int, str]:
         incarnation = source_incarnation(path)
         row = self.connection.execute(
             """
@@ -198,22 +214,22 @@ class ProfileStorage:
             [source_id],
         ).fetchone()
         if row is None:
-            return 0, 0
+            return 0, 0, incarnation.identity
 
         generation = int(row[0])
         previous_identity = row[1]
         checkpoint = self.get_source_checkpoint(source_id, generation)
         if checkpoint is None:
             if self._watermark_exists(source_id, generation):
-                return generation + 1, 0
-            return generation, 0
+                return generation + 1, 0, incarnation.identity
+            return generation, 0, incarnation.identity
         if previous_identity is not None and str(previous_identity) != incarnation.identity:
-            return generation + 1, 0
+            return generation + 1, 0, incarnation.identity
         if incarnation.size < checkpoint.next_offset:
-            return generation + 1, 0
+            return generation + 1, 0, incarnation.identity
         if not self._checkpoint_anchor_matches(path, checkpoint):
-            return generation + 1, 0
-        return generation, checkpoint.next_offset
+            return generation + 1, 0, incarnation.identity
+        return generation, checkpoint.next_offset, incarnation.identity
 
     def get_watermark(self, source_id: str, source_generation: int) -> int:
         checkpoint = self.get_source_checkpoint(source_id, source_generation)
@@ -296,7 +312,8 @@ class ProfileStorage:
     def admit(self, adapted: AdaptedRolloutRecord, *, fail_after_raw: bool = False) -> IngestCounts:
         self._ensure_writer()
         record = adapted.raw.record
-        exists = self.connection.execute(
+        self._assert_source_incarnation(record)
+        raw_exists = self.connection.execute(
             """
             SELECT 1
             FROM raw_rollout_observations
@@ -304,13 +321,32 @@ class ProfileStorage:
             """,
             [record.source_id, record.source_generation, record.source_offset],
         ).fetchone()
-        if exists:
+        projection_exists = self.connection.execute(
+            """
+            SELECT 1
+            FROM adapter_projection_admissions
+            WHERE source_id = ?
+              AND source_generation = ?
+              AND source_offset = ?
+              AND adapter_id = ?
+              AND adapter_version = ?
+              AND adapter_digest = ?
+            """,
+            [
+                record.source_id,
+                record.source_generation,
+                record.source_offset,
+                ADAPTER_ID,
+                ADAPTER_VERSION,
+                ADAPTER_DIGEST,
+            ],
+        ).fetchone()
+        if raw_exists and projection_exists:
             self._advance_watermark(record)
             return IngestCounts()
 
         self.connection.execute("BEGIN TRANSACTION")
         try:
-            incarnation = source_incarnation(record.path)
             self.connection.execute(
                 """
                 INSERT INTO collector_sources (
@@ -328,52 +364,75 @@ class ProfileStorage:
                     record.source_id,
                     record.source_generation,
                     str(record.path),
-                    incarnation.identity,
-                    incarnation.size,
+                    record.source_identity,
+                    record.source_size,
                 ],
             )
-            self._insert_raw(adapted)
+            raw_inserted = 0
+            if not raw_exists:
+                self._insert_raw(adapted)
+                raw_inserted = 1
             if fail_after_raw:
                 raise RuntimeError("simulated collector transaction failure")
             normalized_inserted = 0
-            if adapted.normalized is not None:
-                self._insert_normalized(adapted)
-                normalized_inserted = 1
-            for ordinal, diagnostic in enumerate(adapted.diagnostics):
+            diagnostics_inserted = 0
+            if not projection_exists:
+                if adapted.normalized is not None:
+                    self._insert_normalized(adapted)
+                    normalized_inserted = 1
+                for ordinal, diagnostic in enumerate(adapted.diagnostics):
+                    self.connection.execute(
+                        """
+                        INSERT INTO collector_diagnostics (
+                          diagnostic_id,
+                          source_id,
+                          source_generation,
+                          source_offset,
+                          adapter_id,
+                          adapter_version,
+                          adapter_digest,
+                          code,
+                          diagnostic_scope,
+                          diagnostic_ordinal,
+                          severity,
+                          message
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        [
+                            (
+                                f"{record.source_id}:{record.source_generation}:{record.source_offset}:"
+                                f"{ADAPTER_ID}:{ADAPTER_VERSION}:{diagnostic.code}:{ordinal}:{diagnostic.scope}"
+                            ),
+                            record.source_id,
+                            record.source_generation,
+                            record.source_offset,
+                            ADAPTER_ID,
+                            ADAPTER_VERSION,
+                            ADAPTER_DIGEST,
+                            diagnostic.code,
+                            diagnostic.scope,
+                            ordinal,
+                            "strict" if diagnostic.strict else "advisory",
+                            diagnostic.message,
+                        ],
+                    )
+                diagnostics_inserted = len(adapted.diagnostics)
                 self.connection.execute(
                     """
-                    INSERT INTO collector_diagnostics (
-                      diagnostic_id,
-                      source_id,
-                      source_generation,
-                      source_offset,
-                      adapter_id,
-                      adapter_version,
-                      adapter_digest,
-                      code,
-                      diagnostic_scope,
-                      diagnostic_ordinal,
-                      severity,
-                      message
+                    INSERT INTO adapter_projection_admissions (
+                      source_id, source_generation, source_offset,
+                      adapter_id, adapter_version, adapter_digest
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     """,
                     [
-                        (
-                            f"{record.source_id}:{record.source_generation}:{record.source_offset}:"
-                            f"{ADAPTER_ID}:{ADAPTER_VERSION}:{diagnostic.code}:{ordinal}:{diagnostic.scope}"
-                        ),
                         record.source_id,
                         record.source_generation,
                         record.source_offset,
                         ADAPTER_ID,
                         ADAPTER_VERSION,
                         ADAPTER_DIGEST,
-                        diagnostic.code,
-                        diagnostic.scope,
-                        ordinal,
-                        "strict" if diagnostic.strict else "advisory",
-                        diagnostic.message,
                     ],
                 )
             self._advance_watermark(record)
@@ -381,16 +440,11 @@ class ProfileStorage:
         except Exception:
             self.connection.execute("ROLLBACK")
             raise
-        return IngestCounts(1, normalized_inserted, len(adapted.diagnostics))
+        return IngestCounts(raw_inserted, normalized_inserted, diagnostics_inserted)
 
     def _advance_watermark(self, record: RolloutRecord) -> None:
         self._ensure_writer()
-        checkpoint = _source_checkpoint(
-            record.path,
-            record.source_id,
-            record.source_generation,
-            record.next_offset,
-        )
+        checkpoint = _source_checkpoint(record)
         self.connection.execute(
             """
             INSERT INTO collector_watermarks (
@@ -531,7 +585,7 @@ class ProfileStorage:
         if not active_sources:
             return 0
         clauses = []
-        parameters: list[object] = [ADAPTER_ID, ADAPTER_VERSION]
+        parameters: list[object] = [ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST]
         for source_id, generation in active_sources:
             clauses.append("(source_id = ? AND source_generation = ?)")
             parameters.extend([source_id, generation])
@@ -542,6 +596,7 @@ class ProfileStorage:
             WHERE severity = 'strict'
               AND adapter_id = ?
               AND adapter_version = ?
+              AND adapter_digest = ?
               AND ({' OR '.join(clauses)})
             """,
             parameters,
@@ -572,15 +627,23 @@ class ProfileStorage:
               coalesce(sum(output_tokens), 0),
               coalesce(sum(reasoning_output_tokens), 0)
             FROM normalized_usage_observations
-            """
+            WHERE adapter_id = ?
+              AND adapter_version = ?
+              AND adapter_digest = ?
+            """,
+            [ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST],
         ).fetchone()
         diagnostics = self.connection.execute(
             """
             SELECT code, count(*)
             FROM collector_diagnostics
+            WHERE adapter_id = ?
+              AND adapter_version = ?
+              AND adapter_digest = ?
             GROUP BY code
             ORDER BY code
-            """
+            """,
+            [ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST],
         ).fetchall()
         return {
             "raw_observations": self.table_count("raw_rollout_observations"),
@@ -625,12 +688,12 @@ class ProfileStorage:
         ).fetchall()
         return {str(row[0]) for row in rows}
 
-    def _ensure_normalized_usage_schema(self) -> None:
+    def _ensure_normalized_usage_schema(self) -> bool:
         if not self._table_exists("normalized_usage_observations"):
             self._create_normalized_usage_table("normalized_usage_observations")
-            return
+            return False
         if "adapter_id" in self._columns("normalized_usage_observations"):
-            return
+            return False
 
         replacement = "normalized_usage_observations_v2"
         self.connection.execute(f"DROP TABLE IF EXISTS {replacement}")
@@ -674,10 +737,80 @@ class ProfileStorage:
               total_tokens
             FROM normalized_usage_observations
             """,
-            [ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST],
+            [ADAPTER_ID, LEGACY_ADAPTER_VERSION, LEGACY_ADAPTER_DIGEST],
         )
         self.connection.execute("DROP TABLE normalized_usage_observations")
         self.connection.execute(f"ALTER TABLE {replacement} RENAME TO normalized_usage_observations")
+        return True
+
+    def _ensure_projection_schema(self, migrated_legacy_normalized: bool) -> None:
+        if self._table_exists("adapter_projection_admissions"):
+            return
+        self.connection.execute(
+            """
+            CREATE TABLE adapter_projection_admissions (
+              source_id TEXT NOT NULL,
+              source_generation UBIGINT NOT NULL,
+              source_offset UBIGINT NOT NULL,
+              adapter_id TEXT NOT NULL,
+              adapter_version TEXT NOT NULL,
+              adapter_digest TEXT NOT NULL,
+              projected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+              PRIMARY KEY (
+                source_id,
+                source_generation,
+                source_offset,
+                adapter_id,
+                adapter_version,
+                adapter_digest
+              )
+            )
+            """
+        )
+        version = LEGACY_ADAPTER_VERSION if migrated_legacy_normalized else ADAPTER_VERSION
+        digest = LEGACY_ADAPTER_DIGEST if migrated_legacy_normalized else ADAPTER_DIGEST
+        self.connection.execute(
+            """
+            INSERT INTO adapter_projection_admissions (
+              source_id, source_generation, source_offset,
+              adapter_id, adapter_version, adapter_digest
+            )
+            SELECT source_id, source_generation, source_offset, ?, ?, ?
+            FROM raw_rollout_observations
+            """,
+            [ADAPTER_ID, version, digest],
+        )
+
+    def _projection_required(self, source_id: str, source_generation: int) -> bool:
+        row = self.connection.execute(
+            """
+            SELECT 1
+            FROM raw_rollout_observations AS raw
+            WHERE raw.source_id = ?
+              AND raw.source_generation = ?
+              AND NOT EXISTS (
+                SELECT 1
+                FROM adapter_projection_admissions AS projected
+                WHERE projected.source_id = raw.source_id
+                  AND projected.source_generation = raw.source_generation
+                  AND projected.source_offset = raw.source_offset
+                  AND projected.adapter_id = ?
+                  AND projected.adapter_version = ?
+                  AND projected.adapter_digest = ?
+              )
+            LIMIT 1
+            """,
+            [source_id, source_generation, ADAPTER_ID, ADAPTER_VERSION, ADAPTER_DIGEST],
+        ).fetchone()
+        return row is not None
+
+    def _assert_source_incarnation(self, record: RolloutRecord) -> None:
+        try:
+            current = source_incarnation(record.path)
+        except OSError as exc:
+            raise SourceIncarnationMismatch(str(record.path)) from exc
+        if current.identity != record.source_identity:
+            raise SourceIncarnationMismatch(str(record.path))
 
     def _create_normalized_usage_table(self, table: str) -> None:
         self.connection.execute(
@@ -732,16 +865,14 @@ def _field_values(fields: UsageFields | None) -> list[int | None]:
     ]
 
 
-def _source_checkpoint(path: Path, source_id: str, source_generation: int, next_offset: int) -> SourceCheckpoint:
-    anchor_end = next_offset
-    anchor_start = max(0, anchor_end - ANCHOR_BYTE_WINDOW)
+def _source_checkpoint(record: RolloutRecord) -> SourceCheckpoint:
     return SourceCheckpoint(
-        source_id=source_id,
-        source_generation=source_generation,
-        next_offset=next_offset,
-        anchor_start=anchor_start,
-        anchor_end=anchor_end,
-        anchor_digest=_digest_file_range(path, anchor_start, anchor_end),
+        source_id=record.source_id,
+        source_generation=record.source_generation,
+        next_offset=record.next_offset,
+        anchor_start=record.checkpoint_anchor_start,
+        anchor_end=record.checkpoint_anchor_end,
+        anchor_digest=record.checkpoint_anchor_digest,
     )
 
 

@@ -7,6 +7,7 @@ from pathlib import Path
 from codex_profile.adapters.usage import adapt_rollout_record
 from codex_profile.reporting import parse_event
 from codex_profile.sources.rollout import (
+    SourceIncarnationMismatch,
     candidate_rollout_files,
     iter_complete_records,
 )
@@ -39,26 +40,35 @@ def ingest_rollouts(
         if not _matches_repo(path, repo):
             continue
         files_ingested += 1
-        resolved = storage.resolve_source(path)
-        source_id = resolved.source_id
-        generation = resolved.source_generation
-        active_sources.append((source_id, generation))
-        state = resolved.state
-        for record in iter_complete_records(
-            path,
-            start_offset=resolved.start_offset,
-            source_id=source_id,
-            generation=generation,
-        ):
-            adapted = adapt_rollout_record(record, state)
-            state = adapted.state
-            strict_diagnostics += sum(1 for item in adapted.diagnostics if item.strict)
-            fail_after_raw = fail_after_raw_at == (
-                record.source_id,
-                record.source_generation,
-                record.source_offset,
-            )
-            total = total.plus(storage.admit(adapted, fail_after_raw=fail_after_raw))
+        while True:
+            resolved = storage.resolve_source(path)
+            source_id = resolved.source_id
+            generation = resolved.source_generation
+            active_sources.append((source_id, generation))
+            state = resolved.state
+            incarnation_changed = False
+            try:
+                for record in iter_complete_records(
+                    path,
+                    start_offset=resolved.start_offset,
+                    source_id=source_id,
+                    generation=generation,
+                    expected_identity=resolved.source_identity,
+                ):
+                    adapted = adapt_rollout_record(record, state)
+                    fail_after_raw = fail_after_raw_at == (
+                        record.source_id,
+                        record.source_generation,
+                        record.source_offset,
+                    )
+                    counts = storage.admit(adapted, fail_after_raw=fail_after_raw)
+                    state = adapted.state
+                    strict_diagnostics += sum(1 for item in adapted.diagnostics if item.strict)
+                    total = total.plus(counts)
+            except SourceIncarnationMismatch:
+                incarnation_changed = True
+            if not incarnation_changed:
+                break
 
     return CollectorResult(
         files_seen=len(files),
