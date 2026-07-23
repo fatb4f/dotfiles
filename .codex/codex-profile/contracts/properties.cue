@@ -16,7 +16,13 @@ package codexprofile
 		"synthetic-lineage-over-native" |
 		"merge-journal-lifecycle" |
 		"non-collector-write" |
-		"couple-policy-axes"
+		"couple-policy-axes" |
+		"omit-readiness" |
+		"change-repository-identity" |
+		"exceed-size-bound" |
+		"nondeterministic-projection" |
+		"discard-command-output" |
+		"exceed-command-projection"
 
 #PropertyExpectedResult: "accept" | "reject"
 
@@ -198,6 +204,66 @@ assertionCatalog: #ContractPropertyCatalog & {
 			changedTerms:     ["policy.recommendation"]
 			expectedResult:   "accept"
 			rejectionCode:    null
+		}
+		"handoff.readiness-required": {
+			description:      "Objective, current and next operations, and completion criteria are required and nonempty."
+			targetDefinition: "#Handoff"
+			preconditions:    ["A handoff is created."]
+			mutationClass:    "omit-readiness"
+			preservedTerms:   ["repository.identity"]
+			changedTerms:     ["handoff.readiness"]
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.not-ready"
+		}
+		"handoff.repository-identity": {
+			description:      "The canonical repository root and HEAD revision identify the continuation workspace."
+			targetDefinition: "#Handoff"
+			preconditions:    ["Git repository discovery succeeded."]
+			mutationClass:    "change-repository-identity"
+			preservedTerms:   ["handoff.operations"]
+			changedTerms:     ["repository.identity"]
+			expectedResult:   "reject"
+			rejectionCode:    "repository.identity-changed"
+		}
+		"handoff.size-bounded": {
+			description:      "Canonical JSON and Markdown projections are each limited to 16 KiB."
+			targetDefinition: "#Handoff"
+			preconditions:    ["A validated handoff is projected."]
+			mutationClass:    "exceed-size-bound"
+			preservedTerms:   ["handoff.meaning"]
+			changedTerms:     ["projection.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.size-exceeded"
+		}
+		"handoff.projection-deterministic": {
+			description:      "The same validated handoff produces identical canonical JSON and Markdown."
+			targetDefinition: "#Handoff"
+			preconditions:    ["Repository state and createdAt are held constant."]
+			mutationClass:    "nondeterministic-projection"
+			preservedTerms:   ["handoff.meaning"]
+			changedTerms:     ["environment.order"]
+			expectedResult:   "accept"
+			rejectionCode:    null
+		}
+		"command.artifact-complete": {
+			description:      "Complete stdout and stderr bytes remain retained with hashes regardless of projection."
+			targetDefinition: "#CommandArtifactManifest"
+			preconditions:    ["A child command was started or launch failure was normalized."]
+			mutationClass:    "discard-command-output"
+			preservedTerms:   ["command.argv"]
+			changedTerms:     ["artifact.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "command.output-discarded"
+		}
+		"command.projection-bounded": {
+			description:      "The command result is at most 4 KiB and contains at most 20 relevant lines."
+			targetDefinition: "#CommandResult"
+			preconditions:    ["A trustworthy command artifact exists."]
+			mutationClass:    "exceed-command-projection"
+			preservedTerms:   ["artifact.identity"]
+			changedTerms:     ["projection.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "command.projection-exceeded"
 		}
 	}
 }

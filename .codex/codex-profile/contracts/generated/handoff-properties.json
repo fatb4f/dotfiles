@@ -1,0 +1,11 @@
+{
+  "propertyIds": [
+    "command.artifact-complete",
+    "command.projection-bounded",
+    "handoff.projection-deterministic",
+    "handoff.readiness-required",
+    "handoff.repository-identity",
+    "handoff.size-bounded"
+  ],
+  "schema": "codex-profile-generated-properties.v0"
+}
