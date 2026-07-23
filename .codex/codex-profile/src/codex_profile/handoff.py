@@ -8,9 +8,23 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from codex_profile.contracts import Handoff, Repository, Validation, canonical_bytes
+from codex_profile.contracts import (
+    ContractViolation,
+    Handoff,
+    Repository,
+    admit_handoff,
+    canonical_bytes,
+)
 
 HANDOFF_LIMIT = 16 * 1024
+
+
+def _fsync_directory(path: Path) -> None:
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def _git(*args: str, cwd: Path, binary: bool = False) -> str | bytes:
@@ -78,19 +92,22 @@ def markdown(packet: Handoff) -> str:
 
 def create_handoff(args, *, now: datetime | None = None, state_root: Path | None = None) -> tuple[Path, Path, Handoff]:
     created = now or datetime.now(timezone.utc)
-    packet = Handoff.model_validate({
+    authority = repository_state(Path.cwd())
+    packet = admit_handoff({
         "schema": "codex.handoff.v0", "createdAt": created,
         "objective": args.objective, "invariants": args.invariant, "decisions": args.decision,
-        "repository": repository_state(Path.cwd()),
+        "repository": authority,
         "validation": {"passing": args.passing, "failing": args.failing, "notRun": args.not_run},
         "currentOperation": args.current_operation, "nextOperation": args.next_operation,
         "completionCriteria": args.completion_criterion,
         "evidencePointers": args.evidence_pointer, "openQuestions": args.open_question,
-    })
+    }, repository_authority=authority)
     json_data = canonical_bytes(packet)
     md_data = markdown(packet).encode()
     if len(json_data) > HANDOFF_LIMIT or len(md_data) > HANDOFF_LIMIT:
-        raise ValueError("handoff exceeds the 16 KiB JSON or Markdown limit")
+        raise ContractViolation(
+            "handoff.size-exceeded", "handoff exceeds the 16 KiB JSON or Markdown limit"
+        )
     stamp = created.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
     ident = f"{stamp}-{hashlib.sha256(json_data).hexdigest()[:12]}"
     parent = state_root or Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "codex-profile/handoffs"
@@ -106,7 +123,9 @@ def create_handoff(args, *, now: datetime | None = None, state_root: Path | None
             fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             with os.fdopen(fd, "wb") as handle:
                 handle.write(data); handle.flush(); os.fsync(handle.fileno())
+        _fsync_directory(temp)
         os.rename(temp, final)
+        _fsync_directory(parent)
     except BaseException:
         shutil.rmtree(temp, ignore_errors=True)
         raise

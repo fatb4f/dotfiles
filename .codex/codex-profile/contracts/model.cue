@@ -53,7 +53,7 @@ import (
 
 #CommandArtifactManifest: close({
 	schema:           "codex.command-artifact.v0"
-	argv:             [...#NonEmptyString] & [_, ...] & list.MaxItems(4096)
+	argv:             [#NonEmptyString, ...string] & list.MaxItems(4096)
 	workingDirectory: #NonEmptyString
 	startedAt:        #Timestamp
 	durationSeconds:  number & >=0

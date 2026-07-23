@@ -43,6 +43,41 @@ package codexprofile
 	properties: [ID=#ID]: #ContractProperty & {id: ID}
 })
 
+#ExecutablePropertyCase: close({
+	id:               #ID
+	baseline:         #ID
+	mutation:         #ID
+	adapterOperation: "admit-handoff" | "project-handoff" | "admit-command-artifact" | "admit-command-result"
+	expectedResult:   #PropertyExpectedResult
+	rejectionCode:    #ID | null
+	expectedProjectionDigests?: close({
+		json:     #Digest
+		markdown: #Digest
+	})
+})
+
+#ExecutablePropertyCatalog: close({
+	schema: "codex-profile-executable-properties.v0"
+	cases: [ID=#ID]: #ExecutablePropertyCase & {id: ID}
+})
+
+#QualificationCase: close({
+	id:                #ID
+	mutationAttempted: true
+	actualResult:      #PropertyExpectedResult
+	rejectionCode:     #ID | null
+	status:            "passed"
+})
+
+#QualificationReport: close({
+	schema:       "codex-profile-property-report.v0"
+	declaredIDs:  [...#ID]
+	generatedIDs: [...#ID]
+	executedIDs:  [...#ID]
+	reportedIDs:  [...#ID]
+	cases:        [...#QualificationCase]
+})
+
 assertionCatalog: #ContractPropertyCatalog & {
 	properties: {
 		"source.identity-deduplication": {
@@ -262,6 +297,59 @@ assertionCatalog: #ContractPropertyCatalog & {
 			mutationClass:    "exceed-command-projection"
 			preservedTerms:   ["artifact.identity"]
 			changedTerms:     ["projection.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "command.projection-exceeded"
+		}
+	}
+}
+
+// These case names are resolved by the typed mutation and operation registries.
+// The data is exported verbatim and is the authoritative executable inventory.
+handoffExecutableCatalog: #ExecutablePropertyCatalog & {
+	cases: {
+		"handoff.readiness-required": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.remove-readiness"
+			adapterOperation: "admit-handoff"
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.not-ready"
+		}
+		"handoff.repository-identity": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.change-repository"
+			adapterOperation: "admit-handoff"
+			expectedResult:   "reject"
+			rejectionCode:    "repository.identity-changed"
+		}
+		"handoff.size-bounded": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.exceed-projection"
+			adapterOperation: "project-handoff"
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.size-exceeded"
+		}
+		"handoff.projection-deterministic": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.reorder-input"
+			adapterOperation: "project-handoff"
+			expectedResult:   "accept"
+			rejectionCode:    null
+			expectedProjectionDigests: {
+				json:     "sha256:5cfbd3531bb3fc8c79d76eaaeaf2326a79e7661fee7905dd17aa1d5b15614516"
+				markdown: "sha256:e5c4bf7af3ca3d73e527d9e61a5ca7608be4a0a42b86b145d8cb27aa51eb7dbd"
+			}
+		}
+		"command.artifact-complete": {
+			baseline:         "command.artifact-valid"
+			mutation:         "command.remove-output"
+			adapterOperation: "admit-command-artifact"
+			expectedResult:   "reject"
+			rejectionCode:    "command.output-discarded"
+		}
+		"command.projection-bounded": {
+			baseline:         "command.result-valid"
+			mutation:         "command.exceed-projection"
+			adapterOperation: "admit-command-result"
 			expectedResult:   "reject"
 			rejectionCode:    "command.projection-exceeded"
 		}

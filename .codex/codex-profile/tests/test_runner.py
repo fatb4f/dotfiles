@@ -5,6 +5,7 @@ import json
 import os
 import signal
 import sys
+import tracemalloc
 from pathlib import Path
 
 from codex_profile.contracts import canonical_bytes
@@ -48,3 +49,17 @@ def test_large_output_and_twenty_line_bound(tmp_path: Path) -> None:
     assert len(result.relevant_lines) <= 20
     assert "fatal final" in result.relevant_lines
     assert Path(result.artifact).parent.joinpath("stdout.bin").stat().st_size > 80000
+
+
+def test_multimegabyte_newline_free_output_has_bounded_projection_memory(
+    tmp_path: Path,
+) -> None:
+    code = "import sys;sys.stdout.write('x' * (3 * 1024 * 1024))"
+    tracemalloc.start()
+    result, _ = run_projected([sys.executable, "-c", code], state_root=tmp_path)
+    _, peak = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    assert result.truncated
+    assert len(result.relevant_lines) == 1
+    assert len(canonical_bytes(result)) <= 4096
+    assert peak < 2 * 1024 * 1024

@@ -81,12 +81,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         return 0
     if args.command == "run-projected":
-        # argparse preserves the separator only as syntax, so reject forms that
-        # did not contain the literal boundary in the original invocation.
-        if "--" not in args_list:
-            print("run-projected requires a literal -- before the command", file=sys.stderr)
+        if len(args_list) < 2 or args_list[1] != "--":
+            print("run-projected requires -- immediately before the command", file=sys.stderr)
             return 2
-        command = args_list[args_list.index("--") + 1 :]
+        command = args_list[2:]
         try:
             result, exit_code = run_projected(command)
         except (OSError, RuntimeError, ValueError) as error:
