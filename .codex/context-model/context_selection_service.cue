@@ -40,24 +40,24 @@ import (
 })
 
 #ContextRootCatalog: close({
-	schema:     "dotfiles.context-root-catalog.v0"
-	requestID:  #ID
-	snapshotID: #Digest
+	Schema=schema:         "dotfiles.context-root-catalog.v0"
+	RequestID=requestID:   #ID
+	SnapshotID=snapshotID: #Digest
 
-	memberIDs:    [...#GraphID]
-	namespaceIDs: [...#GraphID]
-	paths:        [...#Path]
+	MemberIDs=memberIDs:       [...#GraphID]
+	NamespaceIDs=namespaceIDs: [...#GraphID]
+	Paths=paths:               [...#Path]
 
 	_membersBounded:    len(memberIDs) <= 2048
 	_namespacesBounded: len(namespaceIDs) <= 256
 	_pathsBounded:      len(paths) <= 2048
 	_canonicalBytes: json.Marshal({
-		schema:       schema
-		requestID:    requestID
-		snapshotID:   snapshotID
-		memberIDs:    memberIDs
-		namespaceIDs: namespaceIDs
-		paths:        paths
+		schema:       Schema
+		requestID:    RequestID
+		snapshotID:   SnapshotID
+		memberIDs:    MemberIDs
+		namespaceIDs: NamespaceIDs
+		paths:        Paths
 	})
 	_bytesBounded: len(_canonicalBytes) <= 262144
 })
@@ -186,35 +186,35 @@ import (
 })
 
 #ContextTraversalStep: {
-	snapshot:   #ContextGraphSnapshot
-	predicates: [...#ContextPredicate]
-	previous:   [...#ContextTraversalRecord]
-	visited:    [...#ContextTraversalRecord]
-	distance:   int & >=1 & <=8
+	Snapshot=snapshot:     #ContextGraphSnapshot
+	Predicates=predicates: [...#ContextPredicate]
+	Previous=previous:     [...#ContextTraversalRecord]
+	Visited=visited:       [...#ContextTraversalRecord]
+	Distance=distance:     int & >=1 & <=8
 
 	_candidates: {
-		for _, relationship in snapshot.relationships
-		if len([for record in previous
+		for _, relationship in Snapshot.relationships
+		if len([for record in Previous
 		if record.entity == relationship.subject {record}]) > 0 &&
-			len([for predicate in predicates
+			len([for predicate in Predicates
 			if predicate == relationship.predicate {predicate}]) > 0 &&
-			len([for record in visited
+			len([for record in Visited
 			if record.entity == relationship.object {record}]) == 0 {
 			"\(relationship.object.kind):\(relationship.object.id)": relationship.object
 		}
 	}
-	records: [for _, entity in _candidates {
-		let predecessors = list.SortStrings([for _, relationship in snapshot.relationships
-		if relationship.object == entity &&
-			len([for record in previous
+	records: [for _, candidateEntity in _candidates {
+		let predecessors = list.SortStrings([for _, relationship in Snapshot.relationships
+		if relationship.object == candidateEntity &&
+			len([for record in Previous
 			if record.entity == relationship.subject {record}]) > 0 &&
-			len([for predicate in predicates
+			len([for predicate in Predicates
 			if predicate == relationship.predicate {predicate}]) > 0 {
 			relationship.subject.id
 		}])
 		{
-			entity:      entity
-			distance:    distance
+			entity:      candidateEntity
+			distance:    Distance
 			direction:   "outgoing"
 			predecessor: predecessors[0]
 		}
@@ -278,7 +278,7 @@ import (
 	proposal:            #ContextRootProposal
 	policy:              #ContextSelectionPolicy
 	committedProjection: #GitCommittedSnapshotProjection
-	snapshot:            #ContextGraphSnapshot
+	Snapshot=snapshot:   #ContextGraphSnapshot
 	effectivePathEvaluation: #GitEffectivePathEvaluation & {
 		snapshotID: snapshot.snapshotID
 	}
@@ -334,17 +334,17 @@ import (
 	}]
 
 	_rootSet: {
-		for id in request.roots.memberIDs {
-			"member:\(id)": {kind: "member", id: id}
+		for memberID in request.roots.memberIDs {
+			"member:\(memberID)": {kind: "member", id: memberID}
 		}
-		for id in proposal.memberIDs {
-			"member:\(id)": {kind: "member", id: id}
+		for memberID in proposal.memberIDs {
+			"member:\(memberID)": {kind: "member", id: memberID}
 		}
-		for id in request.roots.namespaceIDs {
-			"namespace:\(id)": {kind: "namespace", id: id}
+		for namespaceID in request.roots.namespaceIDs {
+			"namespace:\(namespaceID)": {kind: "namespace", id: namespaceID}
 		}
-		for id in proposal.namespaceIDs {
-			"namespace:\(id)": {kind: "namespace", id: id}
+		for namespaceID in proposal.namespaceIDs {
+			"namespace:\(namespaceID)": {kind: "namespace", id: namespaceID}
 		}
 		for prefix in request.roots.pathPrefixes {
 			for occurrence in effectiveView.paths
@@ -368,15 +368,15 @@ import (
 
 	_frontier0: #ContextSelectionFrontier & {
 		distance: 0
-		entities: [for _, entity in _rootSet {
-			entity:      entity
+		entities: [for _, rootEntity in _rootSet {
+			entity:      rootEntity
 			distance:    0
 			direction:   "root"
 			predecessor: null
 		}]
 	}
 	_step1: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier0.entities
 		visited:    _frontier0.entities
@@ -384,7 +384,7 @@ import (
 	}
 	_frontier1: #ContextSelectionFrontier & {distance: 1, entities: _step1.records}
 	_step2: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier1.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities])
@@ -392,7 +392,7 @@ import (
 	}
 	_frontier2: #ContextSelectionFrontier & {distance: 2, entities: _step2.records}
 	_step3: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier2.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities])
@@ -400,7 +400,7 @@ import (
 	}
 	_frontier3: #ContextSelectionFrontier & {distance: 3, entities: _step3.records}
 	_step4: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier3.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities])
@@ -408,7 +408,7 @@ import (
 	}
 	_frontier4: #ContextSelectionFrontier & {distance: 4, entities: _step4.records}
 	_step5: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier4.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities])
@@ -416,7 +416,7 @@ import (
 	}
 	_frontier5: #ContextSelectionFrontier & {distance: 5, entities: _step5.records}
 	_step6: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier5.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities])
@@ -424,7 +424,7 @@ import (
 	}
 	_frontier6: #ContextSelectionFrontier & {distance: 6, entities: _step6.records}
 	_step7: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier6.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities, _frontier6.entities])
@@ -432,7 +432,7 @@ import (
 	}
 	_frontier7: #ContextSelectionFrontier & {distance: 7, entities: _step7.records}
 	_step8: #ContextTraversalStep & {
-		snapshot:   snapshot
+		snapshot:   Snapshot
 		predicates: policy.predicates
 		previous:   _frontier7.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities, _frontier6.entities, _frontier7.entities])
@@ -565,7 +565,7 @@ import (
 	if len(_selected) > 0 {
 		resolution: #ContextGraphResolution & {
 			schema:   "kernel.context-resolution.v0"
-			snapshot: snapshot
+			snapshot: Snapshot
 			selection: {
 				schema:          "kernel.context-selection.v0"
 				requestID:       request.requestID
