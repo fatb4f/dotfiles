@@ -29,6 +29,13 @@ func SnapshotOccurrenceID(repositoryID string, revision ObjectID, path string) s
 	return digest(repositoryID + "\x00" + revision.Format + "\x00" + revision.Hex + "\x00" + path)
 }
 
+// LayerOccurrenceID keeps mutable index and worktree occurrences distinct
+// while binding both to the exact immutable commit from which they were
+// collected. It is separate from path occurrence and content identity.
+func LayerOccurrenceID(repositoryID string, revision ObjectID, layer, path string) string {
+	return digest(repositoryID + "\x00" + revision.Format + "\x00" + revision.Hex + "\x00" + layer + "\x00" + path)
+}
+
 // ProjectionID binds a normalized observation to the schema and authority
 // policy identities used to project it into the context graph.
 func ProjectionID(observationDigest, schemaDigest, policyDigest string) string {
