@@ -18,10 +18,14 @@ import (
 
 	allowedPaths: [#Path | ".", ...#Path | "."]
 	overlayMode:  "disabled" | "required" | "auto"
+	// A service request must carry at least one explicit root. The proposal may
+	// add roots, but it never supplies the only success-path seed.
 	roots: close({
 		memberIDs:    [...#GraphID]
 		namespaceIDs: [...#GraphID]
 		pathPrefixes: [...#Path | "."]
+
+		_explicitRoot: memberIDs[0] | namespaceIDs[0] | pathPrefixes[0]
 	})
 })
 
@@ -120,15 +124,15 @@ import (
 // sorted, unique, complete, and that every projected winner follows Git layer
 // precedence. A deletion is a winner, not absence.
 #GitEffectivePathEvaluation: close({
-	snapshotID: #Digest
-	allPaths:   [...#Path]
-	committed:  [...#GitPathLayerOccurrence]
-	index:      [...#GitPathLayerOccurrence]
-	worktree:   [...#GitPathLayerOccurrence]
+	SnapshotID=snapshotID: #Digest
+	AllPaths=allPaths:     [...#Path]
+	Committed=committed:   [...#GitPathLayerOccurrence]
+	Index=index:           [...#GitPathLayerOccurrence]
+	Worktree=worktree:     [...#GitPathLayerOccurrence]
 
-	_committedPaths:  [for occurrence in committed {occurrence.path}]
-	_indexPaths:      [for occurrence in index {occurrence.path}]
-	_worktreePaths:   [for occurrence in worktree {occurrence.path}]
+	_committedPaths:  [for occurrence in Committed {occurrence.path}]
+	_indexPaths:      [for occurrence in Index {occurrence.path}]
+	_worktreePaths:   [for occurrence in Worktree {occurrence.path}]
 	_committedSorted: list.IsSortedStrings(_committedPaths) & true
 	_indexSorted:     list.IsSortedStrings(_indexPaths) & true
 	_worktreeSorted:  list.IsSortedStrings(_worktreePaths) & true
@@ -137,25 +141,25 @@ import (
 	_worktreeUnique:  list.UniqueItems(_worktreePaths) & true
 
 	_allObservedPaths: [
-		for occurrence in committed {occurrence.path},
-		for occurrence in index {occurrence.path},
-		for occurrence in worktree {occurrence.path},
+		for occurrence in Committed {occurrence.path},
+		for occurrence in Index {occurrence.path},
+		for occurrence in Worktree {occurrence.path},
 	]
-	_pathsSorted: list.IsSortedStrings(allPaths) & true
-	_pathsUnique: list.UniqueItems(allPaths) & true
-	_pathCoverage: [for path in allPaths {
-		[for observed in _allObservedPaths if observed == path {observed}] & [_, ...]
+	_pathsSorted: list.IsSortedStrings(AllPaths) & true
+	_pathsUnique: list.UniqueItems(AllPaths) & true
+	_pathCoverage: [for pathValue in AllPaths {
+		[for observed in _allObservedPaths if observed == pathValue {observed}] & [_, ...]
 	}]
 	_observationCoverage: [for observed in _allObservedPaths {
-		[for path in allPaths if path == observed {path}] & [_, ...]
+		[for pathValue in AllPaths if pathValue == observed {pathValue}] & [_, ...]
 	}]
 
 	view: #GitEffectivePathView & {
-		snapshotID: snapshotID
-		paths: [for path in allPaths {
-			let committedMatches = [for occurrence in committed if occurrence.path == path {occurrence}]
-			let indexMatches = [for occurrence in index if occurrence.path == path {occurrence}]
-			let worktreeMatches = [for occurrence in worktree if occurrence.path == path {occurrence}]
+		snapshotID: SnapshotID
+		paths: [for pathValue in AllPaths {
+			let committedMatches = [for occurrence in Committed if occurrence.path == pathValue {occurrence}]
+			let indexMatches = [for occurrence in Index if occurrence.path == pathValue {occurrence}]
+			let worktreeMatches = [for occurrence in Worktree if occurrence.path == pathValue {occurrence}]
 			if len(worktreeMatches) > 0 {
 				worktreeMatches[0] & {layer: "worktree"}
 			}
@@ -266,15 +270,366 @@ import (
 	}]
 })
 
-#ContextSelectionEvaluation: close({
+// The common evaluation accepts only authoritative inputs. Every frontier,
+// selected entity, induced relationship, evidence reference, counter, alias,
+// and digest below is a projection. Callers cannot submit any of those values.
+#ContextSelectionEvaluation: {
 	request:             #ContextApplicationRequest
 	proposal:            #ContextRootProposal
 	policy:              #ContextSelectionPolicy
 	committedProjection: #GitCommittedSnapshotProjection
+	snapshot:            #ContextGraphSnapshot
+	effectivePathEvaluation: #GitEffectivePathEvaluation & {
+		snapshotID: snapshot.snapshotID
+	}
+	effectiveView: effectivePathEvaluation.view
+
+	_requestProposal:  request.requestID & proposal.requestID
+	_proposalSnapshot: proposal.snapshotID & snapshot.snapshotID
+	_viewSnapshot:     effectiveView.snapshotID & snapshot.snapshotID
+
+	rootCatalog: #ContextRootCatalog & {
+		requestID:  request.requestID
+		snapshotID: snapshot.snapshotID
+		memberIDs: [for occurrence in effectiveView.paths
+		if occurrence.status == "present" &&
+			len([for allowed in request.allowedPaths
+			if allowed == "." || occurrence.path == allowed ||
+				strings.HasPrefix(occurrence.path, allowed + "/") {allowed}]) > 0 {
+			occurrence.memberID
+		}]
+		namespaceIDs: [for id, _ in snapshot.namespaces {id}]
+		paths: [for occurrence in effectiveView.paths
+		if occurrence.status == "present" &&
+			len([for allowed in request.allowedPaths
+			if allowed == "." || occurrence.path == allowed ||
+				strings.HasPrefix(occurrence.path, allowed + "/") {allowed}]) > 0 {
+			occurrence.path
+		}]
+	}
+
+	_requestMembersCatalogued: [for root in request.roots.memberIDs {
+		[for id in rootCatalog.memberIDs if id == root {id}] & [_, ...]
+	}]
+	_proposalMembersCatalogued: [for root in proposal.memberIDs {
+		[for id in rootCatalog.memberIDs if id == root {id}] & [_, ...]
+	}]
+	_requestNamespacesCatalogued: [for root in request.roots.namespaceIDs {
+		[for id in rootCatalog.namespaceIDs if id == root {id}] & [_, ...]
+	}]
+	_proposalNamespacesCatalogued: [for root in proposal.namespaceIDs {
+		[for id in rootCatalog.namespaceIDs if id == root {id}] & [_, ...]
+	}]
+	_requestPrefixesBounded: [for root in request.roots.pathPrefixes {
+		[for allowed in request.allowedPaths
+		if allowed == "." || root == allowed || strings.HasPrefix(root, allowed + "/") {allowed}] & [_, ...]
+		[for path in rootCatalog.paths
+		if root == "." || path == root || strings.HasPrefix(path, root + "/") {path}] & [_, ...]
+	}]
+	_proposalPrefixesBounded: [for root in proposal.pathPrefixes {
+		[for allowed in request.allowedPaths
+		if allowed == "." || root == allowed || strings.HasPrefix(root, allowed + "/") {allowed}] & [_, ...]
+		[for path in rootCatalog.paths
+		if root == "." || path == root || strings.HasPrefix(path, root + "/") {path}] & [_, ...]
+	}]
+
+	_rootSet: {
+		for id in request.roots.memberIDs {
+			"member:\(id)": {kind: "member", id: id}
+		}
+		for id in proposal.memberIDs {
+			"member:\(id)": {kind: "member", id: id}
+		}
+		for id in request.roots.namespaceIDs {
+			"namespace:\(id)": {kind: "namespace", id: id}
+		}
+		for id in proposal.namespaceIDs {
+			"namespace:\(id)": {kind: "namespace", id: id}
+		}
+		for prefix in request.roots.pathPrefixes {
+			for occurrence in effectiveView.paths
+			if occurrence.status == "present" &&
+				(prefix == "." || occurrence.path == prefix ||
+					strings.HasPrefix(occurrence.path, prefix + "/")) {
+				"member:\(occurrence.memberID)": {kind: "member", id: occurrence.memberID}
+			}
+		}
+		for prefix in proposal.pathPrefixes {
+			for occurrence in effectiveView.paths
+			if occurrence.status == "present" &&
+				(prefix == "." || occurrence.path == prefix ||
+					strings.HasPrefix(occurrence.path, prefix + "/")) {
+				"member:\(occurrence.memberID)": {kind: "member", id: occurrence.memberID}
+			}
+		}
+	}
+	_rootCount:    len(_rootSet)
+	_rootsBounded: (_rootCount <= policy.limits.maxRoots) & true
+
+	_frontier0: #ContextSelectionFrontier & {
+		distance: 0
+		entities: [for _, entity in _rootSet {
+			entity:      entity
+			distance:    0
+			direction:   "root"
+			predecessor: null
+		}]
+	}
+	_step1: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier0.entities
+		visited:    _frontier0.entities
+		distance:   1
+	}
+	_frontier1: #ContextSelectionFrontier & {distance: 1, entities: _step1.records}
+	_step2: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier1.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities])
+		distance:   2
+	}
+	_frontier2: #ContextSelectionFrontier & {distance: 2, entities: _step2.records}
+	_step3: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier2.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities])
+		distance:   3
+	}
+	_frontier3: #ContextSelectionFrontier & {distance: 3, entities: _step3.records}
+	_step4: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier3.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities])
+		distance:   4
+	}
+	_frontier4: #ContextSelectionFrontier & {distance: 4, entities: _step4.records}
+	_step5: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier4.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities])
+		distance:   5
+	}
+	_frontier5: #ContextSelectionFrontier & {distance: 5, entities: _step5.records}
+	_step6: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier5.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities])
+		distance:   6
+	}
+	_frontier6: #ContextSelectionFrontier & {distance: 6, entities: _step6.records}
+	_step7: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier6.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities, _frontier6.entities])
+		distance:   7
+	}
+	_frontier7: #ContextSelectionFrontier & {distance: 7, entities: _step7.records}
+	_step8: #ContextTraversalStep & {
+		snapshot:   snapshot
+		predicates: policy.predicates
+		previous:   _frontier7.entities
+		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities, _frontier6.entities, _frontier7.entities])
+		distance:   8
+	}
+	_frontier8: #ContextSelectionFrontier & {distance: 8, entities: _step8.records}
+
+	_records: list.Concat([
+		_frontier0.entities,
+		_frontier1.entities,
+		_frontier2.entities,
+		_frontier3.entities,
+		_frontier4.entities,
+		_frontier5.entities,
+		_frontier6.entities,
+		_frontier7.entities,
+		_frontier8.entities,
+	])
+	_selected: [for record in _records {record.entity}]
+	_selectedSet: {
+		for entity in _selected {"\(entity.kind):\(entity.id)": true}
+	}
+	_relationshipSet: {
+		for id, relationship in snapshot.relationships
+		if _selectedSet["\(relationship.subject.kind):\(relationship.subject.id)"] == true &&
+			_selectedSet["\(relationship.object.kind):\(relationship.object.id)"] == true &&
+			len([for predicate in policy.predicates
+			if predicate == relationship.predicate {predicate}]) > 0 {
+			"\(id)": relationship
+		}
+	}
+	_relationshipIDs: [for id, _ in _relationshipSet {id}]
+	_evidenceSet: {
+		for _, relationship in _relationshipSet {
+			for evidenceID in relationship.evidenceIDs {
+				"\(evidenceID)": snapshot.evidence[evidenceID]
+			}
+		}
+	}
+	_evidenceIDs: [for id, _ in _evidenceSet {id}]
+	_effectiveFileSet: {
+		for occurrence in effectiveView.paths
+		if occurrence.status == "present" &&
+			(occurrence.kind == "blob" || occurrence.kind == "symlink") &&
+			_selectedSet["member:\(occurrence.memberID)"] == true {
+			"\(occurrence.path)": occurrence
+		}
+	}
+	_effectiveFiles: [for path, _ in _effectiveFileSet {path}]
+	_selectedFileBytes: list.Sum([for _, occurrence in _effectiveFileSet {
+		occurrence.gitSizeBytes
+	}])
+
+	_aliasSet: {
+		for evidenceID in _evidenceIDs {
+			let digest = hex.Encode(sha256.Sum256(evidenceID))
+			"\(evidenceID)": {
+				graphEvidenceID:  evidenceID
+				packetEvidenceID: "evidence.\(digest)"
+			}
+		}
+	}
+	_aliases:           [for _, alias in _aliasSet {alias}]
+	_packetEvidenceIDs: [for alias in _aliases {alias.packetEvidenceID}]
+	_contextCanonical: json.Marshal({
+		snapshotID:      snapshot.snapshotID
+		seedEntities:    [for record in _frontier0.entities {record.entity}]
+		selected:        _selected
+		relationshipIDs: _relationshipIDs
+		evidenceIDs:     _evidenceIDs
+		effectiveFiles:  _effectiveFiles
+	})
+	_contextDigest: "sha256:" + hex.Encode(sha256.Sum256(_contextCanonical))
+
+	packet: #ContextPacketV0Projection & {
+		adapterVersion: "context-packet-v0-adapter.v1"
+		aliases:        _aliases
+		packet: {
+			schema:        "dotfiles.context-packet.v0"
+			requestID:     request.requestID
+			contextDigest: _contextDigest
+			selected: {
+				fragmentIDs: []
+				files:       _effectiveFiles
+				providerIDs: []
+				workflowIDs: []
+			}
+			evidenceIDs:      _packetEvidenceIDs
+			unresolvedGapIDs: []
+			provenance: {
+				semanticRole:   "workflow"
+				artifactClass:  "generated_projection"
+				claimAuthority: "candidate"
+			}
+		}
+	}
+	_packetCanonical: json.Marshal(packet.packet)
+	_packetDigest:    "sha256:" + hex.Encode(sha256.Sum256(_packetCanonical))
+
+	proof: #ContextSelectionProof & {
+		schema:          "dotfiles.context-selection-proof.v0"
+		snapshotID:      snapshot.snapshotID
+		frontier0:       _frontier0
+		frontier1:       _frontier1
+		frontier2:       _frontier2
+		frontier3:       _frontier3
+		frontier4:       _frontier4
+		frontier5:       _frontier5
+		frontier6:       _frontier6
+		frontier7:       _frontier7
+		frontier8:       _frontier8
+		selected:        _selected
+		relationshipIDs: _relationshipIDs
+		evidenceIDs:     _evidenceIDs
+		effectiveFiles:  _effectiveFiles
+		counters: {
+			modules:       len([for entity in _selected if entity.kind == "module" {entity}])
+			namespaces:    len([for entity in _selected if entity.kind == "namespace" {entity}])
+			members:       len([for entity in _selected if entity.kind == "member" {entity}])
+			entities:      len(_selected)
+			files:         len(_effectiveFiles)
+			fileBytes:     _selectedFileBytes
+			relationships: len(_relationshipIDs)
+			evidence:      len(_evidenceIDs)
+		}
+		contextDigest: _contextDigest
+		packetDigest:  _packetDigest
+	}
+
+	if len(_selected) > 0 {
+		resolution: #ContextGraphResolution & {
+			schema:   "kernel.context-resolution.v0"
+			snapshot: snapshot
+			selection: {
+				schema:          "kernel.context-selection.v0"
+				requestID:       request.requestID
+				snapshotID:      snapshot.snapshotID
+				seedEntities:    [for record in _frontier0.entities {record.entity}]
+				selected:        _selected
+				relationshipIDs: _relationshipIDs
+				evidenceIDs:     _evidenceIDs
+				gaps:            {}
+				conflicts:       {}
+				sufficiency:     "sufficient"
+			}
+		}
+	}
+
+	_modulesBounded:       (proof.counters.modules <= policy.limits.maxModules) & true
+	_namespacesBounded:    (proof.counters.namespaces <= policy.limits.maxNamespaces) & true
+	_membersBounded:       (proof.counters.members <= policy.limits.maxMembers) & true
+	_entitiesBounded:      (proof.counters.entities <= policy.limits.maxEntities) & true
+	_filesBounded:         (proof.counters.files <= policy.limits.maxFiles) & true
+	_fileBytesBounded:     (proof.counters.fileBytes <= policy.limits.maxSelectedFileBytes) & true
+	_relationshipsBounded: (proof.counters.relationships <= policy.limits.maxRelationships) & true
+	_evidenceBounded:      (proof.counters.evidence <= policy.limits.maxEvidence) & true
+	_packetBytesBounded:   (len(_packetCanonical) <= policy.limits.maxPacketBytes) & true
+}
+
+#GitCommittedEffectivePathEvaluation: #GitEffectivePathEvaluation & {
+	index:    []
+	worktree: []
+}
+
+#ContextCommittedSelectionEvaluation: close({
+	#ContextSelectionEvaluation
+	committedProjection: #GitCommittedSnapshotProjection
+	effectivePathEvaluation: #GitCommittedEffectivePathEvaluation & {
+		snapshotID: committedProjection.graph.snapshotID
+		committed: [for occurrence in committedProjection.observation.occurrences {
+			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
+			))
+			{
+				path:       occurrence.path
+				status:     "present"
+				kind:       occurrence.kind
+				memberID:   computedMemberID
+				evidenceID: committedProjection.collected.state.evidenceID
+				if occurrence.size != _|_ {
+					gitSizeBytes: occurrence.size
+				}
+			}
+		}]
+		allPaths: [for occurrence in committed {occurrence.path}]
+	}
+	snapshot:      committedProjection.graph
+	effectiveView: effectivePathEvaluation.view
+})
+
+#ContextOverlaySelectionEvaluation: close({
+	#ContextSelectionEvaluation
+	committedProjection: #GitCommittedSnapshotProjection
 	overlayProjection:   #GitOverlayProjection
+	_committedBinding:   overlayProjection.committed.observationDigest & committedProjection.observationDigest
 	effectivePathEvaluation: #GitEffectivePathEvaluation & {
 		snapshotID: overlayProjection.graph.snapshotID
-
 		committed: [for occurrence in committedProjection.observation.occurrences {
 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
 				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
@@ -339,113 +694,14 @@ import (
 			}
 		}]
 		_pathSet: {
-			for occurrence in committed {
-				"\(occurrence.path)": true
-			}
-			for occurrence in index {
-				"\(occurrence.path)": true
-			}
-			for occurrence in worktree {
-				"\(occurrence.path)": true
-			}
+			for occurrence in committed {"\(occurrence.path)": true}
+			for occurrence in index {"\(occurrence.path)": true}
+			for occurrence in worktree {"\(occurrence.path)": true}
 		}
 		allPaths: [for path, _ in _pathSet {path}]
 	}
 	snapshot:      overlayProjection.graph
 	effectiveView: effectivePathEvaluation.view
-	rootCatalog: #ContextRootCatalog & {
-		requestID:  request.requestID
-		snapshotID: snapshot.snapshotID
-		memberIDs: [for occurrence in effectiveView.paths
-		if occurrence.status == "present" &&
-			len([for allowed in request.allowedPaths
-			if allowed == "." || occurrence.path == allowed ||
-				strings.HasPrefix(occurrence.path, allowed + "/") {allowed}]) > 0 {
-			occurrence.memberID
-		}]
-		namespaceIDs: [for id, _ in snapshot.namespaces {id}]
-		paths: [for occurrence in effectiveView.paths
-		if occurrence.status == "present" &&
-			len([for allowed in request.allowedPaths
-			if allowed == "." || occurrence.path == allowed ||
-				strings.HasPrefix(occurrence.path, allowed + "/") {allowed}]) > 0 {
-			occurrence.path
-		}]
-	}
-	proof:      #ContextSelectionProof
-	resolution: #ContextGraphResolution
-	packet:     #ContextPacketV0Projection
-
-	_committedBinding: overlayProjection.committed.observationDigest & committedProjection.observationDigest
-
-	_requestProposal:         request.requestID & proposal.requestID
-	_proposalSnapshot:        proposal.snapshotID & snapshot.snapshotID
-	_viewSnapshot:            effectiveView.snapshotID & snapshot.snapshotID
-	_proofSnapshot:           proof.snapshotID & snapshot.snapshotID
-	_resolutionSnapshot:      resolution.snapshot.snapshotID & snapshot.snapshotID
-	_resolutionRequest:       resolution.selection.requestID & request.requestID
-	_resolutionSelected:      resolution.selection.selected & proof.selected
-	_resolutionRelationships: resolution.selection.relationshipIDs & proof.relationshipIDs
-	_resolutionEvidence:      resolution.selection.evidenceIDs & proof.evidenceIDs
-	_packetRequest:           packet.packet.requestID & request.requestID
-	_packetDigest:            packet.packet.contextDigest & proof.contextDigest
-	_packetFiles:             packet.packet.selected.files & proof.effectiveFiles
-
-	_requestMembersCatalogued: [for root in request.roots.memberIDs {
-		[for id in rootCatalog.memberIDs if id == root {id}] & [_, ...]
-	}]
-	_proposalMembersCatalogued: [for root in proposal.memberIDs {
-		[for id in rootCatalog.memberIDs if id == root {id}] & [_, ...]
-	}]
-	_requestNamespacesCatalogued: [for root in request.roots.namespaceIDs {
-		[for id in rootCatalog.namespaceIDs if id == root {id}] & [_, ...]
-	}]
-	_proposalNamespacesCatalogued: [for root in proposal.namespaceIDs {
-		[for id in rootCatalog.namespaceIDs if id == root {id}] & [_, ...]
-	}]
-	_requestPrefixesBounded: [for root in request.roots.pathPrefixes {
-		[for allowed in request.allowedPaths
-		if allowed == "." || root == allowed || strings.HasPrefix(root, allowed + "/") {allowed}] & [_, ...]
-		[for path in rootCatalog.paths
-		if path == root || strings.HasPrefix(path, root + "/") {path}] & [_, ...]
-	}]
-	_proposalPrefixesBounded: [for root in proposal.pathPrefixes {
-		[for allowed in request.allowedPaths
-		if allowed == "." || root == allowed || strings.HasPrefix(root, allowed + "/") {allowed}] & [_, ...]
-		[for path in rootCatalog.paths
-		if path == root || strings.HasPrefix(path, root + "/") {path}] & [_, ...]
-	}]
-	_effectiveFilesBounded: [for path in proof.effectiveFiles {
-		[for allowed in request.allowedPaths
-		if allowed == "." || path == allowed || strings.HasPrefix(path, allowed + "/") {allowed}] & [_, ...]
-	}]
-
-	_rootSet: {
-		for id in request.roots.memberIDs {"member:\(id)": true}
-		for id in proposal.memberIDs {"member:\(id)": true}
-		for id in request.roots.namespaceIDs {"namespace:\(id)": true}
-		for id in proposal.namespaceIDs {"namespace:\(id)": true}
-		for path in request.roots.pathPrefixes {"path:\(path)": true}
-		for path in proposal.pathPrefixes {"path:\(path)": true}
-	}
-	_rootCount:            len(_rootSet)
-	_rootsBounded:         _rootCount <= policy.limits.maxRoots
-	_modulesBounded:       proof.counters.modules <= policy.limits.maxModules
-	_namespacesBounded:    proof.counters.namespaces <= policy.limits.maxNamespaces
-	_membersBounded:       proof.counters.members <= policy.limits.maxMembers
-	_entitiesBounded:      proof.counters.entities <= policy.limits.maxEntities
-	_filesBounded:         proof.counters.files <= policy.limits.maxFiles
-	_fileBytesBounded:     proof.counters.fileBytes <= policy.limits.maxSelectedFileBytes
-	_relationshipsBounded: proof.counters.relationships <= policy.limits.maxRelationships
-	_evidenceBounded:      proof.counters.evidence <= policy.limits.maxEvidence
-	_packetCanonical:      json.Marshal(packet.packet)
-	_packetBytesBounded:   len(_packetCanonical) <= policy.limits.maxPacketBytes
-	_packetDigestDerived:  proof.packetDigest & ("sha256:" + hex.Encode(sha256.Sum256(_packetCanonical)))
-
-	_counterEntities:      proof.counters.entities & len(proof.selected)
-	_counterFiles:         proof.counters.files & len(proof.effectiveFiles)
-	_counterRelationships: proof.counters.relationships & len(proof.relationshipIDs)
-	_counterEvidence:      proof.counters.evidence & len(proof.evidenceIDs)
 })
 
 #ContextGraphFailure: close({
@@ -460,7 +716,7 @@ import (
 #ContextGraphServiceSuccess: close({
 	schema:     "dotfiles.context-graph-service-result.v0"
 	status:     "success"
-	evaluation: #ContextSelectionEvaluation
+	evaluation: #ContextCommittedSelectionEvaluation | #ContextOverlaySelectionEvaluation
 })
 
 #ContextGraphServiceFailure: close({

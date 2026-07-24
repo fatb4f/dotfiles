@@ -10,6 +10,8 @@ contextSchemaSources: #RevisionBoundSourceManifest & {
 	paths: [
 		".codex/context-model/context_graph.cue",
 		".codex/context-model/context_selection_service.cue",
+		".codex/context-model/git_committed_snapshot.cue",
+		".codex/context-model/git_overlay.cue",
 		".codex/context-model/model.cue",
 	]
 }

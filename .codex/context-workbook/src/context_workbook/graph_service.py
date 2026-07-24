@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -14,25 +14,6 @@ from pathlib import Path
 from typing import Iterable, Literal
 
 from .repository import RepositoryError, RepositorySnapshot
-
-
-GIT_HYDRATOR_SOURCES = (
-    ".codex/context-hydrators/git/cmd/context-git-hydrator/main.go",
-    ".codex/context-hydrators/git/go.mod",
-    ".codex/context-hydrators/git/go.sum",
-    ".codex/context-hydrators/git/internal/hydrator/hydrator.go",
-    ".codex/context-hydrators/git/internal/hydrator/json.go",
-    ".codex/context-hydrators/git/internal/hydrator/observation.go",
-    ".codex/context-hydrators/git/internal/hydrator/overlay.go",
-    ".codex/context-hydrators/git/internal/hydrator/overlay_observation.go",
-    ".codex/context-hydrators/git/internal/hydrator/overlay_properties.go",
-    ".codex/context-hydrators/git/internal/hydrator/overlay_request.go",
-    ".codex/context-hydrators/git/internal/hydrator/overlay_types.go",
-    ".codex/context-hydrators/git/internal/hydrator/properties.go",
-    ".codex/context-hydrators/git/internal/hydrator/request.go",
-    ".codex/context-hydrators/git/internal/hydrator/types.go",
-    ".codex/context-hydrators/git/internal/identity/identity.go",
-)
 
 
 class GraphServiceError(RuntimeError):
@@ -48,6 +29,12 @@ class GraphServiceError(RuntimeError):
 class RevisionBinding:
     snapshot: RepositorySnapshot
     overlay_enabled: bool
+
+
+@dataclass(frozen=True)
+class SourceManifest:
+    version: str
+    paths: tuple[str, ...]
 
 
 def bind_revision(
@@ -81,18 +68,17 @@ def bind_revision(
 
 def source_manifest_digest(
     snapshot: RepositorySnapshot,
-    version: str,
-    paths: Iterable[str],
+    manifest: SourceManifest,
 ) -> str:
     """Hash ``version NUL path NUL bytes NUL ...`` at the bound revision."""
 
-    ordered = list(paths)
+    ordered = list(manifest.paths)
     if ordered != sorted(ordered) or len(ordered) != len(set(ordered)):
         raise GraphServiceError(
             "manifest", "manifest.paths-not-canonical", "manifest paths must be sorted and unique"
         )
     digest = hashlib.sha256()
-    digest.update(version.encode())
+    digest.update(manifest.version.encode())
     digest.update(b"\0")
     for path in ordered:
         digest.update(path.encode())
@@ -108,12 +94,12 @@ def source_manifest_digest(
 def qualified_hydrator(
     *,
     snapshot: RepositorySnapshot,
-    source_paths: Iterable[str],
+    manifest: SourceManifest,
     cache_root: Path,
 ) -> tuple[Path, str]:
     """Build the exact revision's hydrator and atomically cache it by source digest."""
 
-    digest = source_manifest_digest(snapshot, "git-hydrator-sources.v1", source_paths)
+    digest = source_manifest_digest(snapshot, manifest)
     target = cache_root / digest.removeprefix("sha256:") / "context-git-hydrator"
     if target.is_file() and os.access(target, os.X_OK):
         return target, digest
@@ -121,7 +107,7 @@ def qualified_hydrator(
     target.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="context-git-hydrator-") as temporary:
         checkout = Path(temporary) / "source"
-        for relative in source_paths:
+        for relative in manifest.paths:
             content = snapshot.read_bytes(relative)
             destination = checkout / relative
             destination.parent.mkdir(parents=True, exist_ok=True)
@@ -161,12 +147,19 @@ def _canonical(value: object) -> bytes:
     return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
 
 
-def _hydrate(hydrator: Path, command: str, request: dict[str, object]) -> dict[str, object]:
+def _hydrate(
+    hydrator: Path,
+    command: str,
+    request: dict[str, object],
+    *,
+    cwd: Path,
+) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="context-graph-hydration-") as temporary:
         request_path = Path(temporary) / "request.json"
         request_path.write_bytes(_canonical(request))
         process = subprocess.run(
             [str(hydrator), command, "--request", str(request_path)],
+            cwd=cwd,
             capture_output=True,
             check=False,
             timeout=120,
@@ -202,9 +195,10 @@ def hydrate_revision(
         {
             "schema": "kernel.git-committed-snapshot-request.v0",
             "repositoryID": repository_id,
-            "path": str(binding.snapshot.root),
+            "path": ".",
             "revision": binding.snapshot.resolved_revision,
         },
+        cwd=binding.snapshot.root,
     )
     overlay = None
     if binding.overlay_enabled:
@@ -214,14 +208,222 @@ def hydrate_revision(
             {
                 "schema": "kernel.git-overlay-request.v0",
                 "repositoryID": repository_id,
-                "path": str(binding.snapshot.root),
+                "path": ".",
                 "baseRevision": {
                     "format": "sha1",
                     "hex": binding.snapshot.resolved_revision,
                 },
             },
+            cwd=binding.snapshot.root,
         )
     return committed, overlay
+
+
+def _cue_export(model_root: Path, expression: str, *, stage: str) -> object:
+    process = subprocess.run(
+        ["cue", "export", ".", "-e", expression, "--out", "json"],
+        cwd=model_root,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+    if process.returncode:
+        raise GraphServiceError(
+            stage,
+            f"{stage}.cue-rejected",
+            process.stderr.decode(errors="replace").strip() or "CUE evaluation failed",
+        )
+    try:
+        return json.loads(process.stdout)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise GraphServiceError(
+            stage,
+            f"{stage}.cue-output-invalid",
+            "CUE returned invalid JSON",
+        ) from error
+
+
+def _load_source_manifest(model_root: Path, expression: str) -> SourceManifest:
+    value = _cue_export(model_root, expression, stage="manifest")
+    if not isinstance(value, dict):
+        raise GraphServiceError(
+            "manifest", "manifest.invalid", f"{expression} must export an object"
+        )
+    version = value.get("version")
+    paths = value.get("paths")
+    if not isinstance(version, str) or not version:
+        raise GraphServiceError(
+            "manifest", "manifest.invalid", f"{expression}.version must be non-empty"
+        )
+    if not isinstance(paths, list) or not paths or not all(
+        isinstance(path, str) for path in paths
+    ):
+        raise GraphServiceError(
+            "manifest", "manifest.invalid", f"{expression}.paths must be non-empty strings"
+        )
+    if paths != sorted(paths) or len(paths) != len(set(paths)):
+        raise GraphServiceError(
+            "manifest",
+            "manifest.paths-not-canonical",
+            f"{expression}.paths must be sorted and unique",
+        )
+    return SourceManifest(version=version, paths=tuple(paths))
+
+
+def load_revision_manifests(
+    model_root: Path,
+) -> tuple[SourceManifest, SourceManifest, SourceManifest]:
+    return (
+        _load_source_manifest(model_root, "contextSchemaSources"),
+        _load_source_manifest(model_root, "contextPolicySources"),
+        _load_source_manifest(model_root, "gitHydratorSources"),
+    )
+
+
+def _read_object(path: Path, *, stage: str, code: str) -> dict[str, object]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise GraphServiceError(stage, code, str(error)) from error
+    if not isinstance(value, dict):
+        raise GraphServiceError(stage, code, f"{path} must contain an object")
+    return value
+
+
+def _runtime_cue_source(
+    *,
+    request: dict[str, object],
+    proposal: dict[str, object] | None,
+    committed: dict[str, object],
+    overlay: dict[str, object] | None,
+    schema_digest: str,
+    policy_digest: str,
+) -> str:
+    request_json = json.dumps(request, sort_keys=True, separators=(",", ":"))
+    committed_json = json.dumps(committed, sort_keys=True, separators=(",", ":"))
+    lines = [
+        "package contextmodel",
+        "",
+        f"runtimeRequest: #ContextApplicationRequest & {request_json}",
+        "runtimePolicy: #ContextSelectionPolicy & {",
+        '\tschema: "dotfiles.context-selection-policy.v0"',
+        '\tpredicates: ["contains"]',
+        "\tlimits: {}",
+        "}",
+        "runtimeCommittedProjection: #GitCommittedSnapshotProjection & {",
+        f"\tobservation: {committed_json}",
+        f'\tschemaDigest: "{schema_digest}"',
+        f'\tpolicyDigest: "{policy_digest}"',
+        "}",
+    ]
+    projection = "runtimeCommittedProjection"
+    evaluation_type = "#ContextCommittedSelectionEvaluation"
+    if overlay is not None:
+        overlay_json = json.dumps(overlay, sort_keys=True, separators=(",", ":"))
+        lines.extend(
+            [
+                "runtimeOverlayProjection: #GitOverlayProjection & {",
+                "\tcommitted: runtimeCommittedProjection",
+                f"\tobservation: {overlay_json}",
+                f'\tschemaDigest: "{schema_digest}"',
+                f'\tpolicyDigest: "{policy_digest}"',
+                "}",
+            ]
+        )
+        projection = "runtimeOverlayProjection"
+        evaluation_type = "#ContextOverlaySelectionEvaluation"
+
+    if proposal is None:
+        lines.extend(
+            [
+                "runtimeProposal: #ContextRootProposal & {",
+                '\tschema: "dotfiles.context-root-proposal.v0"',
+                "\trequestID: runtimeRequest.requestID",
+                f"\tsnapshotID: {projection}.graph.snapshotID",
+                "\tmemberIDs: []",
+                "\tnamespaceIDs: []",
+                "\tpathPrefixes: []",
+                "}",
+            ]
+        )
+    else:
+        proposal_json = json.dumps(proposal, sort_keys=True, separators=(",", ":"))
+        lines.append(f"runtimeProposal: #ContextRootProposal & {proposal_json}")
+
+    evaluation_lines = [
+        f"runtimeEvaluation: {evaluation_type} & {{",
+        "\trequest: runtimeRequest",
+        "\tproposal: runtimeProposal",
+        "\tpolicy: runtimePolicy",
+        "\tcommittedProjection: runtimeCommittedProjection",
+    ]
+    if overlay is not None:
+        evaluation_lines.append("\toverlayProjection: runtimeOverlayProjection")
+    evaluation_lines.extend(
+        [
+            "}",
+            "runtimeResult: {",
+            '\tschema: "dotfiles.context-graph-service-result.v0"',
+            '\tstatus: "success"',
+            "\tevaluation: runtimeEvaluation",
+            "}",
+            "",
+        ]
+    )
+    lines.extend(evaluation_lines)
+    return "\n".join(lines)
+
+
+def evaluate_revision(
+    *,
+    model_root: Path,
+    request: dict[str, object],
+    proposal: dict[str, object] | None,
+    committed: dict[str, object],
+    overlay: dict[str, object] | None,
+    schema_digest: str,
+    policy_digest: str,
+) -> dict[str, object]:
+    runtime_path = model_root / "runtime_graph_service.cue"
+    runtime_path.write_text(
+        _runtime_cue_source(
+            request=request,
+            proposal=proposal,
+            committed=committed,
+            overlay=overlay,
+            schema_digest=schema_digest,
+            policy_digest=policy_digest,
+        ),
+        encoding="utf-8",
+    )
+    _cue_export(model_root, "runtimeCommittedProjection", stage="snapshot")
+    projection_expression = "runtimeCommittedProjection"
+    if overlay is not None:
+        _cue_export(model_root, "runtimeOverlayProjection", stage="snapshot")
+        projection_expression = "runtimeOverlayProjection"
+    projection = _cue_export(model_root, projection_expression, stage="snapshot")
+    if not isinstance(projection, dict):
+        raise GraphServiceError(
+            "snapshot", "snapshot.cue-output-invalid", "projection must be an object"
+        )
+    graph = projection.get("graph")
+    if not isinstance(graph, dict) or not isinstance(graph.get("snapshotID"), str):
+        raise GraphServiceError(
+            "snapshot", "snapshot.cue-output-invalid", "projection graph is incomplete"
+        )
+    if proposal is not None and proposal.get("snapshotID") != graph["snapshotID"]:
+        raise GraphServiceError(
+            "proposal",
+            "proposal.snapshot-mismatch",
+            "proposal snapshotID does not match the authoritative projection",
+        )
+    _cue_export(model_root, "runtimeProposal", stage="proposal")
+    result = _cue_export(model_root, "runtimeResult", stage="selection")
+    if not isinstance(result, dict) or result.get("status") != "success":
+        raise GraphServiceError(
+            "selection", "selection.cue-output-invalid", "CUE did not produce a success result"
+        )
+    return result
 
 
 def _failure(request_id: str, error: GraphServiceError) -> dict[str, object]:
@@ -247,9 +449,9 @@ def main(arguments: list[str] | None = None) -> int:
     args = parser.parse_args(arguments)
     request_id = "request.unknown"
     try:
-        request = json.loads(args.request_file.read_text(encoding="utf-8"))
-        if not isinstance(request, dict):
-            raise GraphServiceError("proposal", "request.invalid", "request must be an object")
+        request = _read_object(
+            args.request_file, stage="proposal", code="request.invalid"
+        )
         request_id = request.get("requestID", request_id)
         if not isinstance(request_id, str):
             request_id = "request.unknown"
@@ -267,21 +469,48 @@ def main(arguments: list[str] | None = None) -> int:
                 ),
             )
         )
-        hydrator, _ = qualified_hydrator(
-            snapshot=binding.snapshot,
-            source_paths=GIT_HYDRATOR_SOURCES,
-            cache_root=cache_root,
+        proposal = (
+            _read_object(
+                args.proposal_file,
+                stage="proposal",
+                code="proposal.invalid",
+            )
+            if args.proposal_file is not None
+            else None
         )
-        hydrate_revision(
-            binding=binding,
-            repository_id=str(request.get("repository", "")),
-            hydrator=hydrator,
-        )
-        raise GraphServiceError(
-            "selection",
-            "selection.cue-evaluation-required",
-            "hydration succeeded but no concrete CUE selection evaluation was produced",
-        )
+        with tempfile.TemporaryDirectory(prefix="context-graph-cue-") as temporary:
+            try:
+                model_root = binding.snapshot.materialize_cue_package(
+                    ".codex/context-model", Path(temporary)
+                )
+            except RepositoryError as error:
+                raise GraphServiceError(
+                    "manifest", "manifest.package-unavailable", str(error)
+                ) from error
+            schema_manifest, policy_manifest, hydrator_manifest = (
+                load_revision_manifests(model_root)
+            )
+            schema_digest = source_manifest_digest(binding.snapshot, schema_manifest)
+            policy_digest = source_manifest_digest(binding.snapshot, policy_manifest)
+            hydrator, _ = qualified_hydrator(
+                snapshot=binding.snapshot,
+                manifest=hydrator_manifest,
+                cache_root=cache_root,
+            )
+            committed, overlay = hydrate_revision(
+                binding=binding,
+                repository_id=str(request.get("repository", "")),
+                hydrator=hydrator,
+            )
+            result = evaluate_revision(
+                model_root=model_root,
+                request=request,
+                proposal=proposal,
+                committed=committed,
+                overlay=overlay,
+                schema_digest=schema_digest,
+                policy_digest=policy_digest,
+            )
     except (OSError, json.JSONDecodeError) as error:
         result = _failure(
             request_id,
