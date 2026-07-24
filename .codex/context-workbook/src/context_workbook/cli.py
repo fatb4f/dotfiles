@@ -106,13 +106,50 @@ def run(app: Any) -> int:
     try:
         return _dispatch(app)
     except Exception as error:
-        print(
-            json.dumps(
-                {"schema": "dotfiles.context-workbook-error.v0", "error": f"{type(error).__name__}: {error}"},
-                sort_keys=True,
-            ),
-            file=sys.stderr,
-        )
+        message = f"{type(error).__name__}: {error}"
+        failure = {
+            "schema": "dotfiles.context-graph-failure.v0",
+            "requestID": "request.unknown",
+            "stage": "selection",
+            "code": "graph-service.failed",
+            "message": message,
+            "details": {},
+        }
+        if "--hook" in sys.argv:
+            context = {
+                "schema": "agent.resolver-prompt-surface.v2",
+                "requestID": None,
+                "sufficiency": {
+                    "state": "insufficient",
+                    "reasons": ["The canonical context graph service failed closed."],
+                    "blockingGapIDs": ["gap.context-graph-service-failed"],
+                    "unresolvedConflictIDs": [],
+                },
+                "context": None,
+                "diagnostics": [],
+                "execution": {
+                    "mode": "prompt-only",
+                    "routeExecution": False,
+                    "sourceAuthority": False,
+                    "rawTranscriptForwarding": False,
+                },
+            }
+            print(
+                json.dumps(
+                    {
+                        "hookSpecificOutput": {
+                            "hookEventName": "UserPromptSubmit",
+                            "additionalContext": json.dumps(
+                                context, sort_keys=True, separators=(",", ":")
+                            ),
+                        }
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                )
+            )
+            return 0
+        print(json.dumps(failure, sort_keys=True), file=sys.stderr)
         return 2
 
 

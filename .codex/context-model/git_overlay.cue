@@ -28,10 +28,10 @@ import (
 	status:              "added"
 	modeChanged:         false
 
-	mode:     #NonEmptyString
-	kind:     "blob" | "symlink"
-	objectID: #GitObjectID
-	size?:    int & >=0
+	mode:          #NonEmptyString
+	kind:          "blob" | "symlink"
+	objectID:      #GitObjectID
+	gitSizeBytes?: int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]
@@ -59,10 +59,10 @@ import (
 	status:              "modified"
 	modeChanged:         bool
 
-	mode:     #NonEmptyString
-	kind:     "blob" | "symlink"
-	objectID: #GitObjectID
-	size?:    int & >=0
+	mode:          #NonEmptyString
+	kind:          "blob" | "symlink"
+	objectID:      #GitObjectID
+	gitSizeBytes?: int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]
@@ -99,10 +99,10 @@ import (
 	status:              "modified"
 	modeChanged:         bool
 
-	mode:     #NonEmptyString
-	kind:     "blob" | "symlink"
-	objectID: #GitObjectID
-	size?:    int & >=0
+	mode:          #NonEmptyString
+	kind:          "blob" | "symlink"
+	objectID:      #GitObjectID
+	gitSizeBytes?: int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]
@@ -130,10 +130,10 @@ import (
 	status:              "untracked"
 	modeChanged:         false
 
-	mode:     #NonEmptyString
-	kind:     "blob" | "symlink"
-	objectID: #GitObjectID
-	size?:    int & >=0
+	mode:          #NonEmptyString
+	kind:          "blob" | "symlink"
+	objectID:      #GitObjectID
+	gitSizeBytes?: int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]

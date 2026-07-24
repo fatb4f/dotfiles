@@ -38,7 +38,7 @@ import (
 	mode:                #NonEmptyString
 	kind:                #GitCommittedKind
 	objectID:            #GitObjectID
-	size?:               int & >=0
+	gitSizeBytes?:       int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]

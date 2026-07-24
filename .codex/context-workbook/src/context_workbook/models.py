@@ -11,6 +11,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 _ID = re.compile(r"^[a-z0-9]+([._-][a-z0-9]+)*$")
+_GRAPH_ID = re.compile(r"^[a-z0-9]+([._:/-][a-z0-9]+)*$")
 _DIGEST = re.compile(r"^sha256:[0-9a-f]{64}$")
 _CLAIMANT_FIELDS = frozenset(
     {
@@ -49,6 +50,12 @@ def reject_claimant_fields(value: object, label: str = "payload") -> None:
 def validate_id(value: str) -> str:
     if not _ID.fullmatch(value):
         raise ValueError(f"invalid ID: {value!r}")
+    return value
+
+
+def validate_graph_id(value: str) -> str:
+    if not _GRAPH_ID.fullmatch(value):
+        raise ValueError(f"invalid graph ID: {value!r}")
     return value
 
 
@@ -125,6 +132,105 @@ class ContextRequest(StrictModel):
             validate_path(path)
         for projection_id in self.requested_projection_ids:
             validate_id(projection_id)
+        return self
+
+
+class ExplicitContextRoots(StrictModel):
+    member_ids: list[str] = Field(alias="memberIDs", default_factory=list)
+    namespace_ids: list[str] = Field(alias="namespaceIDs", default_factory=list)
+    path_prefixes: list[str] = Field(alias="pathPrefixes", default_factory=list)
+
+    @model_validator(mode="after")
+    def canonical_roots(self) -> "ExplicitContextRoots":
+        for values in (self.member_ids, self.namespace_ids, self.path_prefixes):
+            if values != sorted(values) or len(values) != len(set(values)):
+                raise ValueError("explicit roots must be sorted and unique")
+        for identifier in (*self.member_ids, *self.namespace_ids):
+            validate_graph_id(identifier)
+        for path in self.path_prefixes:
+            validate_path(path)
+        if len(self.member_ids) + len(self.namespace_ids) + len(self.path_prefixes) > 64:
+            raise ValueError("explicit roots exceed the 64-root limit")
+        return self
+
+
+class ContextApplicationRequest(StrictModel):
+    schema_: Literal["dotfiles.context-application-request.v0"] = Field(alias="schema")
+    request_id: str = Field(alias="requestID")
+    repository: str = Field(min_length=1)
+    revision: str = Field(min_length=1)
+    allowed_paths: list[str] = Field(alias="allowedPaths", min_length=1)
+    overlay_mode: Literal["disabled", "required", "auto"] = Field(alias="overlayMode")
+    roots: ExplicitContextRoots
+
+    @model_validator(mode="after")
+    def closed_request(self) -> "ContextApplicationRequest":
+        validate_id(self.request_id)
+        for path in self.allowed_paths:
+            validate_path(path)
+        if self.allowed_paths != sorted(self.allowed_paths):
+            raise ValueError("allowedPaths must be sorted")
+        return self
+
+
+class ContextRootProposal(StrictModel):
+    schema_: Literal["dotfiles.context-root-proposal.v0"] = Field(alias="schema")
+    request_id: str = Field(alias="requestID")
+    snapshot_id: str = Field(alias="snapshotID", pattern=_DIGEST.pattern)
+    member_ids: list[str] = Field(alias="memberIDs", default_factory=list)
+    namespace_ids: list[str] = Field(alias="namespaceIDs", default_factory=list)
+    path_prefixes: list[str] = Field(alias="pathPrefixes", default_factory=list)
+
+    @model_validator(mode="after")
+    def canonical_proposal(self) -> "ContextRootProposal":
+        ExplicitContextRoots.model_validate(
+            {
+                "memberIDs": self.member_ids,
+                "namespaceIDs": self.namespace_ids,
+                "pathPrefixes": self.path_prefixes,
+            }
+        )
+        validate_id(self.request_id)
+        return self
+
+
+class ContextGraphFailure(StrictModel):
+    schema_: Literal["dotfiles.context-graph-failure.v0"] = Field(alias="schema")
+    request_id: str = Field(alias="requestID")
+    stage: Literal[
+        "revision", "manifest", "hydration", "snapshot", "proposal", "selection", "packet"
+    ]
+    code: str
+    message: str = Field(min_length=1)
+    details: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def identifiers(self) -> "ContextGraphFailure":
+        validate_id(self.request_id)
+        validate_id(self.code)
+        return self
+
+
+class ContextRootCatalog(StrictModel):
+    schema_: Literal["dotfiles.context-root-catalog.v0"] = Field(alias="schema")
+    request_id: str = Field(alias="requestID")
+    snapshot_id: str = Field(alias="snapshotID", pattern=_DIGEST.pattern)
+    member_ids: list[str] = Field(alias="memberIDs", max_length=2048)
+    namespace_ids: list[str] = Field(alias="namespaceIDs", max_length=256)
+    paths: list[str] = Field(max_length=2048)
+
+    @model_validator(mode="after")
+    def bounded_catalog(self) -> "ContextRootCatalog":
+        validate_id(self.request_id)
+        for values in (self.member_ids, self.namespace_ids, self.paths):
+            if values != sorted(values) or len(values) != len(set(values)):
+                raise ValueError("catalog lists must be sorted and unique")
+        for identifier in (*self.member_ids, *self.namespace_ids):
+            validate_graph_id(identifier)
+        for path in self.paths:
+            validate_path(path)
+        if len(canonical_json(self.model_dump(by_alias=True))) > 262_144:
+            raise ValueError("catalog exceeds canonical byte limit")
         return self
 
 

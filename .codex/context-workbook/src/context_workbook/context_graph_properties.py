@@ -248,8 +248,11 @@ def cue_binary() -> str:
 
 
 def _run_cue(*args: str) -> subprocess.CompletedProcess[str]:
+    root = model_root()
+    canonical_args = tuple("." if item == str(root) else item for item in args)
     return subprocess.run(
-        [cue_binary(), *args],
+        [cue_binary(), *canonical_args],
+        cwd=root,
         check=False,
         capture_output=True,
         text=True,

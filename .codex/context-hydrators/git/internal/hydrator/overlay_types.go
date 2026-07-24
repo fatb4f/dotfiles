@@ -24,7 +24,7 @@ type OverlayOccurrence struct {
 	Mode        string             `json:"mode,omitempty"`
 	Kind        string             `json:"kind,omitempty"`
 	ObjectID    *identity.ObjectID `json:"objectID,omitempty"`
-	Size        *int64             `json:"size,omitempty"`
+	Size        *int64             `json:"gitSizeBytes,omitempty"`
 }
 
 type IndexOverlay struct {
