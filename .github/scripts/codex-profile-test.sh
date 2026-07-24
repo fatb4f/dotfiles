@@ -36,10 +36,19 @@ cd "$REPO_ROOT"
 uv run --project .codex/codex-profile -- python .codex/codex-profile/tests/test_replay.py -v
 uv run --project .codex/codex-profile -- python .codex/codex-profile/tests/test_ingestion.py -v
 uv run --project .codex/codex-profile -- python .codex/codex-profile/tests/test_verify_upstream.py -v
+uv run --project .codex/codex-profile --group test -- pytest -q \
+  .codex/codex-profile/tests/test_handoff.py \
+  .codex/codex-profile/tests/test_runner.py \
+  .codex/codex-profile/tests/test_property_gate.py \
+  .codex/codex-profile/tests/test_cli.py
 python -m unittest -v tools/test_codex_corpus_profile.py
 uv run --project .codex/codex-profile -- python -m compileall -q .codex/codex-profile/src
 uv run --project .codex/codex-profile -- python -m py_compile \
   .codex/codex-profile/scripts/verify_upstream.py \
   .codex/codex-profile/tests/test_replay.py \
   .codex/codex-profile/tests/test_ingestion.py \
-  .codex/codex-profile/tests/test_verify_upstream.py
+  .codex/codex-profile/tests/test_verify_upstream.py \
+  .codex/codex-profile/tests/test_handoff.py \
+  .codex/codex-profile/tests/test_runner.py \
+  .codex/codex-profile/tests/test_property_gate.py \
+  .codex/codex-profile/tests/test_cli.py

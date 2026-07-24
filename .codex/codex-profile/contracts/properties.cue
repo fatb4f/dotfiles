@@ -16,7 +16,13 @@ package codexprofile
 		"synthetic-lineage-over-native" |
 		"merge-journal-lifecycle" |
 		"non-collector-write" |
-		"couple-policy-axes"
+		"couple-policy-axes" |
+		"omit-readiness" |
+		"change-repository-identity" |
+		"exceed-size-bound" |
+		"nondeterministic-projection" |
+		"discard-command-output" |
+		"exceed-command-projection"
 
 #PropertyExpectedResult: "accept" | "reject"
 
@@ -35,6 +41,51 @@ package codexprofile
 #ContractPropertyCatalog: close({
 	schema: "codex-profile-properties.v0"
 	properties: [ID=#ID]: #ContractProperty & {id: ID}
+})
+
+#ExecutablePropertyCase: close({
+	id:               #ID
+	baseline:         #ID
+	mutation:         #ID
+	adapterOperation: "admit-handoff" | "project-handoff" | "admit-command-artifact" | "admit-command-result"
+	expectedResult:   #PropertyExpectedResult
+	rejectionCode:    #ID | null
+	expectedProjectionDigests?: close({
+		json:     #Digest
+		markdown: #Digest
+	})
+})
+
+#ExecutablePropertyCatalog: close({
+	schema: "codex-profile-executable-properties.v0"
+	cases: [ID=#ID]: #ExecutablePropertyCase & {id: ID}
+})
+
+#QualificationCase: close({
+	id:                #ID
+	mutationAttempted: bool
+	actualResult:      #PropertyExpectedResult
+	rejectionCode:     #ID | null
+	status:            "passed"
+	evidence:          #MutationEvidence
+})
+
+#MutationEvidence: close({
+	valueChanged:     bool
+	artifactsChanged: bool
+	rawDigests:       [#Digest, #Digest]
+	artifactDigests:  [#Digest, #Digest]
+	jsonDigests?:     [#Digest, #Digest]
+	markdownDigests?: [#Digest, #Digest]
+})
+
+#QualificationReport: close({
+	schema:       "codex-profile-property-report.v0"
+	declaredIDs:  [...#ID]
+	generatedIDs: [...#ID]
+	executedIDs:  [...#ID]
+	reportedIDs:  [...#ID]
+	cases:        [...#QualificationCase]
 })
 
 assertionCatalog: #ContractPropertyCatalog & {
@@ -198,6 +249,119 @@ assertionCatalog: #ContractPropertyCatalog & {
 			changedTerms:     ["policy.recommendation"]
 			expectedResult:   "accept"
 			rejectionCode:    null
+		}
+		"handoff.readiness-required": {
+			description:      "Objective, current and next operations, and completion criteria are required and nonempty."
+			targetDefinition: "#Handoff"
+			preconditions:    ["A handoff is created."]
+			mutationClass:    "omit-readiness"
+			preservedTerms:   ["repository.identity"]
+			changedTerms:     ["handoff.readiness"]
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.not-ready"
+		}
+		"handoff.repository-identity": {
+			description:      "The canonical repository root and HEAD revision identify the continuation workspace."
+			targetDefinition: "#Handoff"
+			preconditions:    ["Git repository discovery succeeded."]
+			mutationClass:    "change-repository-identity"
+			preservedTerms:   ["handoff.operations"]
+			changedTerms:     ["repository.identity"]
+			expectedResult:   "reject"
+			rejectionCode:    "repository.identity-changed"
+		}
+		"handoff.size-bounded": {
+			description:      "Canonical JSON and Markdown projections are each limited to 16 KiB."
+			targetDefinition: "#Handoff"
+			preconditions:    ["A validated handoff is projected."]
+			mutationClass:    "exceed-size-bound"
+			preservedTerms:   ["handoff.meaning"]
+			changedTerms:     ["projection.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.size-exceeded"
+		}
+		"handoff.projection-deterministic": {
+			description:      "The same validated handoff produces identical canonical JSON and Markdown."
+			targetDefinition: "#Handoff"
+			preconditions:    ["Repository state and createdAt are held constant."]
+			mutationClass:    "nondeterministic-projection"
+			preservedTerms:   ["handoff.meaning"]
+			changedTerms:     ["environment.order"]
+			expectedResult:   "accept"
+			rejectionCode:    null
+		}
+		"command.artifact-complete": {
+			description:      "Complete stdout and stderr bytes remain retained with hashes regardless of projection."
+			targetDefinition: "#CommandArtifactManifest"
+			preconditions:    ["A child command was started or launch failure was normalized."]
+			mutationClass:    "discard-command-output"
+			preservedTerms:   ["command.argv"]
+			changedTerms:     ["artifact.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "command.output-discarded"
+		}
+		"command.projection-bounded": {
+			description:      "The command result is at most 4 KiB and contains at most 20 relevant lines."
+			targetDefinition: "#CommandResult"
+			preconditions:    ["A trustworthy command artifact exists."]
+			mutationClass:    "exceed-command-projection"
+			preservedTerms:   ["artifact.identity"]
+			changedTerms:     ["projection.bytes"]
+			expectedResult:   "reject"
+			rejectionCode:    "command.projection-exceeded"
+		}
+	}
+}
+
+// These case names are resolved by the typed mutation and operation registries.
+// The data is exported verbatim and is the authoritative executable inventory.
+handoffExecutableCatalog: #ExecutablePropertyCatalog & {
+	cases: {
+		"handoff.readiness-required": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.remove-readiness"
+			adapterOperation: "admit-handoff"
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.not-ready"
+		}
+		"handoff.repository-identity": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.change-repository"
+			adapterOperation: "admit-handoff"
+			expectedResult:   "reject"
+			rejectionCode:    "repository.identity-changed"
+		}
+		"handoff.size-bounded": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.exceed-projection"
+			adapterOperation: "project-handoff"
+			expectedResult:   "reject"
+			rejectionCode:    "handoff.size-exceeded"
+		}
+		"handoff.projection-deterministic": {
+			baseline:         "handoff.valid"
+			mutation:         "handoff.reorder-input"
+			adapterOperation: "project-handoff"
+			expectedResult:   "accept"
+			rejectionCode:    null
+			expectedProjectionDigests: {
+				json:     "sha256:5cfbd3531bb3fc8c79d76eaaeaf2326a79e7661fee7905dd17aa1d5b15614516"
+				markdown: "sha256:e5c4bf7af3ca3d73e527d9e61a5ca7608be4a0a42b86b145d8cb27aa51eb7dbd"
+			}
+		}
+		"command.artifact-complete": {
+			baseline:         "command.artifact-valid"
+			mutation:         "command.remove-output"
+			adapterOperation: "admit-command-artifact"
+			expectedResult:   "reject"
+			rejectionCode:    "command.output-discarded"
+		}
+		"command.projection-bounded": {
+			baseline:         "command.result-valid"
+			mutation:         "command.exceed-projection"
+			adapterOperation: "admit-command-result"
+			expectedResult:   "reject"
+			rejectionCode:    "command.projection-exceeded"
 		}
 	}
 }

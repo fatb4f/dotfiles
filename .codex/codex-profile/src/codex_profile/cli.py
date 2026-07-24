@@ -9,10 +9,13 @@ from typing import Sequence
 
 from codex_profile import reporting
 from codex_profile.collector import ingest_rollouts
+from codex_profile.contracts import canonical_bytes
+from codex_profile.handoff import create_handoff
+from codex_profile.runner import run_projected
 from codex_profile.storage import ProfileStorage
 
 
-COMMANDS = {"ingest", "analyze", "export"}
+COMMANDS = {"ingest", "analyze", "export", "handoff", "run-projected"}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -32,6 +35,21 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument("--database", required=True, help="DuckDB database path")
     export.add_argument("--out", required=True, help="output directory")
 
+    handoff = subcommands.add_parser("handoff", help="create a manual continuation handoff")
+    handoff_commands = handoff.add_subparsers(dest="handoff_command", required=True)
+    create = handoff_commands.add_parser("create")
+    create.add_argument("--objective", required=True)
+    create.add_argument("--current-operation", required=True)
+    create.add_argument("--next-operation", required=True)
+    create.add_argument("--completion-criterion", action="append", required=True)
+    for option in ("invariant", "decision", "passing", "failing", "not-run", "evidence-pointer", "open-question"):
+        create.add_argument(f"--{option}", action="append", default=[])
+
+    projected = subcommands.add_parser(
+        "run-projected", help="run a command and print a bounded structured result"
+    )
+    projected.add_argument("argv", nargs=argparse.REMAINDER)
+
     return parser
 
 
@@ -48,6 +66,32 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _analyze(args)
     if args.command == "export":
         return _export(args)
+    if args.command == "handoff":
+        try:
+            json_path, md_path, packet = create_handoff(args)
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"handoff creation failed: {error}", file=sys.stderr)
+            return 2
+        print(json_path)
+        print(md_path)
+        print(
+            "Start a new Codex session at "
+            f"{packet.repository.root}; read {json_path} as authoritative, continue "
+            "nextOperation, preserve invariants, and stop on completion or a blocking gap."
+        )
+        return 0
+    if args.command == "run-projected":
+        if len(args_list) < 2 or args_list[1] != "--":
+            print("run-projected requires -- immediately before the command", file=sys.stderr)
+            return 2
+        command = args_list[2:]
+        try:
+            result, exit_code = run_projected(command)
+        except (OSError, RuntimeError, ValueError) as error:
+            print(f"run-projected failed: {error}", file=sys.stderr)
+            return 2
+        sys.stdout.buffer.write(canonical_bytes(result))
+        return exit_code
     parser.error(f"unknown command: {args.command}")
     return 2
 

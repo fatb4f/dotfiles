@@ -1,6 +1,10 @@
 package codexprofile
 
-import "time"
+import (
+	"list"
+	"strings"
+	"time"
+)
 
 // CUE is the authority for issue #72 admission and policy boundaries. Runtime
 // adapters may narrow these definitions, but may not widen them.
@@ -10,6 +14,75 @@ import "time"
 #Digest:         string & =~"^sha256:[0-9a-f]{64}$"
 #UUIDv7:         string & =~"^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
 #Timestamp:      time.Time
+#GitRevision:    string & (=~"^[0-9a-f]{40}$" | =~"^[0-9a-f]{64}$")
+#BoundedStrings: [...#NonEmptyString] & list.MaxItems(256)
+
+#Handoff: close({
+	schema:     "codex.handoff.v0"
+	createdAt:  #Timestamp
+	objective:  #NonEmptyString
+	invariants: #BoundedStrings
+	decisions:  #BoundedStrings
+	repository: close({
+		root:        #NonEmptyString
+		revision:    #GitRevision
+		branch:      #NonEmptyString | null
+		dirtyPaths:  #BoundedStrings
+		stagedPaths: #BoundedStrings
+	})
+	validation: close({
+		passing: #BoundedStrings
+		failing: #BoundedStrings
+		notRun:  #BoundedStrings
+	})
+	currentOperation:   #NonEmptyString
+	nextOperation:      #NonEmptyString
+	completionCriteria: #BoundedStrings & [_, ...]
+	evidencePointers:   #BoundedStrings
+	openQuestions:      #BoundedStrings
+})
+
+#CommandResult: close({
+	schema:        "codex.command-result.v0"
+	exitCode:      int
+	signal:        uint | null
+	truncated:     bool
+	relevantLines: [...string] & list.MaxItems(20)
+	artifact:      #NonEmptyString
+	sha256:        string & =~"^[0-9a-f]{64}$"
+})
+
+#CommandArtifactManifest: close({
+	schema:           "codex.command-artifact.v0"
+	argv:             [#NonEmptyString, ...string] & list.MaxItems(4096)
+	workingDirectory: #NonEmptyString
+	startedAt:        #Timestamp
+	durationSeconds:  number & >=0
+	exitCode:         int
+	signal:           uint | null
+	stdoutBytes:      uint
+	stderrBytes:      uint
+	stdoutSha256:     string & =~"^[0-9a-f]{64}$"
+	stderrSha256:     string & =~"^[0-9a-f]{64}$"
+})
+
+#CommandQuarantine: close({
+	schema:            "codex.command-quarantine.v0"
+	argv:              [#NonEmptyString, ...string] & list.MaxItems(4096)
+	workingDirectory:  #NonEmptyString
+	startedAt:         #Timestamp
+	durationSeconds:   number & >=0
+	exitCode:          int
+	signal:            uint | null
+	stdoutBytes:       uint
+	stderrBytes:       uint
+	stdoutSha256:      string & =~"^[0-9a-f]{64}$"
+	stderrSha256:      string & =~"^[0-9a-f]{64}$"
+	manifestAvailable: bool
+	failurePhase:      "artifact-admission" | "projection" | "result-admission" | "publication"
+	failureCode:       #NonEmptyString
+	failureDetail:     string & strings.MaxRunes(2048)
+})
 
 #GitObjectID: close({
 	format: "sha1"

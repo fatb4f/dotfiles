@@ -44,3 +44,43 @@ uv run --project .codex/codex-profile -- codex-profile export \
   --database ~/.local/state/codex-profile/profile.duckdb \
   --out /tmp/codex-profile
 ```
+
+## Manual handoffs
+
+Create an explicit packet before resetting a long-running session:
+
+```bash
+uv run --project .codex/codex-profile -- codex-profile handoff create \
+  --objective "finish the requested change" \
+  --current-operation "implementing the adapter" \
+  --next-operation "run qualification" \
+  --invariant "preserve existing CLI behavior" \
+  --completion-criterion "the qualification script passes"
+```
+
+The command records the canonical Git root, revision, branch, dirty paths, and
+staged paths. It atomically writes `handoff.json` and the derived `handoff.md`
+under `~/.local/state/codex-profile/handoffs/<id>/`, then prints the manual
+continuation instruction. Both projections are limited to 16 KiB.
+
+To reset manually, finish or interrupt the current operation, run the command,
+start a new Codex session at the printed repository root, and tell it to read
+the printed authoritative JSON path and continue `nextOperation`.
+
+## Bounded command projection
+
+```bash
+uv run --project .codex/codex-profile -- \
+  codex-profile run-projected -- pytest -q
+```
+
+The literal `--` is required. The child receives no stdin and is executed
+directly without a shell. Complete byte-exact output is retained atomically as
+`stdout.bin`, `stderr.bin`, and `manifest.json` under
+`~/.local/state/codex-profile/command-results/<id>/`. The one JSON result
+printed to stdout is limited to 4 KiB and 20 relevant lines; its artifact path
+and hash address the complete manifest.
+
+These state directories can contain source paths, command arguments, and
+unredacted command output. Treat them as private local data, do not publish
+them, and remove obsolete packets deliberately when they are no longer needed.
