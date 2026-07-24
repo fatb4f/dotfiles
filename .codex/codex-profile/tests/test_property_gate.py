@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -27,6 +28,32 @@ def test_executable_property_equality_gate(tmp_path: Path) -> None:
     assert expected == set(report["reportedIDs"])
     assert expected == {entry["id"] for entry in report["cases"]}
     assert all(entry["mutationAttempted"] and entry["status"] == "passed" for entry in report["cases"])
+
+
+def test_qualification_is_repeatable_at_same_report_path(tmp_path: Path) -> None:
+    report_path = tmp_path / "property-report.json"
+    assert qualify(report_path) == qualify(report_path)
+    assert not list(tmp_path.glob(".qualification-work-*"))
+
+
+def test_qualification_reorder_has_raw_but_not_semantic_change(tmp_path: Path) -> None:
+    report = qualify(tmp_path / "property-report.json")
+    case = next(
+        entry for entry in report["cases"]
+        if entry["id"] == "handoff.projection-deterministic"
+    )
+    evidence = case["evidence"]
+    assert evidence["rawDigests"][0] != evidence["rawDigests"][1]
+    assert evidence["jsonDigests"][0] == evidence["jsonDigests"][1]
+    assert evidence["markdownDigests"][0] == evidence["markdownDigests"][1]
+
+
+def test_concurrent_qualification_writers_are_identical(tmp_path: Path) -> None:
+    report_path = tmp_path / "property-report.json"
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        reports = list(executor.map(lambda _: qualify(report_path), range(2)))
+    assert reports[0] == reports[1] == json.loads(report_path.read_text())
+    assert not list(tmp_path.glob(f".{report_path.name}.*"))
 
 
 def test_generated_catalog_is_complete_document() -> None:

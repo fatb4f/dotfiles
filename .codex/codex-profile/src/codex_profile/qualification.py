@@ -7,9 +7,14 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
+import tempfile
+from typing import Any
 
 from codex_profile.contracts import (
     ContractViolation,
+    CommandManifest,
+    CommandResult,
+    Handoff,
     Repository,
     admit_command_artifact,
     admit_command_result,
@@ -92,16 +97,24 @@ def _remove_output(value: dict, root: Path) -> dict:
 
 def _oversized_result(root: Path) -> tuple[dict, Path]:
     manifest = root / "manifest.json"
-    manifest.write_bytes(b"{}\n")
-    return {
+    artifact, directory = _command_artifact(root)
+    manifest.write_bytes(canonical_bytes(CommandManifest.model_validate(artifact)))
+    result = {
         "schema": "codex.command-result.v0",
         "exitCode": 0,
         "signal": None,
         "truncated": True,
-        "relevantLines": ["x" * 500 for _ in range(20)],
-        "artifact": str(manifest),
+        "relevantLines": ["baseline"],
+        "artifact": "manifest.json",
         "sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
-    }, manifest
+    }
+    assert len(canonical_bytes(CommandResult.model_validate(result))) < 4096
+    return result, manifest
+
+
+def _exceed_result(value: dict, _: Path) -> dict:
+    value["relevantLines"] = ["x" * 500 for _ in range(20)]
+    return value
 
 
 MUTATIONS = {
@@ -110,8 +123,56 @@ MUTATIONS = {
     "handoff.exceed-projection": _exceed_handoff,
     "handoff.reorder-input": _reorder_handoff,
     "command.remove-output": _remove_output,
-    "command.exceed-projection": lambda value, root: value,
+    "command.exceed-projection": _exceed_result,
 }
+
+
+def _ordered_bytes(value: Any) -> bytes:
+    def default(item: Any) -> Any:
+        if isinstance(item, datetime):
+            return item.isoformat().replace("+00:00", "Z")
+        raise TypeError(type(item).__name__)
+    return json.dumps(
+        value, ensure_ascii=False, separators=(",", ":"), default=default
+    ).encode()
+
+
+def _sha(data: bytes) -> str:
+    return "sha256:" + hashlib.sha256(data).hexdigest()
+
+
+def _tree_digest(root: Path) -> str:
+    entries: list[dict] = []
+    if root.exists():
+        for path in sorted(root.rglob("*"), key=lambda item: item.relative_to(root).as_posix()):
+            relative = path.relative_to(root).as_posix()
+            stat = path.lstat()
+            if path.is_symlink():
+                kind, data = "symlink", os.readlink(path).encode()
+            elif path.is_file():
+                kind, data = "file", path.read_bytes()
+            elif path.is_dir():
+                kind, data = "directory", b""
+            else:
+                kind, data = "other", b""
+            entries.append({
+                "path": relative,
+                "kind": kind,
+                "mode": stat.st_mode & 0o777,
+                "length": len(data),
+                "content": hashlib.sha256(data).hexdigest(),
+            })
+    return _sha(json.dumps(entries, sort_keys=True, separators=(",", ":")).encode())
+
+
+def _semantic_digests(value: dict, operation: str) -> tuple[str, str] | None:
+    if operation not in ("admit-handoff", "project-handoff"):
+        return None
+    try:
+        packet = Handoff.model_validate(value)
+    except Exception:
+        return None
+    return _sha(canonical_bytes(packet)), _sha(markdown(packet).encode())
 
 
 def _operate_admit_handoff(value: dict, context: dict, _: dict) -> None:
@@ -190,44 +251,71 @@ def qualify(report_path: Path, *, contract_root: Path | None = None) -> dict:
         raise ContractViolation("qualification.coverage-mismatch", "operation registry is not exact")
     records = []
     executed: set[str] = set()
-    work = report_path.parent / ".qualification-work"
-    work.mkdir(parents=True, exist_ok=True)
-    for property_id, case in catalog["cases"].items():
-        case_root = work / property_id
-        case_root.mkdir(parents=True, exist_ok=True)
-        rejection_code = None
-        actual = "accept"
-        if case["baseline"] == "handoff.valid":
-            baseline = _handoff_value()
-            context = {"authority": _authority(baseline)}
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="codex-profile-qualification-") as work_name:
+        work = Path(work_name)
+        for property_id, case in catalog["cases"].items():
+            case_root = work / property_id
+            case_root.mkdir()
+            if case["baseline"] == "handoff.valid":
+                baseline = _handoff_value()
+                context = {"authority": _authority(baseline)}
+            elif case["baseline"] == "command.artifact-valid":
+                baseline, directory = _command_artifact(case_root)
+                context = {"directory": directory}
+            else:
+                baseline, manifest = _oversized_result(case_root)
+                context = {"manifest": manifest}
+            try:
+                OPERATIONS[case["adapterOperation"]](baseline, context, case)
+            except ContractViolation as error:
+                raise ContractViolation(
+                    "qualification.baseline-rejected",
+                    f"{property_id}: {error.code}",
+                ) from error
+            before_raw = _sha(_ordered_bytes(baseline))
+            before_tree = _tree_digest(case_root)
+            before_semantic = _semantic_digests(baseline, case["adapterOperation"])
             mutated = MUTATIONS[case["mutation"]](deepcopy(baseline), case_root)
-        elif case["baseline"] == "command.artifact-valid":
-            baseline, directory = _command_artifact(case_root)
-            context = {"directory": directory}
-            mutated = MUTATIONS[case["mutation"]](deepcopy(baseline), case_root)
-        else:
-            baseline, manifest = _oversized_result(case_root)
-            context = {"manifest": manifest}
-            mutated = MUTATIONS[case["mutation"]](deepcopy(baseline), case_root)
-        try:
-            OPERATIONS[case["adapterOperation"]](mutated, context, case)
-        except ContractViolation as error:
-            actual, rejection_code = "reject", error.code
-        if actual != case["expectedResult"] or rejection_code != case["rejectionCode"]:
-            raise ContractViolation(
-                "qualification.case-failed",
-                f"{property_id}: got {actual}/{rejection_code}",
-            )
-        executed.add(property_id)
-        records.append(
-            {
+            after_raw = _sha(_ordered_bytes(mutated))
+            after_tree = _tree_digest(case_root)
+            after_semantic = _semantic_digests(mutated, case["adapterOperation"])
+            value_changed = before_raw != after_raw
+            artifacts_changed = before_tree != after_tree
+            mutation_attempted = value_changed or artifacts_changed
+            if not mutation_attempted:
+                raise ContractViolation(
+                    "qualification.mutation-not-observed", property_id
+                )
+            rejection_code = None
+            actual = "accept"
+            try:
+                OPERATIONS[case["adapterOperation"]](mutated, context, case)
+            except ContractViolation as error:
+                actual, rejection_code = "reject", error.code
+            if actual != case["expectedResult"] or rejection_code != case["rejectionCode"]:
+                raise ContractViolation(
+                    "qualification.case-failed",
+                    f"{property_id}: got {actual}/{rejection_code}",
+                )
+            executed.add(property_id)
+            evidence = {
+                "valueChanged": value_changed,
+                "artifactsChanged": artifacts_changed,
+                "rawDigests": [before_raw, after_raw],
+                "artifactDigests": [before_tree, after_tree],
+            }
+            if before_semantic is not None and after_semantic is not None:
+                evidence["jsonDigests"] = [before_semantic[0], after_semantic[0]]
+                evidence["markdownDigests"] = [before_semantic[1], after_semantic[1]]
+            records.append({
                 "id": property_id,
-                "mutationAttempted": True,
+                "mutationAttempted": mutation_attempted,
                 "actualResult": actual,
                 "rejectionCode": rejection_code,
                 "status": "passed",
-            }
-        )
+                "evidence": evidence,
+            })
     ids = sorted(executed)
     if declared != generated or generated != executed:
         raise ContractViolation("qualification.coverage-mismatch", "declared/generated/executed differ")
@@ -239,18 +327,38 @@ def qualify(report_path: Path, *, contract_root: Path | None = None) -> dict:
         "reportedIDs": ids,
         "cases": records,
     }
-    report_path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    report_data = (json.dumps(report, indent=2, sort_keys=True) + "\n").encode()
+    staged_fd, staged_name = tempfile.mkstemp(
+        prefix=f".{report_path.name}.", dir=report_path.parent
+    )
+    staged = Path(staged_name)
+    try:
+        with os.fdopen(staged_fd, "wb") as handle:
+            handle.write(report_data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(staged, report_path)
+        directory_fd = os.open(report_path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        staged.unlink(missing_ok=True)
     persisted = json.loads(report_path.read_text(encoding="utf-8"))
     if set(persisted["reportedIDs"]) != executed:
         raise ContractViolation("qualification.coverage-mismatch", "persisted report differs")
     cue = os.environ.get("CODEX_PROFILE_CUE", "cue")
-    result = subprocess.run(
-        [cue, "vet", ".", str(report_path), "-d", "#QualificationReport"],
-        cwd=root,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=False,
-    )
+    with tempfile.NamedTemporaryFile(suffix=".json") as validation_input:
+        validation_input.write(report_data)
+        validation_input.flush()
+        result = subprocess.run(
+            [cue, "vet", ".", validation_input.name, "-d", "#QualificationReport"],
+            cwd=root,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
     if result.returncode:
         raise ContractViolation(
             "qualification.report-invalid",

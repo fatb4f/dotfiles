@@ -13,15 +13,24 @@ from pathlib import Path
 from codex_profile.contracts import (
     ContractViolation,
     CommandManifest,
+    CommandQuarantine,
     CommandResult,
     admit_command_artifact,
     admit_command_result,
     canonical_bytes,
+    validate_command_manifest,
 )
 
 RESULT_LIMIT = 4096
 LINE_LIMIT = 512
 TERMS = ("error", "fail", "fatal", "panic", "traceback", "expected", "got")
+
+
+class CommandQuarantined(ContractViolation):
+    def __init__(self, code: str, detail: str, *, failure_phase: str, artifact_path: Path):
+        self.failure_phase = failure_phase
+        self.artifact_path = artifact_path
+        super().__init__(code, detail)
 
 
 def _digest(path: Path) -> str:
@@ -85,9 +94,83 @@ def _projection_lines(paths: tuple[Path, Path]) -> tuple[list[str], bool]:
     return [chosen[index][1] for index in sorted(chosen)], truncated
 
 
+def _preflight() -> None:
+    cue_setting = os.environ.get("CODEX_PROFILE_CUE", "cue")
+    cue = shutil.which(cue_setting)
+    root = Path(
+        os.environ.get(
+            "CODEX_PROFILE_CONTRACT_ROOT",
+            Path(__file__).resolve().parents[2] / "contracts",
+        )
+    )
+    if cue is None or not root.is_dir() or not os.access(root, os.R_OK | os.X_OK):
+        raise ContractViolation("contract.unavailable", "CUE or contract root is unavailable")
+    for definition in ("#CommandArtifactManifest", "#CommandResult", "#CommandQuarantine"):
+        result = subprocess.run(
+            [cue, "eval", ".", "-e", definition],
+            cwd=root,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if result.returncode:
+            raise ContractViolation(
+                "contract.unavailable",
+                result.stderr.decode("utf-8", "replace").strip(),
+            )
+
+
+def _write_fsynced(path: Path, data: bytes) -> None:
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(fd, "wb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+
+
+def _quarantine(
+    *,
+    temp: Path,
+    parent: Path,
+    ident: str,
+    manifest_value: dict,
+    phase: str,
+    error: BaseException,
+) -> CommandQuarantined:
+    code = error.code if isinstance(error, ContractViolation) else "command.publication-failed"
+    detail = str(error)[:2048]
+    value = {
+        "schema": "codex.command-quarantine.v0",
+        **{key: manifest_value[key] for key in (
+            "argv", "workingDirectory", "startedAt", "durationSeconds", "exitCode",
+            "signal", "stdoutBytes", "stderrBytes", "stdoutSha256", "stderrSha256",
+        )},
+        "manifestAvailable": (temp / "manifest.json").is_file(),
+        "failurePhase": phase,
+        "failureCode": code,
+        "failureDetail": detail,
+    }
+    quarantine = CommandQuarantine.model_validate(value)
+    quarantine_path = temp / "quarantine.json"
+    if not quarantine_path.exists():
+        _write_fsynced(quarantine_path, canonical_bytes(quarantine))
+    _fsync_directory(temp)
+    final = parent / f"{ident}-quarantine"
+    try:
+        os.rename(temp, final)
+        _fsync_directory(parent)
+        retained = final
+    except OSError:
+        retained = final if final.exists() else temp
+    return CommandQuarantined(
+        code, detail, failure_phase=phase, artifact_path=retained / "quarantine.json"
+    )
+
+
 def run_projected(argv: list[str], *, state_root: Path | None = None) -> tuple[CommandResult, int]:
     if not argv:
         raise ValueError("no command follows --")
+    _preflight()
     started = datetime.now(timezone.utc)
     parent = state_root or Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local/state")) / "codex-profile/command-results"
     parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -116,15 +199,25 @@ def run_projected(argv: list[str], *, state_root: Path | None = None) -> tuple[C
             "stdoutBytes": stdout_path.stat().st_size, "stderrBytes": stderr_path.stat().st_size,
             "stdoutSha256": _digest(stdout_path), "stderrSha256": _digest(stderr_path),
         }
-        manifest = admit_command_artifact(manifest_value, artifact_directory=temp)
+        manifest = validate_command_manifest(manifest_value)
         manifest_data = canonical_bytes(manifest)
         manifest_path = temp / "manifest.json"
-        fd = os.open(manifest_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-        with os.fdopen(fd, "wb") as handle:
-            handle.write(manifest_data)
-            handle.flush()
-            os.fsync(handle.fileno())
-        lines, truncated = _projection_lines((temp / "stdout.bin", temp / "stderr.bin"))
+        _write_fsynced(manifest_path, manifest_data)
+        _fsync_directory(temp)
+        try:
+            admit_command_artifact(manifest_value, artifact_directory=temp)
+        except BaseException as error:
+            raise _quarantine(
+                temp=temp, parent=parent, ident=ident, manifest_value=manifest_value,
+                phase="artifact-admission", error=error,
+            ) from error
+        try:
+            lines, truncated = _projection_lines((temp / "stdout.bin", temp / "stderr.bin"))
+        except BaseException as error:
+            raise _quarantine(
+                temp=temp, parent=parent, ident=ident, manifest_value=manifest_value,
+                phase="projection", error=error,
+            ) from error
         digest = hashlib.sha256(manifest_data).hexdigest()
         while True:
             result_value = {
@@ -133,19 +226,40 @@ def run_projected(argv: list[str], *, state_root: Path | None = None) -> tuple[C
                 "artifact": str(final / "manifest.json"), "sha256": digest,
             }
             try:
-                result = admit_command_result(
-                    result_value, limit=RESULT_LIMIT, artifact_path=manifest_path
-                )
-            except ContractViolation as error:
-                if error.code != "command.projection-exceeded" or not lines:
+                try:
+                    result = admit_command_result(
+                        result_value, limit=RESULT_LIMIT, artifact_path=manifest_path
+                    )
+                except ContractViolation as error:
+                    if error.code == "command.projection-exceeded" and lines:
+                        lines.pop(0)
+                        truncated = True
+                        continue
                     raise
-                lines.pop(0)
-                truncated = True
-                continue
-            _fsync_directory(temp)
-            os.rename(temp, final)
-            _fsync_directory(parent)
+            except ContractViolation as error:
+                raise _quarantine(
+                    temp=temp, parent=parent, ident=ident, manifest_value=manifest_value,
+                    phase="result-admission", error=error,
+                ) from error
+            except BaseException as error:
+                raise _quarantine(
+                    temp=temp, parent=parent, ident=ident, manifest_value=manifest_value,
+                    phase="result-admission", error=error,
+                ) from error
+            try:
+                _fsync_directory(temp)
+                os.rename(temp, final)
+                _fsync_directory(parent)
+            except BaseException as error:
+                location = final if final.exists() else temp
+                raise _quarantine(
+                    temp=location, parent=parent, ident=ident, manifest_value=manifest_value,
+                    phase="publication", error=error,
+                ) from error
             return result, exit_code
+    except CommandQuarantined:
+        raise
     except BaseException:
-        shutil.rmtree(temp, ignore_errors=True)
+        if temp.exists():
+            shutil.rmtree(temp, ignore_errors=True)
         raise

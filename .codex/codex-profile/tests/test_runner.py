@@ -8,8 +8,11 @@ import sys
 import tracemalloc
 from pathlib import Path
 
-from codex_profile.contracts import canonical_bytes
-from codex_profile.runner import run_projected
+import pytest
+
+from codex_profile import runner
+from codex_profile.contracts import ContractViolation, canonical_bytes
+from codex_profile.runner import CommandQuarantined, run_projected
 
 
 def test_separate_binary_streams_and_hashes(tmp_path: Path) -> None:
@@ -63,3 +66,38 @@ def test_multimegabyte_newline_free_output_has_bounded_projection_memory(
     assert len(result.relevant_lines) == 1
     assert len(canonical_bytes(result)) <= 4096
     assert peak < 2 * 1024 * 1024
+
+
+def test_artifact_admission_failure_quarantines_completed_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def reject(*args, **kwargs):
+        raise ContractViolation("command.output-discarded", "forced")
+
+    monkeypatch.setattr(runner, "admit_command_artifact", reject)
+    with pytest.raises(CommandQuarantined) as raised:
+        run_projected([sys.executable, "-c", "print('retained')"], state_root=tmp_path)
+    error = raised.value
+    assert error.code == "command.output-discarded"
+    assert error.failure_phase == "artifact-admission"
+    quarantine = json.loads(error.artifact_path.read_text())
+    directory = error.artifact_path.parent
+    assert quarantine["failureCode"] == error.code
+    assert quarantine["manifestAvailable"]
+    assert hashlib.sha256((directory / "stdout.bin").read_bytes()).hexdigest() == (
+        quarantine["stdoutSha256"]
+    )
+    assert (directory / "manifest.json").is_file()
+
+
+def test_preflight_failure_prevents_child_execution(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("CODEX_PROFILE_CUE", str(tmp_path / "missing-cue"))
+    monkeypatch.setattr(
+        runner.subprocess,
+        "Popen",
+        lambda *args, **kwargs: pytest.fail("child launched before preflight"),
+    )
+    with pytest.raises(ContractViolation, match="contract.unavailable"):
+        run_projected(["tool"], state_root=tmp_path)

@@ -2,6 +2,7 @@ package codexprofile
 
 import (
 	"list"
+	"strings"
 	"time"
 )
 
@@ -63,6 +64,24 @@ import (
 	stderrBytes:      uint
 	stdoutSha256:     string & =~"^[0-9a-f]{64}$"
 	stderrSha256:     string & =~"^[0-9a-f]{64}$"
+})
+
+#CommandQuarantine: close({
+	schema:            "codex.command-quarantine.v0"
+	argv:              [#NonEmptyString, ...string] & list.MaxItems(4096)
+	workingDirectory:  #NonEmptyString
+	startedAt:         #Timestamp
+	durationSeconds:   number & >=0
+	exitCode:          int
+	signal:            uint | null
+	stdoutBytes:       uint
+	stderrBytes:       uint
+	stdoutSha256:      string & =~"^[0-9a-f]{64}$"
+	stderrSha256:      string & =~"^[0-9a-f]{64}$"
+	manifestAvailable: bool
+	failurePhase:      "artifact-admission" | "projection" | "result-admission" | "publication"
+	failureCode:       #NonEmptyString
+	failureDetail:     string & strings.MaxRunes(2048)
 })
 
 #GitObjectID: close({

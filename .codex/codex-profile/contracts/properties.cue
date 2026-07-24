@@ -63,10 +63,20 @@ package codexprofile
 
 #QualificationCase: close({
 	id:                #ID
-	mutationAttempted: true
+	mutationAttempted: bool
 	actualResult:      #PropertyExpectedResult
 	rejectionCode:     #ID | null
 	status:            "passed"
+	evidence:          #MutationEvidence
+})
+
+#MutationEvidence: close({
+	valueChanged:     bool
+	artifactsChanged: bool
+	rawDigests:       [#Digest, #Digest]
+	artifactDigests:  [#Digest, #Digest]
+	jsonDigests?:     [#Digest, #Digest]
+	markdownDigests?: [#Digest, #Digest]
 })
 
 #QualificationReport: close({

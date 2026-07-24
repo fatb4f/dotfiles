@@ -104,6 +104,30 @@ class CommandManifest(ContractModel):
     stdout_sha256: Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
     stderr_sha256: Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
 
+FailurePhase = Literal[
+    "artifact-admission", "projection", "result-admission", "publication"
+]
+
+
+class CommandQuarantine(ContractModel):
+    schema_: Literal["codex.command-quarantine.v0"] = Field(alias="schema")
+    argv: Annotated[
+        list[StrictStr], Field(min_length=1, max_length=4096), AfterValidator(_executable_argv)
+    ]
+    working_directory: NonEmpty
+    started_at: AwareDatetime
+    duration_seconds: NonNegativeNumber
+    exit_code: StrictInt
+    signal: NonNegativeInt | None
+    stdout_bytes: NonNegativeInt
+    stderr_bytes: NonNegativeInt
+    stdout_sha256: Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
+    stderr_sha256: Annotated[StrictStr, Field(pattern=r"^[0-9a-f]{64}$")]
+    manifest_available: bool
+    failure_phase: FailurePhase
+    failure_code: NonEmpty
+    failure_detail: Annotated[StrictStr, Field(max_length=2048)]
+
 
 def canonical_bytes(model: BaseModel) -> bytes:
     value = model.model_dump(mode="json", by_alias=True, exclude_none=False)
@@ -133,7 +157,7 @@ def _cue_vet(value: BaseModel, definition: str, code: str) -> None:
     root = _contract_root()
     try:
         with tempfile.NamedTemporaryFile(
-            mode="wb", suffix=".json", dir=root, delete=False
+            mode="wb", suffix=".json", delete=False
         ) as handle:
             handle.write(canonical_bytes(value))
             input_path = Path(handle.name)
@@ -201,6 +225,14 @@ def admit_command_artifact(
         if digest.hexdigest() != expected_digest:
             raise ContractViolation("command.output-discarded", f"{name} hash mismatch")
     return manifest
+
+
+def validate_command_manifest(value: object) -> CommandManifest:
+    return _validate(CommandManifest, value, "command.output-discarded")
+
+
+def validate_command_result(value: object) -> CommandResult:
+    return _validate(CommandResult, value, "command.projection-exceeded")
 
 
 def admit_command_result(
