@@ -24,7 +24,7 @@ cue vet ./.codex/codex-profile/contracts
 cue vet -c ./.codex/codex-profile/contracts
 (cd .codex/codex-profile/contracts && cue vet ./fixtures/positive)
 python .codex/codex-profile/tests/test_replay.py -v
-uv run --project .codex/codex-profile -- python .codex/codex-profile/tests/test_ingestion.py -v
+uv run -- python .codex/codex-profile/tests/test_ingestion.py -v
 python .codex/codex-profile/scripts/verify_upstream.py --source-root /path/to/openai-codex-tag
 ```
 
@@ -33,14 +33,14 @@ Each immediate child of `contracts/fixtures/negative` must fail `cue vet`.
 MVP CLI:
 
 ```bash
-uv run --project .codex/codex-profile -- codex-profile ingest \
+uv run -- codex-profile ingest \
   --root ~/.local/share/codex \
   --repo /home/_404/src/dotfiles \
   --database ~/.local/state/codex-profile/profile.duckdb \
   --strict
-uv run --project .codex/codex-profile -- codex-profile analyze \
+uv run -- codex-profile analyze \
   --database ~/.local/state/codex-profile/profile.duckdb
-uv run --project .codex/codex-profile -- codex-profile export \
+uv run -- codex-profile export \
   --database ~/.local/state/codex-profile/profile.duckdb \
   --out /tmp/codex-profile
 ```
@@ -50,7 +50,7 @@ uv run --project .codex/codex-profile -- codex-profile export \
 Create an explicit packet before resetting a long-running session:
 
 ```bash
-uv run --project .codex/codex-profile -- codex-profile handoff create \
+uv run -- codex-profile handoff create \
   --objective "finish the requested change" \
   --current-operation "implementing the adapter" \
   --next-operation "run qualification" \
@@ -70,7 +70,7 @@ the printed authoritative JSON path and continue `nextOperation`.
 ## Bounded command projection
 
 ```bash
-uv run --project .codex/codex-profile -- \
+uv run -- \
   codex-profile run-projected -- pytest -q
 ```
 

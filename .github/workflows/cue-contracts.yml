@@ -43,7 +43,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y jq
           python -m pip install "uv==${UV_VERSION}"
-          uv sync --project .codex/context-workbook
+          uv sync
 
       - name: Print tool versions
         run: |
@@ -63,35 +63,35 @@ jobs:
 
       - name: Run context graph authority validation
         run: |
-          uv run --project .codex/context-workbook \
+          uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-authority-test.sh
 
       - name: Run context graph admission validation
         run: |
-          uv run --project .codex/context-workbook \
+          uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-admission-test.sh
 
       - name: Run context graph property validation
         run: |
-          uv run --project .codex/context-workbook \
+          uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-graph-property-test.sh
 
       - name: Run context workbook DSPy validation
         run: |
-          uv run --project .codex/context-workbook \
+          uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-workbook-test.sh dspy
 
       - name: Compile context workbook
         run: |
-          uv run --project .codex/context-workbook \
+          uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- python -m compileall -q .codex/context-workbook
@@ -99,22 +99,22 @@ jobs:
       - name: Run context workbook CLI tests
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_cli
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v test_cli
 
       - name: Run context workbook model tests
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_models
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v test_models
 
       - name: Run context workbook DSPy program tests
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v test_dspy_program
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v test_dspy_program
 
       - name: Run context workbook engine tests A
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v \
             test_engine.EngineTests.test_establishes_cue_valid_context_and_packet \
             test_engine.EngineTests.test_requested_projection_ids_gate_projection_creation \
             test_engine.EngineTests.test_request_boundary_scopes_all_reasoner_inputs \
@@ -127,7 +127,7 @@ jobs:
       - name: Run context workbook engine tests B1
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v \
             test_engine.EngineTests.test_unknown_provider_fails_closed \
             test_engine.EngineTests.test_outside_file_fails_closed \
             test_engine.EngineTests.test_request_file_cannot_widen_configured_paths \
@@ -136,28 +136,28 @@ jobs:
       - name: Run context workbook engine snapshot tests
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v \
             test_engine.EngineTests.test_resolved_revision_keeps_config_and_state_on_same_snapshot \
             test_engine.EngineTests.test_repository_observation_records_resolved_commit
 
       - name: Run default reasoner engine test
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v \
             test_engine.EngineTests.test_missing_model_uses_chatgpt_authenticated_codex_default
 
       - name: Run unavailable-runtime engine test
         if: always()
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v \
             test_engine.EngineTests.test_runtime_auth_failure_uses_shared_fail_closed_decision
 
       - name: Run gap-dominance engine test
         if: always()
         run: |
           cd .codex/context-workbook/tests
-          PYTHONPATH=../src uv run --project .. -- python -m unittest -v \
+          PYTHONPATH=../src uv run --project "$GITHUB_WORKSPACE" -- python -m unittest -v \
             test_engine.EngineTests.test_complete_gap_map_overrides_sufficiency_claim
 
       - name: Run direct CUE vet qualification
@@ -170,7 +170,7 @@ jobs:
           CONTEXT_GIT_ASSERTION_CANDIDATE_DIR: ${{ runner.temp }}/context-git-assertion-candidates
         run: |
           set -o pipefail
-          PYTHONPATH=.codex/context-workbook/src uv run --project .codex/context-workbook \
+          PYTHONPATH=.codex/context-workbook/src uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- pytest .codex/context-workbook/tests 2>&1 | tee "$RUNNER_TEMP/context-workbook-pytest.log"
@@ -193,7 +193,7 @@ jobs:
 
       - name: Check deterministic plugin projections
         run: |
-          uv run --project .codex/context-workbook -- \
+          uv run --project . -- \
             python -m context_workbook.projections --repo-root "$GITHUB_WORKSPACE" --check
 
       - name: Prove legacy lexical routing is absent
@@ -207,7 +207,7 @@ jobs:
 
       - name: Run context workbook hook validation
         run: |
-          uv run --project .codex/context-workbook \
+          uv run --project . \
             --with "hypothesis==${HYPOTHESIS_VERSION}" \
             --with "pytest==${PYTEST_VERSION}" \
             -- bash .github/scripts/context-workbook-test.sh hook

@@ -14,7 +14,7 @@ This directory is the canonical executable program for Issue #54.
 ## Bootstrap
 
 ```sh
-uv sync --project .codex/context-workbook
+uv sync
 ```
 
 Production execution defaults to `codex/gpt-5.6-sol`; the Codex CLI reuses its cached ChatGPT login.
@@ -33,7 +33,7 @@ bash .github/scripts/context-workbook-test.sh
 ## Projection regeneration
 
 ```sh
-uv run --project .codex/context-workbook -- \
+uv run -- \
   python -m context_workbook.projections --repo-root .
 ```
 
