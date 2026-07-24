@@ -38,7 +38,7 @@ import (
 	mode:                #NonEmptyString
 	kind:                #GitCommittedKind
 	objectID:            #GitObjectID
-	gitSizeBytes?:       int & >=0
+	size?:               int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]
@@ -152,6 +152,9 @@ import (
 						snapshotOccurrenceIdentity: snapshotOccurrenceID
 						gitMode:                    occurrence.mode
 						gitKind:                    occurrence.kind
+						if occurrence.size != _|_ {
+							gitSizeBytes: occurrence.size
+						}
 					}
 				}
 			}

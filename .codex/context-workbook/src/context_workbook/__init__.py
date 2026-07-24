@@ -1,14 +1,5 @@
-"""Stable import surface for the dotfiles context workbook."""
+"""Authoritative CUE-rooted context graph service."""
 
-from .engine import ContextEngine, EngineError, establish_context
-from .models import ContextDecision, ContextPacket, ContextRequest, ContextState
+from .graph_service import GraphServiceError, RevisionBinding, bind_revision
 
-__all__ = [
-    "ContextDecision",
-    "ContextEngine",
-    "ContextPacket",
-    "ContextRequest",
-    "ContextState",
-    "EngineError",
-    "establish_context",
-]
+__all__ = ["GraphServiceError", "RevisionBinding", "bind_revision"]

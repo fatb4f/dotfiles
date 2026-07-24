@@ -43,6 +43,20 @@ func TestHydrateOverlayRepresentsIndexAndWorktreeSeparately(t *testing.T) {
 	}
 }
 
+func TestOverlayObservationUsesSizeWireField(t *testing.T) {
+	fixture := newOverlayFixture(t)
+	payload, err := MarshalOverlayCanonical(fixture.Dirty)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(payload, []byte(`"size":`)) {
+		t.Fatal("overlay observation omitted size wire field")
+	}
+	if bytes.Contains(payload, []byte(`"gitSizeBytes":`)) {
+		t.Fatal("overlay observation leaked projection-only gitSizeBytes field")
+	}
+}
+
 func TestCleanOverlayIsEmpty(t *testing.T) {
 	fixture := newFixtureRepository(t)
 	observation := hydrateOverlayFixture(t, fixture)

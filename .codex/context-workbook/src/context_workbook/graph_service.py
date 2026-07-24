@@ -3,14 +3,36 @@
 from __future__ import annotations
 
 import hashlib
+import argparse
+import json
 import os
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Literal
 
 from .repository import RepositoryError, RepositorySnapshot
+
+
+GIT_HYDRATOR_SOURCES = (
+    ".codex/context-hydrators/git/cmd/context-git-hydrator/main.go",
+    ".codex/context-hydrators/git/go.mod",
+    ".codex/context-hydrators/git/go.sum",
+    ".codex/context-hydrators/git/internal/hydrator/hydrator.go",
+    ".codex/context-hydrators/git/internal/hydrator/json.go",
+    ".codex/context-hydrators/git/internal/hydrator/observation.go",
+    ".codex/context-hydrators/git/internal/hydrator/overlay.go",
+    ".codex/context-hydrators/git/internal/hydrator/overlay_observation.go",
+    ".codex/context-hydrators/git/internal/hydrator/overlay_properties.go",
+    ".codex/context-hydrators/git/internal/hydrator/overlay_request.go",
+    ".codex/context-hydrators/git/internal/hydrator/overlay_types.go",
+    ".codex/context-hydrators/git/internal/hydrator/properties.go",
+    ".codex/context-hydrators/git/internal/hydrator/request.go",
+    ".codex/context-hydrators/git/internal/hydrator/types.go",
+    ".codex/context-hydrators/git/internal/identity/identity.go",
+)
 
 
 class GraphServiceError(RuntimeError):
@@ -133,3 +155,143 @@ def qualified_hydrator(
         os.chmod(built, 0o755)
         os.replace(built, target)
     return target, digest
+
+
+def _canonical(value: object) -> bytes:
+    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+
+
+def _hydrate(hydrator: Path, command: str, request: dict[str, object]) -> dict[str, object]:
+    with tempfile.TemporaryDirectory(prefix="context-graph-hydration-") as temporary:
+        request_path = Path(temporary) / "request.json"
+        request_path.write_bytes(_canonical(request))
+        process = subprocess.run(
+            [str(hydrator), command, "--request", str(request_path)],
+            capture_output=True,
+            check=False,
+            timeout=120,
+        )
+    if process.returncode:
+        raise GraphServiceError(
+            "hydration",
+            f"hydrator.{command}-failed",
+            process.stderr.decode(errors="replace").strip() or f"{command} hydration failed",
+        )
+    try:
+        payload = json.loads(process.stdout)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise GraphServiceError(
+            "hydration", "hydrator.output-invalid", "hydrator returned invalid JSON"
+        ) from error
+    if not isinstance(payload, dict):
+        raise GraphServiceError(
+            "hydration", "hydrator.output-invalid", "hydrator returned a non-object"
+        )
+    return payload
+
+
+def hydrate_revision(
+    *,
+    binding: RevisionBinding,
+    repository_id: str,
+    hydrator: Path,
+) -> tuple[dict[str, object], dict[str, object] | None]:
+    committed = _hydrate(
+        hydrator,
+        "committed",
+        {
+            "schema": "kernel.git-committed-snapshot-request.v0",
+            "repositoryID": repository_id,
+            "path": str(binding.snapshot.root),
+            "revision": binding.snapshot.resolved_revision,
+        },
+    )
+    overlay = None
+    if binding.overlay_enabled:
+        overlay = _hydrate(
+            hydrator,
+            "overlay",
+            {
+                "schema": "kernel.git-overlay-request.v0",
+                "repositoryID": repository_id,
+                "path": str(binding.snapshot.root),
+                "baseRevision": {
+                    "format": "sha1",
+                    "hex": binding.snapshot.resolved_revision,
+                },
+            },
+        )
+    return committed, overlay
+
+
+def _failure(request_id: str, error: GraphServiceError) -> dict[str, object]:
+    return {
+        "schema": "dotfiles.context-graph-service-result.v0",
+        "status": "failure",
+        "failure": {
+            "schema": "dotfiles.context-graph-failure.v0",
+            "requestID": request_id,
+            "stage": error.stage,
+            "code": error.code,
+            "message": str(error),
+            "details": {},
+        },
+    }
+
+
+def main(arguments: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--repo-root", type=Path, default=Path.cwd())
+    parser.add_argument("--request-file", type=Path, required=True)
+    parser.add_argument("--proposal-file", type=Path)
+    args = parser.parse_args(arguments)
+    request_id = "request.unknown"
+    try:
+        request = json.loads(args.request_file.read_text(encoding="utf-8"))
+        if not isinstance(request, dict):
+            raise GraphServiceError("proposal", "request.invalid", "request must be an object")
+        request_id = request.get("requestID", request_id)
+        if not isinstance(request_id, str):
+            request_id = "request.unknown"
+        binding = bind_revision(
+            args.repo_root,
+            str(request.get("revision", "")),
+            str(request.get("overlayMode", "")),  # type: ignore[arg-type]
+        )
+        cache_root = Path(
+            os.environ.get(
+                "CONTEXT_GRAPH_CACHE",
+                str(
+                    Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
+                    / "dotfiles-context-graph"
+                ),
+            )
+        )
+        hydrator, _ = qualified_hydrator(
+            snapshot=binding.snapshot,
+            source_paths=GIT_HYDRATOR_SOURCES,
+            cache_root=cache_root,
+        )
+        hydrate_revision(
+            binding=binding,
+            repository_id=str(request.get("repository", "")),
+            hydrator=hydrator,
+        )
+        raise GraphServiceError(
+            "selection",
+            "selection.cue-evaluation-required",
+            "hydration succeeded but no concrete CUE selection evaluation was produced",
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        result = _failure(
+            request_id,
+            GraphServiceError("proposal", "request.invalid", str(error)),
+        )
+    except GraphServiceError as error:
+        result = _failure(request_id, error)
+    print(json.dumps(result, sort_keys=True, separators=(",", ":")))
+    return 0 if result["status"] == "success" else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

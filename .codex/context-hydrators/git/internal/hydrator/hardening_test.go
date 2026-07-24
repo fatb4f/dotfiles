@@ -45,6 +45,20 @@ func TestEquivalentRevisionSelectorsProduceIdenticalObservation(t *testing.T) {
 	}
 }
 
+func TestCommittedObservationUsesSizeWireField(t *testing.T) {
+	fixture := newFixtureRepository(t)
+	payload, err := MarshalCanonical(hydrateFixture(t, fixture, fixture.Commits["F"]))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(payload, []byte(`"size":`)) {
+		t.Fatal("committed observation omitted size wire field")
+	}
+	if bytes.Contains(payload, []byte(`"gitSizeBytes":`)) {
+		t.Fatal("committed observation leaked projection-only gitSizeBytes field")
+	}
+}
+
 func TestDefaultConfigRejectsUnboundBuildDigest(t *testing.T) {
 	previous := BuildHydratorDigest
 	BuildHydratorDigest = UnboundHydratorDigest

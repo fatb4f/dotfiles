@@ -27,7 +27,7 @@ type Occurrence struct {
 	Mode     string            `json:"mode"`
 	Kind     string            `json:"kind"`
 	ObjectID identity.ObjectID `json:"objectID"`
-	Size     *int64            `json:"gitSizeBytes,omitempty"`
+	Size     *int64            `json:"size,omitempty"`
 }
 
 type HydratorIdentity struct {

@@ -11,6 +11,7 @@ dependencies = [
 
 [project.scripts]
 dotfiles-context-workbook = "context_workbook.cli:main"
+dotfiles-context-graph = "context_workbook.graph_service:main"
 
 [tool.uv]
 package = true

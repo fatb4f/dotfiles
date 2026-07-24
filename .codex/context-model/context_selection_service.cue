@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"list"
+	"strings"
 )
 
 // The application boundary is deliberately smaller than the workbook request.
@@ -58,18 +59,18 @@ import (
 })
 
 #ContextSelectionLimits: close({
-	maxDepth:             int & >=0 & <=8 | *8
-	maxRoots:             int & >=1 | *64
-	maxModules:           int & >=1 | *8
-	maxNamespaces:        int & >=1 | *64
-	maxMembers:           int & >=1 | *256
-	maxEntities:          int & >=1 | *320
-	maxFiles:             int & >=1 | *32
-	maxSelectedFileBytes: int & >=1 | *1048576
-	maxRelationships:     int & >=1 | *512
-	maxEvidence:          int & >=1 | *128
-	maxPredicates:        int & >=1 | *8
-	maxPacketBytes:       int & >=1 | *65536
+	maxDepth:             8
+	maxRoots:             64
+	maxModules:           8
+	maxNamespaces:        64
+	maxMembers:           256
+	maxEntities:          320
+	maxFiles:             32
+	maxSelectedFileBytes: 1048576
+	maxRelationships:     512
+	maxEvidence:          128
+	maxPredicates:        8
+	maxPacketBytes:       65536
 })
 
 #ContextSelectionPolicy: close({
@@ -180,6 +181,42 @@ import (
 	entities: [...#ContextTraversalRecord]
 })
 
+#ContextTraversalStep: {
+	snapshot:   #ContextGraphSnapshot
+	predicates: [...#ContextPredicate]
+	previous:   [...#ContextTraversalRecord]
+	visited:    [...#ContextTraversalRecord]
+	distance:   int & >=1 & <=8
+
+	_candidates: {
+		for _, relationship in snapshot.relationships
+		if len([for record in previous
+		if record.entity == relationship.subject {record}]) > 0 &&
+			len([for predicate in predicates
+			if predicate == relationship.predicate {predicate}]) > 0 &&
+			len([for record in visited
+			if record.entity == relationship.object {record}]) == 0 {
+			"\(relationship.object.kind):\(relationship.object.id)": relationship.object
+		}
+	}
+	records: [for _, entity in _candidates {
+		let predecessors = list.SortStrings([for _, relationship in snapshot.relationships
+		if relationship.object == entity &&
+			len([for record in previous
+			if record.entity == relationship.subject {record}]) > 0 &&
+			len([for predicate in predicates
+			if predicate == relationship.predicate {predicate}]) > 0 {
+			relationship.subject.id
+		}])
+		{
+			entity:      entity
+			distance:    distance
+			direction:   "outgoing"
+			predecessor: predecessors[0]
+		}
+	}]
+}
+
 #ContextSelectionProof: close({
 	schema:     "dotfiles.context-selection-proof.v0"
 	snapshotID: #Digest
@@ -230,14 +267,116 @@ import (
 })
 
 #ContextSelectionEvaluation: close({
-	request:       #ContextApplicationRequest
-	proposal:      #ContextRootProposal
-	policy:        #ContextSelectionPolicy
-	snapshot:      #ContextGraphSnapshot
-	effectiveView: #GitEffectivePathView
-	proof:         #ContextSelectionProof
-	resolution:    #ContextGraphResolution
-	packet:        #ContextPacketV0Projection
+	request:             #ContextApplicationRequest
+	proposal:            #ContextRootProposal
+	policy:              #ContextSelectionPolicy
+	committedProjection: #GitCommittedSnapshotProjection
+	overlayProjection:   #GitOverlayProjection
+	effectivePathEvaluation: #GitEffectivePathEvaluation & {
+		snapshotID: overlayProjection.graph.snapshotID
+
+		committed: [for occurrence in committedProjection.observation.occurrences {
+			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
+			))
+			{
+				path:       occurrence.path
+				status:     "present"
+				kind:       occurrence.kind
+				memberID:   computedMemberID
+				evidenceID: committedProjection.collected.state.evidenceID
+				if occurrence.size != _|_ {
+					gitSizeBytes: occurrence.size
+				}
+			}
+		}]
+		index: [for occurrence in overlayProjection.observation.index.occurrences {
+			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+				overlayProjection.observation.repositoryID + "\u0000" +
+					overlayProjection.observation.baseRevision.format + "\u0000" +
+					overlayProjection.observation.baseRevision.hex + "\u0000index\u0000" +
+					occurrence.path,
+			))
+			{
+				path: occurrence.path
+				if occurrence.status == "deleted" {
+					status: "deleted"
+					kind:   "tombstone"
+				}
+				if occurrence.status != "deleted" {
+					status: "present"
+					kind:   occurrence.kind
+				}
+				memberID:   computedMemberID
+				evidenceID: overlayProjection.collected.index.state.evidenceID
+				if occurrence.size != _|_ {
+					gitSizeBytes: occurrence.size
+				}
+			}
+		}]
+		worktree: [for occurrence in overlayProjection.observation.worktree.occurrences {
+			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+				overlayProjection.observation.repositoryID + "\u0000" +
+					overlayProjection.observation.baseRevision.format + "\u0000" +
+					overlayProjection.observation.baseRevision.hex + "\u0000worktree\u0000" +
+					occurrence.path,
+			))
+			{
+				path: occurrence.path
+				if occurrence.status == "deleted" {
+					status: "deleted"
+					kind:   "tombstone"
+				}
+				if occurrence.status != "deleted" {
+					status: "present"
+					kind:   occurrence.kind
+				}
+				memberID:   computedMemberID
+				evidenceID: overlayProjection.collected.worktree.state.evidenceID
+				if occurrence.size != _|_ {
+					gitSizeBytes: occurrence.size
+				}
+			}
+		}]
+		_pathSet: {
+			for occurrence in committed {
+				"\(occurrence.path)": true
+			}
+			for occurrence in index {
+				"\(occurrence.path)": true
+			}
+			for occurrence in worktree {
+				"\(occurrence.path)": true
+			}
+		}
+		allPaths: [for path, _ in _pathSet {path}]
+	}
+	snapshot:      overlayProjection.graph
+	effectiveView: effectivePathEvaluation.view
+	rootCatalog: #ContextRootCatalog & {
+		requestID:  request.requestID
+		snapshotID: snapshot.snapshotID
+		memberIDs: [for occurrence in effectiveView.paths
+		if occurrence.status == "present" &&
+			len([for allowed in request.allowedPaths
+			if allowed == "." || occurrence.path == allowed ||
+				strings.HasPrefix(occurrence.path, allowed + "/") {allowed}]) > 0 {
+			occurrence.memberID
+		}]
+		namespaceIDs: [for id, _ in snapshot.namespaces {id}]
+		paths: [for occurrence in effectiveView.paths
+		if occurrence.status == "present" &&
+			len([for allowed in request.allowedPaths
+			if allowed == "." || occurrence.path == allowed ||
+				strings.HasPrefix(occurrence.path, allowed + "/") {allowed}]) > 0 {
+			occurrence.path
+		}]
+	}
+	proof:      #ContextSelectionProof
+	resolution: #ContextGraphResolution
+	packet:     #ContextPacketV0Projection
+
+	_committedBinding: overlayProjection.committed.observationDigest & committedProjection.observationDigest
 
 	_requestProposal:         request.requestID & proposal.requestID
 	_proposalSnapshot:        proposal.snapshotID & snapshot.snapshotID
@@ -252,7 +391,44 @@ import (
 	_packetDigest:            packet.packet.contextDigest & proof.contextDigest
 	_packetFiles:             packet.packet.selected.files & proof.effectiveFiles
 
-	_rootCount:            len(proposal.memberIDs) + len(proposal.namespaceIDs) + len(proposal.pathPrefixes)
+	_requestMembersCatalogued: [for root in request.roots.memberIDs {
+		[for id in rootCatalog.memberIDs if id == root {id}] & [_, ...]
+	}]
+	_proposalMembersCatalogued: [for root in proposal.memberIDs {
+		[for id in rootCatalog.memberIDs if id == root {id}] & [_, ...]
+	}]
+	_requestNamespacesCatalogued: [for root in request.roots.namespaceIDs {
+		[for id in rootCatalog.namespaceIDs if id == root {id}] & [_, ...]
+	}]
+	_proposalNamespacesCatalogued: [for root in proposal.namespaceIDs {
+		[for id in rootCatalog.namespaceIDs if id == root {id}] & [_, ...]
+	}]
+	_requestPrefixesBounded: [for root in request.roots.pathPrefixes {
+		[for allowed in request.allowedPaths
+		if allowed == "." || root == allowed || strings.HasPrefix(root, allowed + "/") {allowed}] & [_, ...]
+		[for path in rootCatalog.paths
+		if path == root || strings.HasPrefix(path, root + "/") {path}] & [_, ...]
+	}]
+	_proposalPrefixesBounded: [for root in proposal.pathPrefixes {
+		[for allowed in request.allowedPaths
+		if allowed == "." || root == allowed || strings.HasPrefix(root, allowed + "/") {allowed}] & [_, ...]
+		[for path in rootCatalog.paths
+		if path == root || strings.HasPrefix(path, root + "/") {path}] & [_, ...]
+	}]
+	_effectiveFilesBounded: [for path in proof.effectiveFiles {
+		[for allowed in request.allowedPaths
+		if allowed == "." || path == allowed || strings.HasPrefix(path, allowed + "/") {allowed}] & [_, ...]
+	}]
+
+	_rootSet: {
+		for id in request.roots.memberIDs {"member:\(id)": true}
+		for id in proposal.memberIDs {"member:\(id)": true}
+		for id in request.roots.namespaceIDs {"namespace:\(id)": true}
+		for id in proposal.namespaceIDs {"namespace:\(id)": true}
+		for path in request.roots.pathPrefixes {"path:\(path)": true}
+		for path in proposal.pathPrefixes {"path:\(path)": true}
+	}
+	_rootCount:            len(_rootSet)
 	_rootsBounded:         _rootCount <= policy.limits.maxRoots
 	_modulesBounded:       proof.counters.modules <= policy.limits.maxModules
 	_namespacesBounded:    proof.counters.namespaces <= policy.limits.maxNamespaces

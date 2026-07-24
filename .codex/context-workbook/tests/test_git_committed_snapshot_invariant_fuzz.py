@@ -374,7 +374,7 @@ def valid_observations(draw: st.DrawFn) -> dict[str, Any]:
                 "mode": "100644",
                 "kind": "blob",
                 "objectID": {"format": "sha1", "hex": blob},
-                "gitSizeBytes": 1,
+                "size": 1,
             },
         ],
         "hydrator": {
@@ -387,7 +387,7 @@ def valid_observations(draw: st.DrawFn) -> dict[str, Any]:
 @st.composite
 def boundary_observations(draw: st.DrawFn) -> dict[str, Any]:
     observation = draw(valid_observations())
-    observation["occurrences"][-1]["gitSizeBytes"] = draw(st.sampled_from([0, 2**63 - 1]))
+    observation["occurrences"][-1]["size"] = draw(st.sampled_from([0, 2**63 - 1]))
     return observation
 
 
@@ -438,7 +438,7 @@ def _valid_projection() -> dict[str, Any]:
                 "mode": "100644",
                 "kind": "blob",
                 "objectID": {"format": "sha1", "hex": "c" * 40},
-                "gitSizeBytes": 1,
+                "size": 1,
             }
         ],
         "hydrator": {
@@ -499,14 +499,14 @@ def invalid_snapshot_mutations(draw: st.DrawFn) -> MutationCase:
                 "mode": "120000",
                 "kind": "symlink",
                 "objectID": {"format": "sha1", "hex": "d" * 40},
-                "gitSizeBytes": 8,
+                "size": 8,
             },
             {
                 "path": "link/child",
                 "mode": "100644",
                 "kind": "blob",
                 "objectID": {"format": "sha1", "hex": "e" * 40},
-                "gitSizeBytes": 1,
+                "size": 1,
             },
         ]
     elif property_id == "opaque-submodule-descendant-rejected":
@@ -522,7 +522,7 @@ def invalid_snapshot_mutations(draw: st.DrawFn) -> MutationCase:
                 "mode": "100644",
                 "kind": "blob",
                 "objectID": {"format": "sha1", "hex": "e" * 40},
-                "gitSizeBytes": 1,
+                "size": 1,
             },
         ]
     else:  # pragma: no cover
@@ -711,7 +711,7 @@ def test_primary_invariants_have_metamorphic_hypothesis_cases(
                 "mode": "100644",
                 "kind": "blob",
                 "objectID": {"format": "sha1", "hex": "f" * 40},
-                "gitSizeBytes": 0,
+                "size": 0,
             }
         )
         after_identity_index = -2
@@ -727,7 +727,7 @@ def test_primary_invariants_have_metamorphic_hypothesis_cases(
             "objectID": {"format": "sha1", "hex": "d" * 40},
         }
         if kind == "symlink":
-            opaque["gitSizeBytes"] = 0
+            opaque["size"] = 0
         after["occurrences"] = [opaque]
         accepted, diagnostics = _cue_accepts("#GitCommittedSnapshotObservation", after)
         assert accepted, diagnostics
@@ -737,7 +737,7 @@ def test_primary_invariants_have_metamorphic_hypothesis_cases(
                 "mode": "100644",
                 "kind": "blob",
                 "objectID": {"format": "sha1", "hex": "e" * 40},
-                "gitSizeBytes": 0,
+                "size": 0,
             }
         )
         accepted, _ = _cue_accepts("#GitCommittedSnapshotObservation", after)

@@ -249,7 +249,7 @@ identityProjection: #GitCommittedSnapshotProjection & {{
             mode: "100644"
             kind: "blob"
             objectID: {{format: "sha1", hex: "cccccccccccccccccccccccccccccccccccccccc"}}
-            gitSizeBytes: 1
+            size: 1
         }}]
         hydrator: {{
             identity: "hydrator.context-git"

@@ -42,16 +42,8 @@ class CliTests(unittest.TestCase):
             check=False,
             timeout=60,
         )
-        self.assertEqual(process.returncode, 0, process.stderr)
-        result = json.loads(process.stdout)
-        self.assertEqual(result["schema"], "dotfiles.context-workbook-result.v0")
-        self.assertEqual(result["state"]["sufficiency"]["state"], "sufficient")
-        self.assertRegex(
-            result["state"]["request"]["repository"]["revision"],
-            r"^[0-9a-f]{40}$",
-        )
-        self.assertIn("hook", result)
-        self.assertNotIn("codeIntel", result)
+        self.assertEqual(process.returncode, 2)
+        self.assertIn("prompt-only selection fails closed", process.stderr)
 
     def test_projection_output_must_be_requested(self) -> None:
         environment = dict(os.environ)
@@ -77,7 +69,7 @@ class CliTests(unittest.TestCase):
             timeout=60,
         )
         self.assertEqual(resolver_only.returncode, 2)
-        self.assertIn("code-intel projection was not requested", resolver_only.stderr)
+        self.assertIn("prompt-only selection fails closed", resolver_only.stderr)
 
         config, snapshot = load_workbook_config(REPO_ROOT)
         request = build_request(
@@ -109,9 +101,8 @@ class CliTests(unittest.TestCase):
                 timeout=60,
             )
         self.assertEqual(code_intel_only.returncode, 2)
-        self.assertIn(
-            "agent-context-resolver projection was not requested", code_intel_only.stderr
-        )
+        failure = json.loads(code_intel_only.stdout)
+        self.assertEqual(failure["status"], "failure")
 
     def test_recorded_decision_requires_explicit_test_mode(self) -> None:
         environment = dict(os.environ)
@@ -138,7 +129,7 @@ class CliTests(unittest.TestCase):
             timeout=60,
         )
         self.assertEqual(process.returncode, 2)
-        self.assertIn("recorded predictions are restricted to explicit test mode", process.stderr)
+        self.assertIn("prompt-only selection fails closed", process.stderr)
 
     def test_installed_adapters_discover_workbook_from_git_worktree(self) -> None:
         environment = dict(os.environ)
@@ -193,9 +184,9 @@ class CliTests(unittest.TestCase):
         self.assertEqual(process.returncode, 0, process.stderr)
         result = json.loads(process.stdout)
         context = json.loads(result["hookSpecificOutput"]["additionalContext"])
-        self.assertEqual(context["sufficiency"]["state"], "sufficient")
-        self.assertEqual(cli_process.returncode, 0, cli_process.stderr)
-        self.assertEqual(json.loads(cli_process.stdout)["sufficiency"]["state"], "sufficient")
+        self.assertEqual(context["sufficiency"]["state"], "insufficient")
+        self.assertIsNone(context["context"])
+        self.assertEqual(cli_process.returncode, 2)
 
 
 if __name__ == "__main__":
