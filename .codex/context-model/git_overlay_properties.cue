@@ -11,9 +11,11 @@ import (
 #GitIndexOverlay: {
 	Occurrences=occurrences: [...#GitIndexOverlayOccurrence]
 	_opaqueDescendants: [
-		for opaque in Occurrences if opaque.status != "deleted" && (opaque.kind == "symlink" || opaque.kind == "submodule") {
-			for candidate in Occurrences if strings.HasPrefix(candidate.path, opaque.path + "/") {
-				_|_("opaque index occurrence has descendant: " + candidate.path)
+		for opaque in Occurrences if opaque.status != "deleted" {
+			if opaque.kind == "symlink" || opaque.kind == "submodule" {
+				for candidate in Occurrences if strings.HasPrefix(candidate.path, opaque.path + "/") {
+					_|_("opaque index occurrence has descendant: " + candidate.path)
+				}
 			}
 		}
 	]
@@ -22,9 +24,11 @@ import (
 #GitWorktreeOverlay: {
 	Occurrences=occurrences: [...#GitWorktreeOverlayOccurrence]
 	_opaqueDescendants: [
-		for opaque in Occurrences if opaque.status != "deleted" && (opaque.kind == "symlink" || opaque.kind == "submodule") {
-			for candidate in Occurrences if strings.HasPrefix(candidate.path, opaque.path + "/") {
-				_|_("opaque worktree occurrence has descendant: " + candidate.path)
+		for opaque in Occurrences if opaque.status != "deleted" {
+			if opaque.kind == "symlink" || opaque.kind == "submodule" {
+				for candidate in Occurrences if strings.HasPrefix(candidate.path, opaque.path + "/") {
+					_|_("opaque worktree occurrence has descendant: " + candidate.path)
+				}
 			}
 		}
 	]

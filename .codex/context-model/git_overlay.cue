@@ -22,52 +22,175 @@ import (
 #GitOverlayStatus:      "added" | "modified" | "deleted" | "untracked"
 #GitOverlayPresentKind: "blob" | "symlink" | "submodule"
 
-#GitOverlayPresentOccurrence: close({
+#GitIndexAddedFileOccurrence: close({
 	OccurrencePath=path: #Path & !="."
-	layer:               #GitOverlayLayer
-	status:              #GitOverlayStatus
-	modeChanged:         bool
-	mode:                #NonEmptyString
-	kind:                #GitOverlayPresentKind
-	objectID:            #GitObjectID
-	size?:               int & >=0
+	layer:               "index"
+	status:              "added"
+	modeChanged:         false
+
+	mode:     #NonEmptyString
+	kind:     "blob" | "symlink"
+	objectID: #GitObjectID
+	size?:    int & >=0
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 	_modeKnown:      #GitCommittedModeKind[mode]
 	_kindCompatible: kind & _modeKnown
-
-	if status != "modified" {
-		modeChanged: false
-	}
-	if kind == "submodule" {
-		size?: _|_
-	}
 })
 
-// A deletion is an occurrence fact, not content. The closed shape makes it
-// impossible to fabricate an object ID, mode, kind, or size for absent data.
-#GitOverlayDeletedOccurrence: close({
+#GitIndexAddedSubmoduleOccurrence: close({
 	OccurrencePath=path: #Path & !="."
-	layer:               #GitOverlayLayer
+	layer:               "index"
+	status:              "added"
+	modeChanged:         false
+
+	mode:     #NonEmptyString
+	kind:     "submodule"
+	objectID: #GitObjectID
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitIndexModifiedFileOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "index"
+	status:              "modified"
+	modeChanged:         bool
+
+	mode:     #NonEmptyString
+	kind:     "blob" | "symlink"
+	objectID: #GitObjectID
+	size?:    int & >=0
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitIndexModifiedSubmoduleOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "index"
+	status:              "modified"
+	modeChanged:         bool
+
+	mode:     #NonEmptyString
+	kind:     "submodule"
+	objectID: #GitObjectID
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitIndexDeletedOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "index"
 	status:              "deleted"
 	modeChanged:         false
 
 	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
 })
 
+#GitWorktreeModifiedFileOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "worktree"
+	status:              "modified"
+	modeChanged:         bool
+
+	mode:     #NonEmptyString
+	kind:     "blob" | "symlink"
+	objectID: #GitObjectID
+	size?:    int & >=0
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitWorktreeModifiedSubmoduleOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "worktree"
+	status:              "modified"
+	modeChanged:         bool
+
+	mode:     #NonEmptyString
+	kind:     "submodule"
+	objectID: #GitObjectID
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitWorktreeUntrackedFileOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "worktree"
+	status:              "untracked"
+	modeChanged:         false
+
+	mode:     #NonEmptyString
+	kind:     "blob" | "symlink"
+	objectID: #GitObjectID
+	size?:    int & >=0
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitWorktreeUntrackedSubmoduleOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "worktree"
+	status:              "untracked"
+	modeChanged:         false
+
+	mode:     #NonEmptyString
+	kind:     "submodule"
+	objectID: #GitObjectID
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+	_modeKnown:      #GitCommittedModeKind[mode]
+	_kindCompatible: kind & _modeKnown
+})
+
+#GitWorktreeDeletedOccurrence: close({
+	OccurrencePath=path: #Path & !="."
+	layer:               "worktree"
+	status:              "deleted"
+	modeChanged:         false
+
+	_pathNormalized: pathpkg.Clean(OccurrencePath) & OccurrencePath
+})
+
+#GitOverlayPresentOccurrence:
+	#GitIndexAddedFileOccurrence |
+		#GitIndexAddedSubmoduleOccurrence |
+		#GitIndexModifiedFileOccurrence |
+		#GitIndexModifiedSubmoduleOccurrence |
+		#GitWorktreeModifiedFileOccurrence |
+		#GitWorktreeModifiedSubmoduleOccurrence |
+		#GitWorktreeUntrackedFileOccurrence |
+		#GitWorktreeUntrackedSubmoduleOccurrence
+
+#GitOverlayDeletedOccurrence:
+	#GitIndexDeletedOccurrence |
+		#GitWorktreeDeletedOccurrence
+
 #GitIndexOverlayOccurrence:
-	(#GitOverlayPresentOccurrence & {
-		layer:  "index"
-		status: "added" | "modified"
-	}) |
-		(#GitOverlayDeletedOccurrence & {layer: "index"})
+	#GitIndexAddedFileOccurrence |
+		#GitIndexAddedSubmoduleOccurrence |
+		#GitIndexModifiedFileOccurrence |
+		#GitIndexModifiedSubmoduleOccurrence |
+		#GitIndexDeletedOccurrence
 
 #GitWorktreeOverlayOccurrence:
-	(#GitOverlayPresentOccurrence & {
-		layer:  "worktree"
-		status: "modified" | "untracked"
-	}) |
-		(#GitOverlayDeletedOccurrence & {layer: "worktree"})
+	#GitWorktreeModifiedFileOccurrence |
+		#GitWorktreeModifiedSubmoduleOccurrence |
+		#GitWorktreeUntrackedFileOccurrence |
+		#GitWorktreeUntrackedSubmoduleOccurrence |
+		#GitWorktreeDeletedOccurrence
 
 #GitIndexOverlay: close({
 	schema:       "kernel.git-index-overlay.v0"
@@ -129,12 +252,12 @@ import (
 	_schemaBinding:     SchemaDigest & Committed.schemaDigest
 	_policyBinding:     PolicyDigest & Committed.policyDigest
 
-	_observationJSON:  json.Marshal(Observation)
-	observationDigest: "sha256:" + hex.Encode(sha256.Sum256(_observationJSON))
-	_indexJSON:        json.Marshal(Observation.index)
-	indexDigest:       "sha256:" + hex.Encode(sha256.Sum256(_indexJSON))
-	_worktreeJSON:     json.Marshal(Observation.worktree)
-	worktreeDigest:    "sha256:" + hex.Encode(sha256.Sum256(_worktreeJSON))
+	_observationJSON:              json.Marshal(Observation)
+	observationDigest:             "sha256:" + hex.Encode(sha256.Sum256(_observationJSON))
+	_indexJSON:                    json.Marshal(Observation.index)
+	IndexDigest=indexDigest:       "sha256:" + hex.Encode(sha256.Sum256(_indexJSON))
+	_worktreeJSON:                 json.Marshal(Observation.worktree)
+	WorktreeDigest=worktreeDigest: "sha256:" + hex.Encode(sha256.Sum256(_worktreeJSON))
 
 	_moduleID:           "sha256:" + hex.Encode(sha256.Sum256("git-module\u0000" + Observation.repositoryID))
 	_rootNamespaceID:    "sha256:" + hex.Encode(sha256.Sum256("git-root-namespace\u0000" + Observation.repositoryID))
@@ -241,7 +364,7 @@ import (
 					let relationshipID = "sha256:" + hex.Encode(sha256.Sum256("git-overlay\u0000" + _rootNamespaceID + "\u0000" + layerOccurrenceID))
 					"\(relationshipID)": {
 						subject:     {kind: "namespace", id: _rootNamespaceID}
-						predicate:   "extension:git-overlay"
+						predicate:   "occurs_as"
 						object:      {kind: "member", id: layerOccurrenceID}
 						evidenceIDs: [_indexEvidenceID]
 					}
@@ -253,7 +376,7 @@ import (
 					let relationshipID = "sha256:" + hex.Encode(sha256.Sum256("git-overlay\u0000" + _rootNamespaceID + "\u0000" + layerOccurrenceID))
 					"\(relationshipID)": {
 						subject:     {kind: "namespace", id: _rootNamespaceID}
-						predicate:   "extension:git-overlay"
+						predicate:   "occurs_as"
 						object:      {kind: "member", id: layerOccurrenceID}
 						evidenceIDs: [_worktreeEvidenceID]
 					}
@@ -313,8 +436,8 @@ import (
 				hydratorDigest:  Observation.hydrator.digest
 				baseRevision:    Observation.baseRevision.format + ":" + Observation.baseRevision.hex
 				baseTree:        Observation.baseTree.format + ":" + Observation.baseTree.hex
-				indexDigest:     indexDigest
-				worktreeDigest:  worktreeDigest
+				indexDigest:     IndexDigest
+				worktreeDigest:  WorktreeDigest
 			}
 		}
 	}
