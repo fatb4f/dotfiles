@@ -159,31 +159,28 @@ value = json.loads(os.environ["HOOK_OUTPUT"])
 assert value["hookSpecificOutput"]["hookEventName"] == "UserPromptSubmit"
 context = json.loads(value["hookSpecificOutput"]["additionalContext"])
 assert context["schema"] == "agent.resolver-prompt-surface.v2"
-assert context["sufficiency"]["state"] == "sufficient"
-assert context["context"]["schema"] == "dotfiles.context-packet.v0"
+assert context["sufficiency"]["state"] == "insufficient"
+assert context["sufficiency"]["blockingGapIDs"] == [
+    "gap.context-root-proposal-required"
+]
+assert context["context"] is None
 PY2
 
-  echo "==> Exercise production fail-closed path without an available Codex CLI"
-  env -u CONTEXT_WORKBOOK_RECORDED_DECISION \
-    CONTEXT_WORKBOOK_DSPY_MODEL=codex/gpt-5.6-sol \
-    CONTEXT_WORKBOOK_CODEX=/nonexistent/context-workbook-codex \
+  echo "==> Exercise prompt-only CLI fail-closed path"
+  fail_closed_error="${TMPDIR:-/tmp}/context-workbook-fail-closed.err"
+  if env -u CONTEXT_WORKBOOK_RECORDED_DECISION \
     CONTEXT_WORKBOOK_PYTHON="$PYTHON_BIN" \
     sh "$WORKBOOK_ROOT/run-context-workbook" \
     --repo-root "$REPO_ROOT" \
     --prompt "No configured model" \
     --revision HEAD \
-    --output state >"${TMPDIR:-/tmp}/context-workbook-fail-closed.json"
-
-  FAIL_CLOSED_PATH="${TMPDIR:-/tmp}/context-workbook-fail-closed.json" "$PYTHON_BIN" - <<'PY2'
-import json
-import os
-from pathlib import Path
-path = Path(os.environ["FAIL_CLOSED_PATH"])
-value = json.loads(path.read_text())
-assert value["sufficiency"]["state"] == "insufficient"
-assert value.get("projection") is None
-assert value["sufficiency"]["blockingGapIDs"] == ["gap.dspy-unavailable"]
-PY2
+    --output state 2>"$fail_closed_error"; then
+    echo "FAIL: prompt-only CLI request unexpectedly succeeded" >&2
+    exit 1
+  fi
+  grep -Fq \
+    -- "--request-file is required; prompt-only selection fails closed" \
+    "$fail_closed_error"
   echo "==> Hook and fail-closed validation passed"
 }
 

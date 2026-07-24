@@ -55,6 +55,7 @@ cue export . -e rootSeed --out json >"$tmpdir/context-model-root-seed.json"
 cue export . -e workbookConfig --out json >"$tmpdir/context-model-workbook-config.json"
 cue vet ./fixtures/positive
 cue export ./fixtures/positive -e minimal --out json >"$tmpdir/context-model-positive.json"
+bash "$REPO_ROOT/.github/scripts/context-selection-property-test.sh"
 
 negative_count=0
 while IFS= read -r fixture_dir; do

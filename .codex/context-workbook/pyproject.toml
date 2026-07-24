@@ -5,8 +5,10 @@ description = "CUE-rooted Marimo/DSPy context establishment for dotfiles Codex p
 requires-python = ">=3.14,<3.15"
 dependencies = [
   "dspy==3.2.1",
+  "hypothesis>=6.161.2",
   "marimo==0.23.14",
   "pydantic==2.13.4",
+  "pytest>=9.1.1",
 ]
 
 [project.scripts]
