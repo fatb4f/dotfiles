@@ -321,9 +321,7 @@ contextSelectionCutoverFixtures: {
 			allowedPaths: ["."]
 			overlayMode:  "disabled"
 			roots: {
-				memberIDs:    []
-				namespaceIDs: []
-				pathPrefixes: ["src"]
+				memberIDs:    [], namespaceIDs: [], pathPrefixes: ["src"]
 			}
 		}
 		Proposal=proposal: #ContextRootProposal & {
@@ -396,13 +394,13 @@ contextSelectionPropertyFixtures: {
 	}
 
 	relationshipOrderPerturbation: {
-		first: relationshipPredecessor
-		second: relationshipPredecessor & {
+		first: contextSelectionPropertyFixtures.relationshipPredecessor
+		second: contextSelectionPropertyFixtures.relationshipPredecessor & {
 			snapshot: #SelectionPropertySnapshot & {
-				members: relationshipPredecessor.snapshot.members
+				members: contextSelectionPropertyFixtures.relationshipPredecessor.snapshot.members
 				relationships: {
-					"rel.z.out": relationshipPredecessor.snapshot.relationships["rel.z.out"]
-					"rel.a.in":  relationshipPredecessor.snapshot.relationships["rel.a.in"]
+					"rel.z.out": contextSelectionPropertyFixtures.relationshipPredecessor.snapshot.relationships["rel.z.out"]
+					"rel.a.in":  contextSelectionPropertyFixtures.relationshipPredecessor.snapshot.relationships["rel.a.in"]
 				}
 			}
 		}
