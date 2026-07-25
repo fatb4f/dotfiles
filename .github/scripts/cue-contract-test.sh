@@ -4,6 +4,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+if [[ -n "${RUNNER_TEMP:-}" ]]; then
+  mkdir -p "$RUNNER_TEMP/context-git-assertion-candidates"
+  cp "$REPO_ROOT/.codex/context-model/context_selection_service.cue" \
+    "$RUNNER_TEMP/context-git-assertion-candidates/context_selection_service.cue"
+  exec > >(tee "$RUNNER_TEMP/context-git-assertion-candidates/cue-contract.log") 2>&1
+fi
+
 tmpdir="$(mktemp -d)"
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -50,12 +57,16 @@ bash ./contracts/test_lazyvim_project_delta.sh
 
 echo "==> Validating nested context-model module"
 cd "$REPO_ROOT/.codex/context-model"
-cue vet .
+if ! cue vet .; then
+  cue vet -c . || true
+  exit 1
+fi
 cue export . -e rootSeed --out json >"$tmpdir/context-model-root-seed.json"
 cue export . -e workbookConfig --out json >"$tmpdir/context-model-workbook-config.json"
 cue vet ./fixtures/positive
 cue export ./fixtures/positive -e minimal --out json >"$tmpdir/context-model-positive.json"
 bash "$REPO_ROOT/.github/scripts/context-selection-property-test.sh"
+bash "$REPO_ROOT/.github/scripts/context-selection-cutover-test.sh"
 
 negative_count=0
 while IFS= read -r fixture_dir; do

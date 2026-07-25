@@ -471,22 +471,22 @@ import (
 // selected entity, induced relationship, evidence reference, counter, alias,
 // and digest below is a projection. Callers cannot submit any of those values.
 #ContextSelectionEvaluation: {
-	request:             #ContextApplicationRequest
-	proposal:            #ContextRootProposal
-	policy:              #ContextSelectionPolicy
-	committedProjection: #GitCommittedSnapshotProjection
-	Snapshot=snapshot:   #ContextGraphSnapshot
-	effectivePathEvaluation: #GitEffectivePathEvaluation & {
-		snapshotID: snapshot.snapshotID
+	Request=request:                         #ContextApplicationRequest
+	Proposal=proposal:                       #ContextRootProposal
+	Policy=policy:                           #ContextSelectionPolicy
+	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
+	Snapshot=snapshot:                       #ContextGraphSnapshot
+	EffectivePathEvaluation=effectivePathEvaluation: #GitEffectivePathEvaluation & {
+		snapshotID: Snapshot.snapshotID
 	}
-	effectiveView: effectivePathEvaluation.view
+	EffectiveView=effectiveView: EffectivePathEvaluation.view
 
 	_rootEvaluation: #ContextRootSelectionEvaluation & {
-		request:       request
-		proposal:      proposal
-		policy:        policy
+		request:       Request
+		proposal:      Proposal
+		policy:        Policy
 		snapshot:      Snapshot
-		effectiveView: effectiveView
+		effectiveView: EffectiveView
 	}
 	rootCatalog: _rootEvaluation.rootCatalog
 	_rootSet:    _rootEvaluation.roots
@@ -502,7 +502,7 @@ import (
 	}
 	_step1: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier0.entities
 		visited:    _frontier0.entities
 		distance:   1
@@ -510,7 +510,7 @@ import (
 	_frontier1: #ContextSelectionFrontier & {distance: 1, entities: _step1.records}
 	_step2: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier1.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities])
 		distance:   2
@@ -518,7 +518,7 @@ import (
 	_frontier2: #ContextSelectionFrontier & {distance: 2, entities: _step2.records}
 	_step3: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier2.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities])
 		distance:   3
@@ -526,7 +526,7 @@ import (
 	_frontier3: #ContextSelectionFrontier & {distance: 3, entities: _step3.records}
 	_step4: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier3.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities])
 		distance:   4
@@ -534,7 +534,7 @@ import (
 	_frontier4: #ContextSelectionFrontier & {distance: 4, entities: _step4.records}
 	_step5: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier4.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities])
 		distance:   5
@@ -542,7 +542,7 @@ import (
 	_frontier5: #ContextSelectionFrontier & {distance: 5, entities: _step5.records}
 	_step6: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier5.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities])
 		distance:   6
@@ -550,7 +550,7 @@ import (
 	_frontier6: #ContextSelectionFrontier & {distance: 6, entities: _step6.records}
 	_step7: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier6.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities, _frontier6.entities])
 		distance:   7
@@ -558,7 +558,7 @@ import (
 	_frontier7: #ContextSelectionFrontier & {distance: 7, entities: _step7.records}
 	_step8: #ContextTraversalStep & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		previous:   _frontier7.entities
 		visited:    list.Concat([_frontier0.entities, _frontier1.entities, _frontier2.entities, _frontier3.entities, _frontier4.entities, _frontier5.entities, _frontier6.entities, _frontier7.entities])
 		distance:   8
@@ -578,7 +578,7 @@ import (
 	])
 	_depthCompletion: #ContextTraversalDepthCompletion & {
 		snapshot:   Snapshot
-		predicates: policy.predicates
+		predicates: Policy.predicates
 		visited:    _records
 	}
 	_selected: [for record in _records {record.entity}]
@@ -586,10 +586,10 @@ import (
 		for entity in _selected {"\(entity.kind):\(entity.id)": true}
 	}
 	_relationshipSet: {
-		for id, relationship in snapshot.relationships
+		for id, relationship in Snapshot.relationships
 		if _selectedSet["\(relationship.subject.kind):\(relationship.subject.id)"] == true &&
 			_selectedSet["\(relationship.object.kind):\(relationship.object.id)"] == true &&
-			len([for predicate in policy.predicates
+			len([for predicate in Policy.predicates
 			if predicate == relationship.predicate {predicate}]) > 0 {
 			"\(id)": relationship
 		}
@@ -598,13 +598,13 @@ import (
 	_evidenceSet: {
 		for _, relationship in _relationshipSet {
 			for evidenceID in relationship.evidenceIDs {
-				"\(evidenceID)": snapshot.evidence[evidenceID]
+				"\(evidenceID)": Snapshot.evidence[evidenceID]
 			}
 		}
 	}
 	_evidenceIDs: [for id, _ in _evidenceSet {id}]
 	_effectiveFileSelection: #ContextEffectiveFileSelection & {
-		effectiveView: effectiveView
+		effectiveView: EffectiveView
 		selected:      _selected
 	}
 	_effectiveFiles: _effectiveFileSelection.files
@@ -626,10 +626,10 @@ import (
 	_adapterVersion:    "context-packet-v0-adapter.v1"
 	_digestEvaluation: #ContextDigestEvaluation & {
 		adapterVersion:    _adapterVersion
-		request:           request
-		proposal:          proposal
-		policy:            policy
-		effectivePathView: effectiveView
+		request:           Request
+		proposal:          Proposal
+		policy:            Policy
+		effectivePathView: EffectiveView
 		traversalRecords:  _records
 		selectedEntities:  _selected
 		relationshipIDs:   _relationshipIDs
@@ -644,7 +644,7 @@ import (
 		aliases:        _aliases
 		packet: {
 			schema:        "dotfiles.context-packet.v0"
-			requestID:     request.requestID
+			requestID:     Request.requestID
 			contextDigest: _contextDigest
 			selected: {
 				fragmentIDs: []
@@ -666,7 +666,7 @@ import (
 
 	proof: #ContextSelectionProof & {
 		schema:          "dotfiles.context-selection-proof.v0"
-		snapshotID:      snapshot.snapshotID
+		snapshotID:      Snapshot.snapshotID
 		frontier0:       _frontier0
 		frontier1:       _frontier1
 		frontier2:       _frontier2
@@ -700,8 +700,8 @@ import (
 			snapshot: Snapshot
 			selection: {
 				schema:          "kernel.context-selection.v0"
-				requestID:       request.requestID
-				snapshotID:      snapshot.snapshotID
+				requestID:       Request.requestID
+				snapshotID:      Snapshot.snapshotID
 				seedEntities:    [for record in _frontier0.entities {record.entity}]
 				selected:        _selected
 				relationshipIDs: _relationshipIDs
@@ -713,15 +713,15 @@ import (
 		}
 	}
 
-	_modulesBounded:       (proof.counters.modules <= policy.limits.maxModules) & true
-	_namespacesBounded:    (proof.counters.namespaces <= policy.limits.maxNamespaces) & true
-	_membersBounded:       (proof.counters.members <= policy.limits.maxMembers) & true
-	_entitiesBounded:      (proof.counters.entities <= policy.limits.maxEntities) & true
-	_filesBounded:         (proof.counters.files <= policy.limits.maxFiles) & true
-	_fileBytesBounded:     (proof.counters.fileBytes <= policy.limits.maxSelectedFileBytes) & true
-	_relationshipsBounded: (proof.counters.relationships <= policy.limits.maxRelationships) & true
-	_evidenceBounded:      (proof.counters.evidence <= policy.limits.maxEvidence) & true
-	_packetBytesBounded:   (len(_packetCanonical) <= policy.limits.maxPacketBytes) & true
+	_modulesBounded:       (proof.counters.modules <= Policy.limits.maxModules) & true
+	_namespacesBounded:    (proof.counters.namespaces <= Policy.limits.maxNamespaces) & true
+	_membersBounded:       (proof.counters.members <= Policy.limits.maxMembers) & true
+	_entitiesBounded:      (proof.counters.entities <= Policy.limits.maxEntities) & true
+	_filesBounded:         (proof.counters.files <= Policy.limits.maxFiles) & true
+	_fileBytesBounded:     (proof.counters.fileBytes <= Policy.limits.maxSelectedFileBytes) & true
+	_relationshipsBounded: (proof.counters.relationships <= Policy.limits.maxRelationships) & true
+	_evidenceBounded:      (proof.counters.evidence <= Policy.limits.maxEvidence) & true
+	_packetBytesBounded:   (len(_packetCanonical) <= Policy.limits.maxPacketBytes) & true
 }
 
 #GitCommittedEffectivePathEvaluation: #GitEffectivePathEvaluation & {
@@ -731,19 +731,19 @@ import (
 
 #ContextCommittedSelectionEvaluation: close({
 	#ContextSelectionEvaluation
-	committedProjection: #GitCommittedSnapshotProjection
-	effectivePathEvaluation: #GitCommittedEffectivePathEvaluation & {
-		snapshotID: committedProjection.graph.snapshotID
-		committed: [for occurrence in committedProjection.observation.occurrences {
+	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
+	CommittedEffectivePathEvaluation=effectivePathEvaluation: #GitCommittedEffectivePathEvaluation & {
+		snapshotID: CommittedProjection.graph.snapshotID
+		committed: [for occurrence in CommittedProjection.observation.occurrences {
 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
-				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
+				CommittedProjection.observation.repositoryID + "\u0000" + occurrence.path,
 			))
 			{
 				path:       occurrence.path
 				status:     "present"
 				kind:       occurrence.kind
 				memberID:   computedMemberID
-				evidenceID: committedProjection.collected.state.evidenceID
+				evidenceID: CommittedProjection.collected.state.evidenceID
 				if occurrence.size != _|_ {
 					gitSizeBytes: occurrence.size
 				}
@@ -751,37 +751,37 @@ import (
 		}]
 		allPaths: [for occurrence in committed {occurrence.path}]
 	}
-	snapshot:      committedProjection.graph
-	effectiveView: effectivePathEvaluation.view
+	CommittedSnapshot=snapshot:           CommittedProjection.graph
+	CommittedEffectiveView=effectiveView: CommittedEffectivePathEvaluation.view
 })
 
 #ContextOverlaySelectionEvaluation: close({
 	#ContextSelectionEvaluation
-	committedProjection: #GitCommittedSnapshotProjection
-	overlayProjection:   #GitOverlayProjection
-	_committedBinding:   overlayProjection.committed.observationDigest & committedProjection.observationDigest
-	effectivePathEvaluation: #GitEffectivePathEvaluation & {
-		snapshotID: overlayProjection.graph.snapshotID
-		committed: [for occurrence in committedProjection.observation.occurrences {
+	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
+	OverlayProjection=overlayProjection:     #GitOverlayProjection
+	_committedBinding:                       OverlayProjection.committed.observationDigest & CommittedProjection.observationDigest
+	OverlayEffectivePathEvaluation=effectivePathEvaluation: #GitEffectivePathEvaluation & {
+		snapshotID: OverlayProjection.graph.snapshotID
+		committed: [for occurrence in CommittedProjection.observation.occurrences {
 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
-				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
+				CommittedProjection.observation.repositoryID + "\u0000" + occurrence.path,
 			))
 			{
 				path:       occurrence.path
 				status:     "present"
 				kind:       occurrence.kind
 				memberID:   computedMemberID
-				evidenceID: committedProjection.collected.state.evidenceID
+				evidenceID: CommittedProjection.collected.state.evidenceID
 				if occurrence.size != _|_ {
 					gitSizeBytes: occurrence.size
 				}
 			}
 		}]
-		index: [for occurrence in overlayProjection.observation.index.occurrences {
+		index: [for occurrence in OverlayProjection.observation.index.occurrences {
 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
-				overlayProjection.observation.repositoryID + "\u0000" +
-					overlayProjection.observation.baseRevision.format + "\u0000" +
-					overlayProjection.observation.baseRevision.hex + "\u0000index\u0000" +
+				OverlayProjection.observation.repositoryID + "\u0000" +
+					OverlayProjection.observation.baseRevision.format + "\u0000" +
+					OverlayProjection.observation.baseRevision.hex + "\u0000index\u0000" +
 					occurrence.path,
 			))
 			{
@@ -795,17 +795,17 @@ import (
 					kind:   occurrence.kind
 				}
 				memberID:   computedMemberID
-				evidenceID: overlayProjection.collected.index.state.evidenceID
+				evidenceID: OverlayProjection.collected.index.state.evidenceID
 				if occurrence.size != _|_ {
 					gitSizeBytes: occurrence.size
 				}
 			}
 		}]
-		worktree: [for occurrence in overlayProjection.observation.worktree.occurrences {
+		worktree: [for occurrence in OverlayProjection.observation.worktree.occurrences {
 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
-				overlayProjection.observation.repositoryID + "\u0000" +
-					overlayProjection.observation.baseRevision.format + "\u0000" +
-					overlayProjection.observation.baseRevision.hex + "\u0000worktree\u0000" +
+				OverlayProjection.observation.repositoryID + "\u0000" +
+					OverlayProjection.observation.baseRevision.format + "\u0000" +
+					OverlayProjection.observation.baseRevision.hex + "\u0000worktree\u0000" +
 					occurrence.path,
 			))
 			{
@@ -819,7 +819,7 @@ import (
 					kind:   occurrence.kind
 				}
 				memberID:   computedMemberID
-				evidenceID: overlayProjection.collected.worktree.state.evidenceID
+				evidenceID: OverlayProjection.collected.worktree.state.evidenceID
 				if occurrence.size != _|_ {
 					gitSizeBytes: occurrence.size
 				}
@@ -832,8 +832,8 @@ import (
 		}
 		allPaths: [for path, _ in _pathSet {path}]
 	}
-	snapshot:      overlayProjection.graph
-	effectiveView: effectivePathEvaluation.view
+	OverlaySnapshot=snapshot:           OverlayProjection.graph
+	OverlayEffectiveView=effectiveView: OverlayEffectivePathEvaluation.view
 })
 
 #ContextGraphFailure: close({
