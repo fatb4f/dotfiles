@@ -55,7 +55,10 @@ bash ./contracts/test_lazyvim_project_delta.sh
 
 echo "==> Validating nested context-model module"
 cd "$REPO_ROOT/.codex/context-model"
-cue vet .
+if ! cue vet .; then
+  cue vet -c . || true
+  exit 1
+fi
 cue export . -e rootSeed --out json >"$tmpdir/context-model-root-seed.json"
 cue export . -e workbookConfig --out json >"$tmpdir/context-model-workbook-config.json"
 cue vet ./fixtures/positive
