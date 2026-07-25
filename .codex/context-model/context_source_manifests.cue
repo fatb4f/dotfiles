@@ -6,9 +6,10 @@ package contextmodel
 })
 
 contextSchemaSources: #RevisionBoundSourceManifest & {
-	version: "context-schema-sources.v1"
+	version: "context-schema-sources.v2"
 	paths: [
 		".codex/context-model/context_graph.cue",
+		".codex/context-model/context_selection_cutover_hardening.cue",
 		".codex/context-model/context_selection_service.cue",
 		".codex/context-model/git_committed_snapshot.cue",
 		".codex/context-model/git_overlay.cue",
@@ -17,10 +18,11 @@ contextSchemaSources: #RevisionBoundSourceManifest & {
 }
 
 contextPolicySources: #RevisionBoundSourceManifest & {
-	version: "context-policy-sources.v1"
+	version: "context-policy-sources.v2"
 	paths: [
 		".codex/context-model/context_graph_authority.cue",
 		".codex/context-model/context_graph_properties.cue",
+		".codex/context-model/context_selection_cutover_hardening.cue",
 		".codex/context-model/context_selection_service.cue",
 	]
 }
@@ -47,8 +49,9 @@ gitHydratorSources: #RevisionBoundSourceManifest & {
 }
 
 graphServiceSources: #RevisionBoundSourceManifest & {
-	version: "graph-service-sources.v1"
+	version: "graph-service-sources.v2"
 	paths: [
+		".codex/context-model/context_selection_cutover_hardening.cue",
 		".codex/context-model/context_selection_service.cue",
 		".codex/context-model/context_source_manifests.cue",
 		".codex/context-workbook/src/context_workbook/graph_service.py",
