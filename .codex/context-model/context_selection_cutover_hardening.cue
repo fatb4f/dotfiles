@@ -5,76 +5,53 @@ import (
 	"strings"
 )
 
-// Proposal and catalog lists are transport boundaries. They must be canonical
-// before they can participate in digests or root resolution.
-#ContextRootProposal: {
-	MemberIDs=memberIDs:       [...#GraphID]
-	NamespaceIDs=namespaceIDs: [...#GraphID]
-	PathPrefixes=pathPrefixes: [...#Path | "."]
+// Canonicality is enforced at the complete application boundary rather than on
+// the transport definitions themselves. This keeps malformed mutation fixtures
+// representable until a property runner explicitly evaluates them.
+#ContextSelectionCanonicalSurface: {
+	Proposal=proposal:       #ContextRootProposal
+	RootCatalog=rootCatalog: #ContextRootCatalog
+	Proof=proof:             #ContextSelectionProof
+	Aliases=aliases:         [...#ContextPacketEvidenceAlias]
 
-	_memberIDsSorted:    list.IsSortedStrings(MemberIDs) & true
-	_memberIDsUnique:    list.UniqueItems(MemberIDs) & true
-	_namespaceIDsSorted: list.IsSortedStrings(NamespaceIDs) & true
-	_namespaceIDsUnique: list.UniqueItems(NamespaceIDs) & true
-	_pathPrefixesSorted: list.IsSortedStrings(PathPrefixes) & true
-	_pathPrefixesUnique: list.UniqueItems(PathPrefixes) & true
-}
-
-#ContextRootCatalog: {
-	MemberIDs=memberIDs:       [...#GraphID]
-	NamespaceIDs=namespaceIDs: [...#GraphID]
-	Paths=paths:               [...#Path]
-
-	_memberIDsSorted:    list.IsSortedStrings(MemberIDs) & true
-	_memberIDsUnique:    list.UniqueItems(MemberIDs) & true
-	_namespaceIDsSorted: list.IsSortedStrings(NamespaceIDs) & true
-	_namespaceIDsUnique: list.UniqueItems(NamespaceIDs) & true
-	_pathsSorted:        list.IsSortedStrings(Paths) & true
-	_pathsUnique:        list.UniqueItems(Paths) & true
-}
-
-// Traversal remains ordered by shortest distance. Within each distance, entity
-// records are canonical by kind and ID and may not repeat an entity.
-#ContextSelectionFrontier: {
-	Entities=entities: [...#ContextTraversalRecord]
-	_entityKeys: [for record in Entities {
-		record.entity.kind + "\u0000" + record.entity.id
+	_proposalMemberIDsSorted:       list.IsSortedStrings(Proposal.memberIDs) & true
+	_proposalMemberIDsUnique:       list.UniqueItems(Proposal.memberIDs) & true
+	_proposalNamespaceIDsSorted:    list.IsSortedStrings(Proposal.namespaceIDs) & true
+	_proposalNamespaceIDsUnique:    list.UniqueItems(Proposal.namespaceIDs) & true
+	_proposalPathPrefixesSorted:    list.IsSortedStrings(Proposal.pathPrefixes) & true
+	_proposalPathPrefixesUnique:    list.UniqueItems(Proposal.pathPrefixes) & true
+	_catalogMemberIDsSorted:        list.IsSortedStrings(RootCatalog.memberIDs) & true
+	_catalogMemberIDsUnique:        list.UniqueItems(RootCatalog.memberIDs) & true
+	_catalogNamespaceIDsSorted:     list.IsSortedStrings(RootCatalog.namespaceIDs) & true
+	_catalogNamespaceIDsUnique:     list.UniqueItems(RootCatalog.namespaceIDs) & true
+	_catalogPathsSorted:            list.IsSortedStrings(RootCatalog.paths) & true
+	_catalogPathsUnique:            list.UniqueItems(RootCatalog.paths) & true
+	_relationshipsSorted:           list.IsSortedStrings(Proof.relationshipIDs) & true
+	_relationshipsUnique:           list.UniqueItems(Proof.relationshipIDs) & true
+	_evidenceSorted:                list.IsSortedStrings(Proof.evidenceIDs) & true
+	_evidenceUnique:                list.UniqueItems(Proof.evidenceIDs) & true
+	_effectiveFilesSorted:          list.IsSortedStrings(Proof.effectiveFiles) & true
+	_effectiveFilesUnique:          list.UniqueItems(Proof.effectiveFiles) & true
+	_selectedKeys:                  [for entity in Proof.selected {entity.kind + "\u0000" + entity.id}]
+	_selectedUnique:                list.UniqueItems(_selectedKeys) & true
+	_aliasGraphEvidenceIDs:         [for alias in Aliases {alias.graphEvidenceID}]
+	_aliasPacketEvidenceIDs:        [for alias in Aliases {alias.packetEvidenceID}]
+	_aliasGraphSorted:              list.IsSortedStrings(_aliasGraphEvidenceIDs) & true
+	_aliasGraphUnique:              list.UniqueItems(_aliasGraphEvidenceIDs) & true
+	_aliasPacketSorted:             list.IsSortedStrings(_aliasPacketEvidenceIDs) & true
+	_aliasPacketUnique:             list.UniqueItems(_aliasPacketEvidenceIDs) & true
+	_frontiers:                     [Proof.frontier0, Proof.frontier1, Proof.frontier2, Proof.frontier3, Proof.frontier4, Proof.frontier5, Proof.frontier6, Proof.frontier7, Proof.frontier8]
+	_frontierCanonicality: [for frontier in _frontiers {
+		let entityKeys = [for record in frontier.entities {
+			record.entity.kind + "\u0000" + record.entity.id
+		}]
+		sorted: list.IsSortedStrings(entityKeys) & true
+		unique: list.UniqueItems(entityKeys) & true
 	}]
-	_entitiesSorted: list.IsSortedStrings(_entityKeys) & true
-	_entitiesUnique: list.UniqueItems(_entityKeys) & true
 }
 
-#ContextSelectionProof: {
-	Selected=selected:               [...#ContextEntityRef]
-	RelationshipIDs=relationshipIDs: [...#GraphID]
-	EvidenceIDs=evidenceIDs:         [...#GraphID]
-	EffectiveFiles=effectiveFiles:   [...#Path]
-
-	_selectedKeys: [for entity in Selected {
-		entity.kind + "\u0000" + entity.id
-	}]
-	_selectedUnique:       list.UniqueItems(_selectedKeys) & true
-	_relationshipsSorted:  list.IsSortedStrings(RelationshipIDs) & true
-	_relationshipsUnique:  list.UniqueItems(RelationshipIDs) & true
-	_evidenceSorted:       list.IsSortedStrings(EvidenceIDs) & true
-	_evidenceUnique:       list.UniqueItems(EvidenceIDs) & true
-	_effectiveFilesSorted: list.IsSortedStrings(EffectiveFiles) & true
-	_effectiveFilesUnique: list.UniqueItems(EffectiveFiles) & true
-}
-
-#ContextPacketV0Projection: {
-	Aliases=aliases: [...#ContextPacketEvidenceAlias]
-	_aliasGraphEvidenceIDs:  [for alias in Aliases {alias.graphEvidenceID}]
-	_aliasPacketEvidenceIDs: [for alias in Aliases {alias.packetEvidenceID}]
-	_aliasGraphSorted:       list.IsSortedStrings(_aliasGraphEvidenceIDs) & true
-	_aliasGraphUnique:       list.UniqueItems(_aliasGraphEvidenceIDs) & true
-	_aliasPacketSorted:      list.IsSortedStrings(_aliasPacketEvidenceIDs) & true
-	_aliasPacketUnique:      list.UniqueItems(_aliasPacketEvidenceIDs) & true
-}
-
-// This helper is reusable by property fixtures and by the complete evaluation.
-// It permits structural containment ancestry, but no path-bearing member or
-// packet file may escape the request's allowed path boundary.
+// Structural containment ancestry is permitted, but no path-bearing selected
+// member or packet file may escape the request's allowed path boundary.
 #ContextSelectionRequestBoundary: {
 	Request=request:      #ContextApplicationRequest
 	Snapshot=snapshot:    #ContextGraphSnapshot
@@ -102,14 +79,23 @@ import (
 }
 
 #ContextSelectionEvaluation: {
-	Request=request:   #ContextApplicationRequest
-	Snapshot=snapshot: #ContextGraphSnapshot
-	Proof=proof:       #ContextSelectionProof
+	CutoverRequest=request:         #ContextApplicationRequest
+	CutoverSnapshot=snapshot:       #ContextGraphSnapshot
+	CutoverProposal=proposal:       #ContextRootProposal
+	CutoverRootCatalog=rootCatalog: #ContextRootCatalog
+	CutoverProof=proof:             #ContextSelectionProof
+	CutoverPacket=packet:           #ContextPacketV0Projection
 
-	_requestBoundary: #ContextSelectionRequestBoundary & {
-		request:  Request
-		snapshot: Snapshot
-		selected: Proof.selected
-		files:    Proof.effectiveFiles
+	_cutoverCanonicalSurface: #ContextSelectionCanonicalSurface & {
+		proposal:    CutoverProposal
+		rootCatalog: CutoverRootCatalog
+		proof:       CutoverProof
+		aliases:     CutoverPacket.aliases
+	}
+	_cutoverRequestBoundary: #ContextSelectionRequestBoundary & {
+		request:  CutoverRequest
+		snapshot: CutoverSnapshot
+		selected: CutoverProof.selected
+		files:    CutoverProof.effectiveFiles
 	}
 }
