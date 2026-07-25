@@ -6,8 +6,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 if [[ -n "${RUNNER_TEMP:-}" ]]; then
   mkdir -p "$RUNNER_TEMP/context-git-assertion-candidates"
-  cp "$REPO_ROOT/.codex/context-model/context_selection_service.cue" \
-    "$RUNNER_TEMP/context-git-assertion-candidates/context_selection_service.cue"
   exec > >(tee "$RUNNER_TEMP/context-git-assertion-candidates/cue-contract.log") 2>&1
 fi
 
@@ -57,15 +55,13 @@ bash ./contracts/test_lazyvim_project_delta.sh
 
 echo "==> Validating nested context-model module"
 cd "$REPO_ROOT/.codex/context-model"
-if ! cue vet .; then
-  cue vet -c . || true
-  exit 1
-fi
+cue vet .
 cue export . -e rootSeed --out json >"$tmpdir/context-model-root-seed.json"
 cue export . -e workbookConfig --out json >"$tmpdir/context-model-workbook-config.json"
 cue vet ./fixtures/positive
 cue export ./fixtures/positive -e minimal --out json >"$tmpdir/context-model-positive.json"
 bash "$REPO_ROOT/.github/scripts/context-selection-property-test.sh"
+# Qualify request boundaries, canonical surfaces, and committed packet emission.
 bash "$REPO_ROOT/.github/scripts/context-selection-cutover-test.sh"
 
 negative_count=0

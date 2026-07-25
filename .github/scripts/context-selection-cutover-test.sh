@@ -5,10 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MODEL_ROOT="$REPO_ROOT/.codex/context-model"
 CASE_MANIFEST="$MODEL_ROOT/testdata/context-selection-cutover-cases.json"
+RUNTIME_CUE="$MODEL_ROOT/context_selection_cutover_runtime.cue"
 CUE_BIN="${CONTEXT_SELECTION_CUE:-cue}"
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/context-selection-cutover.XXXXXX")"
-cleanup() { rm -rf -- "$work"; }
+cleanup() {
+  rm -rf -- "$work"
+  rm -f -- "$RUNTIME_CUE"
+}
 trap cleanup EXIT
 
 cue_json() {
@@ -26,6 +30,109 @@ expect_failure() {
   fi
 }
 
+write_committed_runtime() {
+  cat >"$RUNTIME_CUE" <<'CUE'
+package contextmodel
+
+cutoverProjection: #GitCommittedSnapshotProjection & {
+  observation: {
+    schema: "kernel.git-committed-snapshot-observation.v0"
+    repositoryID: "repository.fixture"
+    requestedRevision: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    resolvedRevision: {format: "sha1", hex: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    rootTree: {format: "sha1", hex: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+    occurrences: [
+      {
+        path: "src"
+        mode: "040000"
+        kind: "tree"
+        objectID: {format: "sha1", hex: "cccccccccccccccccccccccccccccccccccccccc"}
+      },
+      {
+        path: "src/main.py"
+        mode: "100644"
+        kind: "blob"
+        size: 12
+        objectID: {format: "sha1", hex: "dddddddddddddddddddddddddddddddddddddddd"}
+      },
+    ]
+    hydrator: {
+      identity: "hydrator.fixture"
+      digest: "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+    }
+  }
+  schemaDigest: "sha256:7777777777777777777777777777777777777777777777777777777777777777"
+  policyDigest: "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+}
+
+cutoverRequest: #ContextApplicationRequest & {
+  schema: "dotfiles.context-application-request.v0"
+  requestID: "request.committed-cutover"
+  repository: "repository.fixture"
+  revision: "HEAD"
+  allowedPaths: ["."]
+  overlayMode: "disabled"
+  roots: {
+    memberIDs: []
+    namespaceIDs: []
+    pathPrefixes: ["src"]
+  }
+}
+
+cutoverProposal: #ContextRootProposal & {
+  schema: "dotfiles.context-root-proposal.v0"
+  requestID: cutoverRequest.requestID
+  snapshotID: cutoverProjection.graph.snapshotID
+  memberIDs: []
+  namespaceIDs: []
+  pathPrefixes: []
+}
+
+cutoverPolicy: #ContextSelectionPolicy & {
+  schema: "dotfiles.context-selection-policy.v0"
+  predicates: ["contains"]
+  limits: {}
+}
+
+cutoverEvaluation: #ContextCommittedSelectionEvaluation & {
+  request: cutoverRequest
+  proposal: cutoverProposal
+  policy: cutoverPolicy
+  committedProjection: cutoverProjection
+}
+
+cutoverOutsideRequest: #ContextApplicationRequest & {
+  schema: "dotfiles.context-application-request.v0"
+  requestID: "request.committed-cutover-outside"
+  repository: "repository.fixture"
+  revision: "HEAD"
+  allowedPaths: ["src/main.py"]
+  overlayMode: "disabled"
+  roots: {
+    memberIDs: []
+    namespaceIDs: []
+    pathPrefixes: ["src/main.py"]
+  }
+}
+
+cutoverOutsideProposal: #ContextRootProposal & {
+  schema: "dotfiles.context-root-proposal.v0"
+  requestID: cutoverOutsideRequest.requestID
+  snapshotID: cutoverProjection.graph.snapshotID
+  memberIDs: []
+  namespaceIDs: []
+  pathPrefixes: []
+}
+
+_cutoverOutsideEvaluation: #ContextCommittedSelectionEvaluation & {
+  request: cutoverOutsideRequest
+  proposal: cutoverOutsideProposal
+  policy: cutoverPolicy
+  committedProjection: cutoverProjection
+}
+CUE
+}
+
 record_case() {
   local property_id="$1"
   printf '%s\n' "$property_id" >>"$work/executed-property-ids.txt"
@@ -34,7 +141,7 @@ record_case() {
 run_case() {
   local property_id="$1"
   local case_id="$2"
-  local output expression
+  local output
   case "$case_id" in
     inside-boundary)
       cue_json 'contextSelectionCutoverFixtures.boundary.inside & {evaluation: #ContextSelectionRequestBoundary & contextSelectionCutoverFixtures.boundary.inside}' >/dev/null
@@ -61,14 +168,17 @@ run_case() {
       cue_json '{evaluation: #ContextSelectionCanonicalSurface & {proposal: contextSelectionCutoverFixtures.canonical.emptyProposal, rootCatalog: contextSelectionCutoverFixtures.canonical.emptyRootCatalog, proof: contextSelectionCutoverFixtures.canonical.empty, aliases: contextSelectionCutoverFixtures.canonical.aliases}}' >/dev/null
       ;;
     committed-success|committed-single-file)
-      output="$(cue_json 'contextSelectionCutoverFixtures.committed._qualificationEvaluation')"
+      write_committed_runtime
+      output="$(cue_json cutoverEvaluation)"
+      rm -f -- "$RUNTIME_CUE"
       jq -e '.packet.packet.selected.files == ["src/main.py"]' <<<"$output" >/dev/null
       jq -e '.proof.counters.files == 1 and .proof.counters.fileBytes == 12' <<<"$output" >/dev/null
       jq -e '.resolution.selection.sufficiency == "sufficient"' <<<"$output" >/dev/null
       ;;
     committed-outside-boundary)
-      expression='contextSelectionCutoverFixtures.committed.outsideBoundary & {evaluation: #ContextCommittedSelectionEvaluation & contextSelectionCutoverFixtures.committed.outsideBoundary}'
-      expect_failure "$expression"
+      write_committed_runtime
+      expect_failure _cutoverOutsideEvaluation
+      rm -f -- "$RUNTIME_CUE"
       ;;
     *)
       echo "FAIL: no runner for property case: $property_id/$case_id" >&2

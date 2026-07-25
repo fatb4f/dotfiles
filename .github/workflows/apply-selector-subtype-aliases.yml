@@ -1,0 +1,31 @@
+name: Apply selector subtype aliases
+
+on:
+  push:
+    branches:
+      - agent/context-selection-cutover-qualification
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply selector subtype alias repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          patch_file=.selector-subtype-aliases.patch
+          git apply --check "$patch_file"
+          git apply "$patch_file"
+          rm -f "$patch_file" .github/workflows/apply-selector-subtype-aliases.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add .codex/context-model/context_selection_service.cue "$patch_file" .github/workflows/apply-selector-subtype-aliases.yml
+          git commit -m "fix selector subtype projection bindings"
+          git push origin HEAD:agent/context-selection-cutover-qualification

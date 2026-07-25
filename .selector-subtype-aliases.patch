@@ -1,0 +1,120 @@
+--- a/.codex/context-model/context_selection_service.cue
++++ b/.codex/context-model/context_selection_service.cue
+@@ -732,23 +732,23 @@
+ #ContextCommittedSelectionEvaluation: close({
+ 	#ContextSelectionEvaluation
+-	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
+-	CommittedEffectivePathEvaluation=effectivePathEvaluation: #GitCommittedEffectivePathEvaluation & {
+-		snapshotID: CommittedProjection.graph.snapshotID
+-		committed: [for occurrence in CommittedProjection.observation.occurrences {
++	committedProjection: #GitCommittedSnapshotProjection
++	effectivePathEvaluation: #GitCommittedEffectivePathEvaluation & {
++		snapshotID: committedProjection.graph.snapshotID
++		committed: [for occurrence in committedProjection.observation.occurrences {
+ 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+-				CommittedProjection.observation.repositoryID + "\u0000" + occurrence.path,
++				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
+ 			))
+ 			{
+ 				path:       occurrence.path
+ 				status:     "present"
+ 				kind:       occurrence.kind
+ 				memberID:   computedMemberID
+-				evidenceID: CommittedProjection.collected.state.evidenceID
++				evidenceID: committedProjection.collected.state.evidenceID
+ 				if occurrence.size != _|_ {
+ 					gitSizeBytes: occurrence.size
+ 				}
+ 			}
+ 		}]
+ 		allPaths: [for occurrence in committed {occurrence.path}]
+ 	}
+-	snapshot:      CommittedProjection.graph
+-	effectiveView: CommittedEffectivePathEvaluation.view
++	snapshot:      committedProjection.graph
++	effectiveView: effectivePathEvaluation.view
+ })
+ 
+ #ContextOverlaySelectionEvaluation: close({
+ 	#ContextSelectionEvaluation
+-	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
+-	OverlayProjection=overlayProjection:     #GitOverlayProjection
+-	_committedBinding:                       OverlayProjection.committed.observationDigest & CommittedProjection.observationDigest
+-	OverlayEffectivePathEvaluation=effectivePathEvaluation: #GitEffectivePathEvaluation & {
+-		snapshotID: OverlayProjection.graph.snapshotID
+-		committed: [for occurrence in CommittedProjection.observation.occurrences {
++	committedProjection: #GitCommittedSnapshotProjection
++	overlayProjection:   #GitOverlayProjection
++	_committedBinding:   overlayProjection.committed.observationDigest & committedProjection.observationDigest
++	effectivePathEvaluation: #GitEffectivePathEvaluation & {
++		snapshotID: overlayProjection.graph.snapshotID
++		committed: [for occurrence in committedProjection.observation.occurrences {
+ 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+-				CommittedProjection.observation.repositoryID + "\u0000" + occurrence.path,
++				committedProjection.observation.repositoryID + "\u0000" + occurrence.path,
+ 			))
+ 			{
+ 				path:       occurrence.path
+ 				status:     "present"
+ 				kind:       occurrence.kind
+ 				memberID:   computedMemberID
+-				evidenceID: CommittedProjection.collected.state.evidenceID
++				evidenceID: committedProjection.collected.state.evidenceID
+ 				if occurrence.size != _|_ {
+ 					gitSizeBytes: occurrence.size
+ 				}
+ 			}
+ 		}]
+-		index: [for occurrence in OverlayProjection.observation.index.occurrences {
++		index: [for occurrence in overlayProjection.observation.index.occurrences {
+ 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+-				OverlayProjection.observation.repositoryID + "\u0000" +
+-					OverlayProjection.observation.baseRevision.format + "\u0000" +
+-					OverlayProjection.observation.baseRevision.hex + "\u0000index\u0000" +
++				overlayProjection.observation.repositoryID + "\u0000" +
++					overlayProjection.observation.baseRevision.format + "\u0000" +
++					overlayProjection.observation.baseRevision.hex + "\u0000index\u0000" +
+ 					occurrence.path,
+ 			))
+@@ -795,17 +795,17 @@
+ 					kind:   occurrence.kind
+ 				}
+ 				memberID:   computedMemberID
+-				evidenceID: OverlayProjection.collected.index.state.evidenceID
++				evidenceID: overlayProjection.collected.index.state.evidenceID
+ 				if occurrence.size != _|_ {
+ 					gitSizeBytes: occurrence.size
+ 				}
+ 			}
+ 		}]
+-		worktree: [for occurrence in OverlayProjection.observation.worktree.occurrences {
++		worktree: [for occurrence in overlayProjection.observation.worktree.occurrences {
+ 			let computedMemberID = "sha256:" + hex.Encode(sha256.Sum256(
+-				OverlayProjection.observation.repositoryID + "\u0000" +
+-					OverlayProjection.observation.baseRevision.format + "\u0000" +
+-					OverlayProjection.observation.baseRevision.hex + "\u0000worktree\u0000" +
++				overlayProjection.observation.repositoryID + "\u0000" +
++					overlayProjection.observation.baseRevision.format + "\u0000" +
++					overlayProjection.observation.baseRevision.hex + "\u0000worktree\u0000" +
+ 					occurrence.path,
+ 			))
+@@ -819,7 +819,7 @@
+ 					kind:   occurrence.kind
+ 				}
+ 				memberID:   computedMemberID
+-				evidenceID: OverlayProjection.collected.worktree.state.evidenceID
++				evidenceID: overlayProjection.collected.worktree.state.evidenceID
+ 				if occurrence.size != _|_ {
+ 					gitSizeBytes: occurrence.size
+ 				}
+@@ -832,8 +832,8 @@
+ 		}
+ 		allPaths: [for path, _ in _pathSet {path}]
+ 	}
+-	snapshot:      OverlayProjection.graph
+-	effectiveView: OverlayEffectivePathEvaluation.view
++	snapshot:      overlayProjection.graph
++	effectiveView: effectivePathEvaluation.view
+ })
+ 
+ #ContextGraphFailure: close({
