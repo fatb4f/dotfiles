@@ -49,17 +49,16 @@ run_case() {
       cue_json 'contextSelectionCutoverFixtures.boundary.repositoryRoot & {evaluation: #ContextSelectionRequestBoundary & contextSelectionCutoverFixtures.boundary.repositoryRoot}' >/dev/null
       ;;
     canonical-order)
-      cue_json 'contextSelectionCutoverFixtures.canonical.proposal' >/dev/null
-      cue_json 'contextSelectionCutoverFixtures.canonical.proof' >/dev/null
+      cue_json '{evaluation: #ContextSelectionCanonicalSurface & {proposal: contextSelectionCutoverFixtures.canonical.proposal, rootCatalog: contextSelectionCutoverFixtures.canonical.rootCatalog, proof: contextSelectionCutoverFixtures.canonical.proof, aliases: contextSelectionCutoverFixtures.canonical.aliases}}' >/dev/null
       ;;
     unsorted-proposal)
-      expect_failure 'contextSelectionCutoverFixtures.canonical.unsortedProposal & #ContextRootProposal'
+      expect_failure '{evaluation: #ContextSelectionCanonicalSurface & {proposal: contextSelectionCutoverFixtures.canonical.unsortedProposal, rootCatalog: contextSelectionCutoverFixtures.canonical.rootCatalog, proof: contextSelectionCutoverFixtures.canonical.proof, aliases: contextSelectionCutoverFixtures.canonical.aliases}}'
       ;;
     duplicate-evidence)
-      expect_failure 'contextSelectionCutoverFixtures.canonical.duplicateEvidenceProof'
+      expect_failure '{evaluation: #ContextSelectionCanonicalSurface & {proposal: contextSelectionCutoverFixtures.canonical.proposal, rootCatalog: contextSelectionCutoverFixtures.canonical.rootCatalog, proof: contextSelectionCutoverFixtures.canonical.duplicateEvidenceProof, aliases: contextSelectionCutoverFixtures.canonical.aliases}}'
       ;;
     empty-canonical-lists)
-      cue_json 'contextSelectionCutoverFixtures.canonical.empty' >/dev/null
+      cue_json '{evaluation: #ContextSelectionCanonicalSurface & {proposal: contextSelectionCutoverFixtures.canonical.emptyProposal, rootCatalog: contextSelectionCutoverFixtures.canonical.emptyRootCatalog, proof: contextSelectionCutoverFixtures.canonical.empty, aliases: contextSelectionCutoverFixtures.canonical.aliases}}' >/dev/null
       ;;
     committed-success|committed-single-file)
       output="$(cue_json 'contextSelectionCutoverFixtures.committed.evaluation')"
