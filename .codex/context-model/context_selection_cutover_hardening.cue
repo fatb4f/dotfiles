@@ -14,33 +14,33 @@ import (
 	Proof=proof:             #ContextSelectionProof
 	Aliases=aliases:         [...#ContextPacketEvidenceAlias]
 
-	_proposalMemberIDsSorted:       list.IsSortedStrings(Proposal.memberIDs) & true
-	_proposalMemberIDsUnique:       list.UniqueItems(Proposal.memberIDs) & true
-	_proposalNamespaceIDsSorted:    list.IsSortedStrings(Proposal.namespaceIDs) & true
-	_proposalNamespaceIDsUnique:    list.UniqueItems(Proposal.namespaceIDs) & true
-	_proposalPathPrefixesSorted:    list.IsSortedStrings(Proposal.pathPrefixes) & true
-	_proposalPathPrefixesUnique:    list.UniqueItems(Proposal.pathPrefixes) & true
-	_catalogMemberIDsSorted:        list.IsSortedStrings(RootCatalog.memberIDs) & true
-	_catalogMemberIDsUnique:        list.UniqueItems(RootCatalog.memberIDs) & true
-	_catalogNamespaceIDsSorted:     list.IsSortedStrings(RootCatalog.namespaceIDs) & true
-	_catalogNamespaceIDsUnique:     list.UniqueItems(RootCatalog.namespaceIDs) & true
-	_catalogPathsSorted:            list.IsSortedStrings(RootCatalog.paths) & true
-	_catalogPathsUnique:            list.UniqueItems(RootCatalog.paths) & true
-	_relationshipsSorted:           list.IsSortedStrings(Proof.relationshipIDs) & true
-	_relationshipsUnique:           list.UniqueItems(Proof.relationshipIDs) & true
-	_evidenceSorted:                list.IsSortedStrings(Proof.evidenceIDs) & true
-	_evidenceUnique:                list.UniqueItems(Proof.evidenceIDs) & true
-	_effectiveFilesSorted:          list.IsSortedStrings(Proof.effectiveFiles) & true
-	_effectiveFilesUnique:          list.UniqueItems(Proof.effectiveFiles) & true
-	_selectedKeys:                  [for entity in Proof.selected {entity.kind + "\u0000" + entity.id}]
-	_selectedUnique:                list.UniqueItems(_selectedKeys) & true
-	_aliasGraphEvidenceIDs:         [for alias in Aliases {alias.graphEvidenceID}]
-	_aliasPacketEvidenceIDs:        [for alias in Aliases {alias.packetEvidenceID}]
-	_aliasGraphSorted:              list.IsSortedStrings(_aliasGraphEvidenceIDs) & true
-	_aliasGraphUnique:              list.UniqueItems(_aliasGraphEvidenceIDs) & true
-	_aliasPacketSorted:             list.IsSortedStrings(_aliasPacketEvidenceIDs) & true
-	_aliasPacketUnique:             list.UniqueItems(_aliasPacketEvidenceIDs) & true
-	_frontiers:                     [Proof.frontier0, Proof.frontier1, Proof.frontier2, Proof.frontier3, Proof.frontier4, Proof.frontier5, Proof.frontier6, Proof.frontier7, Proof.frontier8]
+	_proposalMemberIDsSorted:    list.IsSortedStrings(Proposal.memberIDs) & true
+	_proposalMemberIDsUnique:    list.UniqueItems(Proposal.memberIDs) & true
+	_proposalNamespaceIDsSorted: list.IsSortedStrings(Proposal.namespaceIDs) & true
+	_proposalNamespaceIDsUnique: list.UniqueItems(Proposal.namespaceIDs) & true
+	_proposalPathPrefixesSorted: list.IsSortedStrings(Proposal.pathPrefixes) & true
+	_proposalPathPrefixesUnique: list.UniqueItems(Proposal.pathPrefixes) & true
+	_catalogMemberIDsSorted:     list.IsSortedStrings(RootCatalog.memberIDs) & true
+	_catalogMemberIDsUnique:     list.UniqueItems(RootCatalog.memberIDs) & true
+	_catalogNamespaceIDsSorted:  list.IsSortedStrings(RootCatalog.namespaceIDs) & true
+	_catalogNamespaceIDsUnique:  list.UniqueItems(RootCatalog.namespaceIDs) & true
+	_catalogPathsSorted:         list.IsSortedStrings(RootCatalog.paths) & true
+	_catalogPathsUnique:         list.UniqueItems(RootCatalog.paths) & true
+	_relationshipsSorted:        list.IsSortedStrings(Proof.relationshipIDs) & true
+	_relationshipsUnique:        list.UniqueItems(Proof.relationshipIDs) & true
+	_evidenceSorted:             list.IsSortedStrings(Proof.evidenceIDs) & true
+	_evidenceUnique:             list.UniqueItems(Proof.evidenceIDs) & true
+	_effectiveFilesSorted:       list.IsSortedStrings(Proof.effectiveFiles) & true
+	_effectiveFilesUnique:       list.UniqueItems(Proof.effectiveFiles) & true
+	_selectedKeys:               [for entity in Proof.selected {entity.kind + "\u0000" + entity.id}]
+	_selectedUnique:             list.UniqueItems(_selectedKeys) & true
+	_aliasGraphEvidenceIDs:      [for alias in Aliases {alias.graphEvidenceID}]
+	_aliasPacketEvidenceIDs:     [for alias in Aliases {alias.packetEvidenceID}]
+	_aliasGraphSorted:           list.IsSortedStrings(_aliasGraphEvidenceIDs) & true
+	_aliasGraphUnique:           list.UniqueItems(_aliasGraphEvidenceIDs) & true
+	_aliasPacketSorted:          list.IsSortedStrings(_aliasPacketEvidenceIDs) & true
+	_aliasPacketUnique:          list.UniqueItems(_aliasPacketEvidenceIDs) & true
+	_frontiers:                  [Proof.frontier0, Proof.frontier1, Proof.frontier2, Proof.frontier3, Proof.frontier4, Proof.frontier5, Proof.frontier6, Proof.frontier7, Proof.frontier8]
 	_frontierCanonicality: [for frontier in _frontiers {
 		let entityKeys = [for record in frontier.entities {
 			record.entity.kind + "\u0000" + record.entity.id
@@ -78,13 +78,44 @@ import (
 	}]
 }
 
+// The original selector is intentionally decomposed into nested CUE helpers.
+// Rebind each helper to aliases at the complete application boundary so later
+// unification cannot leave references attached to the generic definition.
 #ContextSelectionEvaluation: {
-	CutoverRequest=request:         #ContextApplicationRequest
-	CutoverSnapshot=snapshot:       #ContextGraphSnapshot
-	CutoverProposal=proposal:       #ContextRootProposal
-	CutoverRootCatalog=rootCatalog: #ContextRootCatalog
-	CutoverProof=proof:             #ContextSelectionProof
-	CutoverPacket=packet:           #ContextPacketV0Projection
+	CutoverRequest=request:                 #ContextApplicationRequest
+	CutoverSnapshot=snapshot:               #ContextGraphSnapshot
+	CutoverProposal=proposal:               #ContextRootProposal
+	CutoverPolicy=policy:                   #ContextSelectionPolicy
+	CutoverEffectiveView=effectiveView:     #GitEffectivePathView
+	CutoverRootCatalog=rootCatalog:         #ContextRootCatalog
+	CutoverProof=proof:                     #ContextSelectionProof
+	CutoverPacket=packet:                   #ContextPacketV0Projection
+
+	_rootEvaluation: {
+		request:       CutoverRequest
+		proposal:      CutoverProposal
+		policy:        CutoverPolicy
+		snapshot:      CutoverSnapshot
+		effectiveView: CutoverEffectiveView
+	}
+	_step1: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step2: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step3: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step4: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step5: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step6: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step7: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step8: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_depthCompletion: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_effectiveFileSelection: {
+		effectiveView: CutoverEffectiveView
+	}
+	_digestEvaluation: {
+		request:           CutoverRequest
+		proposal:          CutoverProposal
+		policy:            CutoverPolicy
+		effectivePathView: CutoverEffectiveView
+	}
 
 	_cutoverCanonicalSurface: #ContextSelectionCanonicalSurface & {
 		proposal:    CutoverProposal
