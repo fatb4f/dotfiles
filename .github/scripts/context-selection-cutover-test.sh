@@ -61,7 +61,7 @@ run_case() {
       cue_json '{evaluation: #ContextSelectionCanonicalSurface & {proposal: contextSelectionCutoverFixtures.canonical.emptyProposal, rootCatalog: contextSelectionCutoverFixtures.canonical.emptyRootCatalog, proof: contextSelectionCutoverFixtures.canonical.empty, aliases: contextSelectionCutoverFixtures.canonical.aliases}}' >/dev/null
       ;;
     committed-success|committed-single-file)
-      output="$(cue_json 'contextSelectionCutoverFixtures.committed.evaluation')"
+      output="$(cue_json 'contextSelectionCutoverFixtures.committed._qualificationEvaluation')"
       jq -e '.packet.packet.selected.files == ["src/main.py"]' <<<"$output" >/dev/null
       jq -e '.proof.counters.files == 1 and .proof.counters.fileBytes == 12' <<<"$output" >/dev/null
       jq -e '.resolution.selection.sufficiency == "sufficient"' <<<"$output" >/dev/null
