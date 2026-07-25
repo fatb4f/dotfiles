@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 if [[ -n "${RUNNER_TEMP:-}" ]]; then
   mkdir -p "$RUNNER_TEMP/context-git-assertion-candidates"
+  cp "$REPO_ROOT/.codex/context-model/context_selection_service.cue" \
+    "$RUNNER_TEMP/context-git-assertion-candidates/context_selection_service.cue"
   exec > >(tee "$RUNNER_TEMP/context-git-assertion-candidates/cue-contract.log") 2>&1
 fi
 
