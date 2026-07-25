@@ -38,12 +38,24 @@ record_case() {
 run_case() {
   local property_id="$1"
   local case_id="$2"
-  local expression output base_digest variant_digest
+  local expression output first_output second_output base_digest variant_digest
   case "$case_id" in
-    outgoing-proof|lowest-incoming-proof|relationship-order-perturbation)
+    outgoing-proof)
+      expression='contextSelectionPropertyFixtures.relationshipOutgoing & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.relationshipOutgoing}'
+      output="$(cue_json "$expression")"
+      jq -e '.step.records == [{entity:{kind:"member",id:"member.target"},distance:1,direction:"outgoing",predecessor:"rel.out"}]' <<<"$output" >/dev/null
+      ;;
+    lowest-incoming-proof)
       expression='contextSelectionPropertyFixtures.relationshipPredecessor & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.relationshipPredecessor}'
       output="$(cue_json "$expression")"
       jq -e '.step.records == [{entity:{kind:"member",id:"member.target"},distance:1,direction:"incoming",predecessor:"rel.a.in"}]' <<<"$output" >/dev/null
+      ;;
+    relationship-order-perturbation)
+      first_output="$(cue_json 'contextSelectionPropertyFixtures.relationshipOrderPerturbation.first & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.relationshipOrderPerturbation.first}')"
+      second_output="$(cue_json 'contextSelectionPropertyFixtures.relationshipOrderPerturbation.second & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.relationshipOrderPerturbation.second}')"
+      jq -S '.step.records' <<<"$first_output" >"$work/relationship-order-first.json"
+      jq -S '.step.records' <<<"$second_output" >"$work/relationship-order-second.json"
+      cmp "$work/relationship-order-first.json" "$work/relationship-order-second.json"
       ;;
     entity-id-predecessor)
       output="$(cue_json 'contextSelectionPropertyFixtures.relationshipPredecessor & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.relationshipPredecessor}')"
@@ -54,12 +66,16 @@ run_case() {
       jq -e '.step.records == [{entity:{kind:"namespace",id:"namespace.fixture"},distance:1,direction:"outgoing",predecessor:"rel.contains-root"}]' <<<"$output" >/dev/null
       ;;
     non-contains-edge)
-      output="$(cue_json '{step: #ContextTraversalStep & {snapshot: contextSelectionPropertyFixtures.incomingAncestry.snapshot, predicates: [], previous: contextSelectionPropertyFixtures.incomingAncestry.previous, visited: contextSelectionPropertyFixtures.incomingAncestry.visited, distance: 1}}')"
+      output="$(cue_json 'contextSelectionPropertyFixtures.nonContains & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.nonContains}')"
       jq -e '.step.records == []' <<<"$output" >/dev/null
       ;;
-    child-to-parent|root-endpoint-reversal)
+    child-to-parent)
       output="$(cue_json 'contextSelectionPropertyFixtures.incomingAncestry & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.incomingAncestry & {distance: 1}}')"
       jq -e '.step.records == [{entity:{kind:"module",id:"module.fixture"},distance:1,direction:"incoming",predecessor:"rel.contains-root"}]' <<<"$output" >/dev/null
+      ;;
+    root-endpoint-reversal)
+      output="$(cue_json 'contextSelectionPropertyFixtures.endpointReversed & {step: #ContextTraversalStep & contextSelectionPropertyFixtures.endpointReversed}')"
+      jq -e '.step.records == [{entity:{kind:"namespace",id:"namespace.fixture"},distance:1,direction:"incoming",predecessor:"rel.reversed"}]' <<<"$output" >/dev/null
       ;;
     depth-eight-terminal)
       cue_json 'contextSelectionPropertyFixtures.depth.terminal & {completion: #ContextTraversalDepthCompletion & contextSelectionPropertyFixtures.depth.terminal}' >/dev/null
