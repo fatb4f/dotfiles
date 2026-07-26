@@ -95,83 +95,86 @@ import (
 		snapshot:      CutoverSnapshot
 		effectiveView: CutoverEffectiveView
 	}
-	_step1: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step2: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step3: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step4: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step5: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step6: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step7: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_step8: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
-	_depthCompletion: {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step1:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step2:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step3:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step4:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step5:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step6:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step7:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_step8:                  {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
+	_depthCompletion:        {snapshot: CutoverSnapshot, predicates: CutoverPolicy.predicates}
 	_effectiveFileSelection: {effectiveView: CutoverEffectiveView}
 	_digestEvaluation: {
-		request: CutoverRequest, proposal: CutoverProposal, policy: CutoverPolicy, effectivePathView: CutoverEffectiveView
+		request:           CutoverRequest, proposal:          CutoverProposal, policy:            CutoverPolicy, effectivePathView: CutoverEffectiveView
 	}
 
 	_cutoverCanonicalSurface: #ContextSelectionCanonicalSurface & {
-		proposal: CutoverProposal, rootCatalog: CutoverRootCatalog, proof: CutoverProof, aliases: CutoverPacket.aliases
+		proposal:    CutoverProposal, rootCatalog: CutoverRootCatalog, proof:       CutoverProof, aliases:     CutoverPacket.aliases
 	}
 	_cutoverRequestBoundary: #ContextSelectionRequestBoundary & {
-		request: CutoverRequest, snapshot: CutoverSnapshot, selected: CutoverProof.selected, files: CutoverProof.effectiveFiles
+		request:  CutoverRequest, snapshot: CutoverSnapshot, selected: CutoverProof.selected, files:    CutoverProof.effectiveFiles
 	}
 }
 
-// Bind aliases after each subtype has supplied its concrete projection graph.
-// Aliases declared only in the common definition retain the generic graph and
-// cannot make traversal records concrete under CUE's lexical reference rules.
+// Bind internal evaluators after each subtype has supplied its concrete
+// projection graph. References declared only in the common definition retain
+// the generic graph and cannot make traversal records concrete under CUE's
+// lexical reference rules.
 #ContextCommittedSelectionEvaluation: {
-	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
-	CommittedRequest=request:                #ContextApplicationRequest
-	CommittedProposal=proposal:              #ContextRootProposal
-	CommittedPolicy=policy:                  #ContextSelectionPolicy
-	CommittedSnapshot=snapshot:              CommittedProjection.graph
-	CommittedEffectivePathEvaluation=effectivePathEvaluation: #GitCommittedEffectivePathEvaluation
-	CommittedEffectiveView=effectiveView: CommittedEffectivePathEvaluation.view
+	CommittedRequest=request:             #ContextApplicationRequest
+	CommittedProposal=proposal:           #ContextRootProposal
+	CommittedPolicy=policy:               #ContextSelectionPolicy
+	CommittedSnapshot=snapshot:           #ContextGraphSnapshot
+	CommittedEffectiveView=effectiveView: #GitEffectivePathView
 
 	_rootEvaluation: {
-		request: CommittedRequest, proposal: CommittedProposal, policy: CommittedPolicy
-		snapshot: CommittedSnapshot, effectiveView: CommittedEffectiveView
+		request:       CommittedRequest
+		proposal:      CommittedProposal
+		policy:        CommittedPolicy
+		snapshot:      CommittedSnapshot
+		effectiveView: CommittedEffectiveView
 	}
-	_step1: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step2: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step3: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step4: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step5: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step6: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step7: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_step8: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
-	_depthCompletion: {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step1:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step2:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step3:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step4:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step5:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step6:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step7:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_step8:                  {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
+	_depthCompletion:        {snapshot: CommittedSnapshot, predicates: CommittedPolicy.predicates}
 	_effectiveFileSelection: {effectiveView: CommittedEffectiveView}
 	_digestEvaluation: {
-		request: CommittedRequest, proposal: CommittedProposal, policy: CommittedPolicy, effectivePathView: CommittedEffectiveView
+		request:           CommittedRequest, proposal:          CommittedProposal, policy:            CommittedPolicy, effectivePathView: CommittedEffectiveView
 	}
 }
 
 #ContextOverlaySelectionEvaluation: {
-	OverlayProjection=overlayProjection:     #GitOverlayProjection
-	OverlayRequest=request:                  #ContextApplicationRequest
-	OverlayProposal=proposal:                #ContextRootProposal
-	OverlayPolicy=policy:                    #ContextSelectionPolicy
-	OverlaySnapshot=snapshot:                OverlayProjection.graph
-	OverlayEffectivePathEvaluation=effectivePathEvaluation: #GitEffectivePathEvaluation
-	OverlayEffectiveView=effectiveView: OverlayEffectivePathEvaluation.view
+	OverlayRequest=request:             #ContextApplicationRequest
+	OverlayProposal=proposal:           #ContextRootProposal
+	OverlayPolicy=policy:               #ContextSelectionPolicy
+	OverlaySnapshot=snapshot:           #ContextGraphSnapshot
+	OverlayEffectiveView=effectiveView: #GitEffectivePathView
 
 	_rootEvaluation: {
-		request: OverlayRequest, proposal: OverlayProposal, policy: OverlayPolicy
-		snapshot: OverlaySnapshot, effectiveView: OverlayEffectiveView
+		request:       OverlayRequest
+		proposal:      OverlayProposal
+		policy:        OverlayPolicy
+		snapshot:      OverlaySnapshot
+		effectiveView: OverlayEffectiveView
 	}
-	_step1: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step2: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step3: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step4: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step5: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step6: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step7: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_step8: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
-	_depthCompletion: {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step1:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step2:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step3:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step4:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step5:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step6:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step7:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_step8:                  {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
+	_depthCompletion:        {snapshot: OverlaySnapshot, predicates: OverlayPolicy.predicates}
 	_effectiveFileSelection: {effectiveView: OverlayEffectiveView}
 	_digestEvaluation: {
-		request: OverlayRequest, proposal: OverlayProposal, policy: OverlayPolicy, effectivePathView: OverlayEffectiveView
+		request:           OverlayRequest, proposal:          OverlayProposal, policy:            OverlayPolicy, effectivePathView: OverlayEffectiveView
 	}
 }

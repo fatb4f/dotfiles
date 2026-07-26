@@ -471,11 +471,10 @@ import (
 // selected entity, induced relationship, evidence reference, counter, alias,
 // and digest below is a projection. Callers cannot submit any of those values.
 #ContextSelectionEvaluation: {
-	Request=request:                         #ContextApplicationRequest
-	Proposal=proposal:                       #ContextRootProposal
-	Policy=policy:                           #ContextSelectionPolicy
-	CommittedProjection=committedProjection: #GitCommittedSnapshotProjection
-	Snapshot=snapshot:                       #ContextGraphSnapshot
+	Request=request:   #ContextApplicationRequest
+	Proposal=proposal: #ContextRootProposal
+	Policy=policy:     #ContextSelectionPolicy
+	Snapshot=snapshot: #ContextGraphSnapshot
 	EffectivePathEvaluation=effectivePathEvaluation: #GitEffectivePathEvaluation & {
 		snapshotID: Snapshot.snapshotID
 	}
@@ -753,6 +752,19 @@ import (
 	}
 	CommittedSnapshot=snapshot:           CommittedProjection.graph
 	CommittedEffectiveView=effectiveView: CommittedEffectivePathEvaluation.view
+
+	_rootEvaluation:         {snapshot: CommittedSnapshot, effectiveView: CommittedEffectiveView}
+	_step1:                  {snapshot: CommittedSnapshot}
+	_step2:                  {snapshot: CommittedSnapshot}
+	_step3:                  {snapshot: CommittedSnapshot}
+	_step4:                  {snapshot: CommittedSnapshot}
+	_step5:                  {snapshot: CommittedSnapshot}
+	_step6:                  {snapshot: CommittedSnapshot}
+	_step7:                  {snapshot: CommittedSnapshot}
+	_step8:                  {snapshot: CommittedSnapshot}
+	_depthCompletion:        {snapshot: CommittedSnapshot}
+	_effectiveFileSelection: {effectiveView: CommittedEffectiveView}
+	_digestEvaluation:       {effectivePathView: CommittedEffectiveView}
 })
 
 #ContextOverlaySelectionEvaluation: close({
@@ -834,6 +846,19 @@ import (
 	}
 	OverlaySnapshot=snapshot:           OverlayProjection.graph
 	OverlayEffectiveView=effectiveView: OverlayEffectivePathEvaluation.view
+
+	_rootEvaluation:         {snapshot: OverlaySnapshot, effectiveView: OverlayEffectiveView}
+	_step1:                  {snapshot: OverlaySnapshot}
+	_step2:                  {snapshot: OverlaySnapshot}
+	_step3:                  {snapshot: OverlaySnapshot}
+	_step4:                  {snapshot: OverlaySnapshot}
+	_step5:                  {snapshot: OverlaySnapshot}
+	_step6:                  {snapshot: OverlaySnapshot}
+	_step7:                  {snapshot: OverlaySnapshot}
+	_step8:                  {snapshot: OverlaySnapshot}
+	_depthCompletion:        {snapshot: OverlaySnapshot}
+	_effectiveFileSelection: {effectiveView: OverlayEffectiveView}
+	_digestEvaluation:       {effectivePathView: OverlayEffectiveView}
 })
 
 #ContextGraphFailure: close({
