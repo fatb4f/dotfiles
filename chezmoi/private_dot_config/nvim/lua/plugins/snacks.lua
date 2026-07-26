@@ -17,6 +17,10 @@ return {
 			explorer = {
 				enabled = true,
 				replace_netrw = true,
+				hidden = true,
+			},
+			picker = {
+				hidden = true,
 			},
 		},
 		keys = {
