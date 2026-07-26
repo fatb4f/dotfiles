@@ -20,6 +20,14 @@ return {
 				hidden = true,
 			},
 			picker = {
+				sources = {
+					explorer = {
+						layout = {
+							preset = "sidebar",
+							preview = "main",
+						},
+					},
+				},
 				hidden = true,
 			},
 		},
