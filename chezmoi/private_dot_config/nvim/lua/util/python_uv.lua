@@ -44,19 +44,34 @@ end
 
 function M.pytest_diagnostics(root, output)
 	local items = {}
+	local project_prefix = vim.fs.normalize(root) .. "/"
 	for _, line in ipairs(vim.split(output, "\n", { plain = true, trimempty = true })) do
+		local traceback_filename, traceback_lnum = line:match('^E%s+File "(.+%.py)", line (%d+)')
+		if traceback_filename then
+			table.insert(items, {
+				filename = filename_at(root, traceback_filename),
+				lnum = tonumber(traceback_lnum),
+				col = 1,
+				type = "E",
+				text = "pytest collection error",
+			})
+		end
+
 		local filename, lnum, col, text = line:match("^(.+%.py):(%d+):(%d+):%s*(.+)$")
 		if not filename then
 			filename, lnum, text = line:match("^(.+%.py):(%d+):%s*(.+)$")
 		end
 		if filename then
-			table.insert(items, {
-				filename = filename_at(root, filename),
-				lnum = tonumber(lnum),
-				col = tonumber(col) or 1,
-				type = "E",
-				text = text,
-			})
+			local resolved = filename_at(root, filename)
+			if vim.startswith(resolved, project_prefix) then
+				table.insert(items, {
+					filename = resolved,
+					lnum = tonumber(lnum),
+					col = tonumber(col) or 1,
+					type = "E",
+					text = text,
+				})
+			end
 		end
 	end
 	return items
