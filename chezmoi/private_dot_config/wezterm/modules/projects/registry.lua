@@ -84,34 +84,37 @@ local function session_for_path(path)
 	}
 end
 
-local model = {
-	version = "workspace.projects.v3",
-	sessions = {},
-	sessions_by_workspace = {},
-	order = {},
-}
+local function load()
+	local model = {
+		version = "workspace.projects.v3",
+		sessions = {},
+		sessions_by_workspace = {},
+		order = {},
+	}
+	local roots = {}
 
-local roots = {}
+	for _, path in ipairs(seed_paths()) do
+		local session = session_for_path(path)
 
-for _, path in ipairs(seed_paths()) do
-	local session = session_for_path(path)
+		if roots[path] then
+			error("Duplicate project seed path: " .. path)
+		end
 
-	if roots[path] then
-		error("Duplicate project seed path: " .. path)
+		if model.sessions[session.id] then
+			error("Duplicate project seed id: " .. session.id)
+		end
+
+		if model.sessions_by_workspace[session.workspace] then
+			error("Duplicate project seed workspace: " .. session.workspace)
+		end
+
+		roots[path] = true
+		model.sessions[session.id] = session
+		model.sessions_by_workspace[session.workspace] = session
+		table.insert(model.order, session.id)
 	end
 
-	if model.sessions[session.id] then
-		error("Duplicate project seed id: " .. session.id)
-	end
-
-	if model.sessions_by_workspace[session.workspace] then
-		error("Duplicate project seed workspace: " .. session.workspace)
-	end
-
-	roots[path] = true
-	model.sessions[session.id] = session
-	model.sessions_by_workspace[session.workspace] = session
-	table.insert(model.order, session.id)
+	return model
 end
 
-return model
+return { load = load }

@@ -32,7 +32,7 @@ local function workspace_exists(name)
 end
 
 local function load_sessions()
-	return projects
+	return projects.load()
 end
 
 local function session_entries()
