@@ -6,6 +6,7 @@
 WezTerm owns project/session topology and terminal pane lifecycle.
 Neovim owns editor-local file exploration through Snacks explorer.
 WezTerm native actions own terminal pane focus and resize mechanics.
+`~/.config/projects.seed` is the curated project catalog shared by WezTerm and Neovim.
 ```
 
 ## Authority matrix
@@ -14,6 +15,8 @@ WezTerm native actions own terminal pane focus and resize mechanics.
 |---|---|---|
 | WezTerm project registry | Project identity, roots, cwd, and editor env | Editor buffer state |
 | WezTerm sessionizer | Workspace selection and `SwitchToWorkspace` | Neovim project topology |
+| Shared project seed | Curated project membership and order | Workspace or editor-session lifecycle |
+| Neovim Snacks project picker | Editor-local project directory and session restore | WezTerm workspace selection |
 | WezTerm native pane actions | Split, close, zoom, select, focus, and resize terminal panes | Launching project applications |
 | Neovim Snacks explorer | Editor-local file browsing, reveal, preview, filesystem operations | WezTerm project/session selection |
 | Neovim smart-splits | Editor-local split navigation and resize | WezTerm terminal panes or project topology |
@@ -23,6 +26,7 @@ WezTerm native actions own terminal pane focus and resize mechanics.
 | User action | Route | Expected result |
 |---|---|---|
 | `Alt-s` sessionizer | WezTerm sessionizer | Project workspace selected or spawned |
+| `<leader>fp` | Snacks project picker | Seeded editor project selected; home is excluded |
 | `Ctrl+Shift+S` / `Ctrl+Shift+D` | `SplitPane` right / down | A shell pane opens without launching an application |
 | `Ctrl+Shift+Z` | `TogglePaneZoomState` | Active pane toggles between zoomed and tiled |
 | `Ctrl+Shift+W` | `CloseCurrentPane` | Active pane closes after confirmation |

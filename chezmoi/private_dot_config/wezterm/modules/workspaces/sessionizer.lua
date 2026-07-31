@@ -1,7 +1,7 @@
 local wezterm = require("wezterm")
 
 local sessionizer = wezterm.plugin.require("https://github.com/mikkasendke/sessionizer.wezterm")
-local projects = require("modules.workspaces.projects")
+local projects = require("modules.projects.registry")
 
 local M = {}
 
@@ -32,7 +32,7 @@ local function workspace_exists(name)
 end
 
 local function load_sessions()
-	return projects.sessions()
+	return projects
 end
 
 local function session_entries()
