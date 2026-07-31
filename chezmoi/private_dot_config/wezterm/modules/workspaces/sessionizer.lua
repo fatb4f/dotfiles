@@ -44,42 +44,11 @@ local function session_entries()
 
 		table.insert(entries, {
 			id = session.workspace,
-			label = session.workspace,
+			label = string.format("Workspace: '%s'", home_relative(session.workspace)),
 		})
 	end
 
 	return entries
-end
-
-local function normalize_entries(entries)
-	local sessions_by_workspace = load_sessions().sessions_by_workspace
-	local seen = {}
-	local next_index = 1
-
-	for _, entry in ipairs(entries) do
-		if type(entry.id) == "string" and sessions_by_workspace[entry.id] and not seen[entry.id] then
-			seen[entry.id] = true
-			entry.label = string.format("Workspace: '%s'", home_relative(entry.id))
-			entries[next_index] = entry
-			next_index = next_index + 1
-		end
-	end
-
-	for index = #entries, next_index, -1 do
-		entries[index] = nil
-	end
-
-	table.sort(entries, function(a, b)
-		if a.id == wezterm.home_dir then
-			return true
-		end
-
-		if b.id == wezterm.home_dir then
-			return false
-		end
-
-		return a.id < b.id
-	end)
 end
 
 local function switch_to_session(window, pane, session)
@@ -139,14 +108,7 @@ local function schema()
 			callback = normalized_callback,
 		},
 
-		sessionizer.AllActiveWorkspaces({
-			filter_current = true,
-			filter_default = true,
-		}),
-
 		session_entries,
-
-		processing = normalize_entries,
 	}
 end
 
