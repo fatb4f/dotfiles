@@ -1,0 +1,13 @@
+[[shades]]
+name = "eye-day"
+default = true
+
+[[shades]]
+name = "eye-evening"
+start_time = 18:00:00
+end_time = 22:00:00
+
+[[shades]]
+name = "eye-night"
+start_time = 22:00:00
+end_time = 06:30:00
