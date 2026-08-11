@@ -29,19 +29,21 @@ return {
 		},
 	},
 	{
-		"nvim-neotest/neotest",
-		dependencies = { "nvim-neotest/neotest-python" },
-		opts = function(_, opts)
-			opts.adapters = opts.adapters or {}
-			table.insert(
-				opts.adapters,
-				require("neotest-python")({
-					runner = "pytest",
-					python = function(root)
-						return uv.command(root, "python")
-					end,
-				})
-			)
+		"benomahony/uv.nvim",
+		ft = { "python" },
+		dependencies = { "folke/snacks.nvim" },
+		opts = {
+			auto_activate_venv = true,
+			picker_integration = true,
+			keymaps = false,
+			execution = {
+				run_command = "uv run --frozen --no-sync python",
+				notify_output = true,
+			},
+		},
+		config = function(_, opts)
+			require("uv").setup(opts)
+			require("util.python_learning").setup()
 		end,
 	},
 }

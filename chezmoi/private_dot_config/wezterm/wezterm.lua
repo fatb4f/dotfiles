@@ -21,6 +21,7 @@ table.insert(config.keys, {
 })
 
 require("modules.panes").apply_to_config(config)
+require("modules.python_learning").apply_to_config(config)
 require("modules.workspaces.sessionizer").apply_to_config(config)
 require("modules.scrollback").apply_to_config(config)
 require("modules.tinty").apply_to_config(config)

@@ -77,9 +77,8 @@ function M.pytest_diagnostics(root, output)
 	return items
 end
 
-function M.run_quickfix(executable, args, parser)
+function M.run_quickfix_command(command, parser)
 	local root = M.root(0)
-	local command = M.command(root, executable, args)
 	vim.system(command, { cwd = root, text = true }, function(result)
 		vim.schedule(function()
 			local output = (result.stdout or "") .. (result.stderr or "")
@@ -92,6 +91,11 @@ function M.run_quickfix(executable, args, parser)
 			vim.notify(table.concat(command, " ") .. " exited with " .. result.code)
 		end)
 	end)
+end
+
+function M.run_quickfix(executable, args, parser)
+	local root = M.root(0)
+	M.run_quickfix_command(M.command(root, executable, args), parser)
 end
 
 return M
