@@ -1,0 +1,634 @@
+# Helix config.toml — normalized commented reference
+#
+# Entire file is inert: every TOML assignment and table header is commented out.
+# Uncomment only the sections/keys you want to override.
+#
+# Sources supplied:
+#   - editor.md   -> editor configuration
+#   - keymap.md   -> default remappable normal/insert/minor-mode bindings
+#   - themes.md   -> theme selection syntax
+#   - languages.md -> language/LSP settings (kept out of config.toml except the
+#                     project-level workspace-lsp-roots crossover)
+#
+# Key notation below is normalized to Helix remapping syntax:
+#   Ctrl- => C-, Alt- => A-, Shift- => S-
+#   Enter => ret, Escape => esc, PageUp => pageup, PageDown => pagedown, etc.
+
+# -----------------------------------------------------------------------------
+# Theme
+# -----------------------------------------------------------------------------
+# Choose EITHER a single theme:
+# theme = "default"  # example built-in theme name
+#
+# OR adaptive dark/light themes:
+# [theme]
+# dark = "catppuccin_frappe"
+# light = "catppuccin_latte"
+# fallback = "catppuccin_frappe"  # optional; defaults to dark theme
+
+# -----------------------------------------------------------------------------
+# Editor — top-level
+# -----------------------------------------------------------------------------
+# [editor]
+# scrolloff = 5  # default; lines of viewport padding
+# mouse = true  # default
+# mouse-yank-register = "*"  # default
+# middle-click-paste = true  # default
+# default-yank-register = '"'  # default register is the double-quote register
+# scroll-lines = 3  # default
+# shell = ["sh", "-c"]  # Unix default; Windows uses ["cmd", "/C"]
+# line-number = "absolute"  # default; alternative: "relative"
+# cursorline = false  # default
+# cursorcolumn = false  # default
+# continue-comments = true  # default
+# gutters = ["diagnostics", "spacer", "line-numbers", "spacer", "diff"]  # default
+# auto-completion = true  # default
+# path-completion = true  # default
+# auto-format = true  # default; language must generally allow auto-format too
+# idle-timeout = 250  # default ms
+# completion-timeout = 250  # default ms; 5 gives near-instant completion
+# preview-completion-insert = true  # default
+# completion-trigger-len = 2  # default
+# completion-replace = false  # default
+# auto-info = true  # default
+# true-color = false  # default
+# undercurl = false  # default
+# rulers = []  # default
+# bufferline = "never"  # default; "always" | "never" | "multiple"
+# color-modes = false  # default
+# text-width = 80  # default
+# workspace-lsp-roots = []  # default; intended for project-specific .helix/config.toml
+# default-line-ending = "native"  # default; native | lf | crlf | ff | cr | nel
+# insert-final-newline = true  # default
+# atomic-save = true  # default
+# trim-final-newlines = false  # default
+# trim-trailing-whitespace = false  # default
+# popup-border = "none"  # default; popup | menu | all | none
+# indent-heuristic = "hybrid"  # default; hybrid | tree-sitter | simple
+# jump-label-alphabet = "abcdefghijklmnopqrstuvwxyz"  # default
+# end-of-line-diagnostics = "hint"  # default; error | warning | info | hint | disable
+# clipboard-provider = "wayland"  # example; actual default is platform/environment specific
+# editor-config = true  # default
+# rainbow-brackets = false  # default; requires language rainbows.scm queries
+# kitty-keyboard-protocol = "auto"  # default; enabled | disabled | auto
+# auto-pairs = true  # default; alternatively configure [editor.auto-pairs] below
+
+# -----------------------------------------------------------------------------
+# Clipboard provider — custom commands
+# -----------------------------------------------------------------------------
+# [editor.clipboard-provider.custom]
+# yank = { command = "cat", args = ["test.txt"] }  # example from source
+# paste = { command = "tee", args = ["test.txt"] }  # example from source
+# primary-yank = { command = "cat", args = ["test-primary.txt"] }  # optional example
+# primary-paste = { command = "tee", args = ["test-primary.txt"] }  # optional example
+
+# -----------------------------------------------------------------------------
+# Statusline
+# -----------------------------------------------------------------------------
+# [editor.statusline]
+# left = ["mode", "spinner", "file-name", "read-only-indicator", "file-modification-indicator"]  # default
+# center = []  # default
+# right = ["diagnostics", "selections", "register", "position", "file-encoding"]  # default
+# separator = "│"  # default
+# mode.normal = "NOR"  # default
+# mode.insert = "INS"  # default
+# mode.select = "SEL"  # default
+# diagnostics = ["warning", "error"]  # default
+# workspace-diagnostics = ["warning", "error"]  # default
+# Available statusline elements:
+# mode, spinner, file-name, file-absolute-path, file-base-name,
+# current-working-directory, file-modification-indicator, file-encoding,
+# file-line-ending, file-indent-style, read-only-indicator, total-line-numbers,
+# file-type, diagnostics, workspace-diagnostics, selections,
+# primary-selection-length, position, position-percentage, separator, spacer,
+# version-control, register, code-action-hint
+
+# -----------------------------------------------------------------------------
+# LSP
+# -----------------------------------------------------------------------------
+# [editor.lsp]
+# enable = true  # default
+# display-messages = true  # default
+# display-progress-messages = false  # default
+# auto-signature-help = true  # default
+# auto-document-highlight = false  # default
+# display-inlay-hints = false  # default
+# inlay-hints-length-limit = 80  # example; unset by default
+# display-color-swatches = true  # default
+# display-signature-help-docs = true  # default
+# snippets = true  # default; requires LSP restart after changing
+# goto-reference-include-declaration = true  # default
+
+# -----------------------------------------------------------------------------
+# Cursor shape
+# -----------------------------------------------------------------------------
+# [editor.cursor-shape]
+# normal = "block"  # default; block | bar | underline | hidden
+# insert = "block"  # default; block | bar | underline | hidden
+# select = "block"  # default; block | bar | underline | hidden
+
+# -----------------------------------------------------------------------------
+# File picker
+# -----------------------------------------------------------------------------
+# [editor.file-picker]
+# hidden = true  # default
+# follow-symlinks = true  # default
+# deduplicate-links = true  # default
+# parents = true  # default
+# ignore = true  # default
+# git-ignore = true  # default
+# git-global = true  # default
+# git-exclude = true  # default
+# max-depth = 10  # example; unset by default
+
+# -----------------------------------------------------------------------------
+# File explorer
+# -----------------------------------------------------------------------------
+# [editor.file-explorer]
+# hidden = false  # default
+# follow-symlinks = false  # default
+# parents = false  # default
+# ignore = false  # default
+# git-ignore = false  # default
+# git-global = false  # default
+# git-exclude = false  # default
+# flatten-dirs = true  # default
+
+# -----------------------------------------------------------------------------
+# Buffer picker
+# -----------------------------------------------------------------------------
+# [editor.buffer-picker]
+# start-position = "current"  # default; source example uses "previous"
+
+# -----------------------------------------------------------------------------
+# Auto pairs — explicit pair map
+# -----------------------------------------------------------------------------
+# [editor.auto-pairs]
+# '(' = ')'
+# '{' = '}'
+# '[' = ']'
+# '"' = '"'
+# '`' = '`'
+# '<' = '>'  # optional example from source, not part of documented default set
+
+# -----------------------------------------------------------------------------
+# Auto save
+# -----------------------------------------------------------------------------
+# [editor.auto-save]
+# focus-lost = false  # default
+# after-delay.enable = false  # default
+# after-delay.timeout = 3000  # default ms
+
+# -----------------------------------------------------------------------------
+# Search
+# -----------------------------------------------------------------------------
+# [editor.search]
+# smart-case = true  # default
+# wrap-around = true  # default
+
+# -----------------------------------------------------------------------------
+# Whitespace
+# -----------------------------------------------------------------------------
+# [editor.whitespace]
+# render = "none"  # default; may also be "all" or a per-character table
+# characters are configured in the subtable below
+
+# Per-character render policy:
+# [editor.whitespace.render]
+# space = "all"  # example from source
+# tab = "all"  # example from source
+# nbsp = "none"  # example from source
+# nnbsp = "none"  # example from source
+# newline = "none"  # example from source
+
+# Visible glyphs:
+# [editor.whitespace.characters]
+# space = "·"  # example from source
+# nbsp = "⍽"  # example from source
+# nnbsp = "␣"  # example from source
+# tab = "→"  # example from source
+# newline = "⏎"  # example from source
+# tabpad = "·"  # example from source
+
+# -----------------------------------------------------------------------------
+# Indent guides
+# -----------------------------------------------------------------------------
+# [editor.indent-guides]
+# render = false  # default
+# character = "│"  # default
+# skip-levels = 0  # default
+
+# -----------------------------------------------------------------------------
+# Gutters
+# -----------------------------------------------------------------------------
+# [editor.gutters]
+# layout = ["diagnostics", "spacer", "line-numbers", "spacer", "diff"]  # default
+
+# Line-number gutter:
+# [editor.gutters.line-numbers]
+# min-width = 3  # default
+# [editor.gutters.diagnostics]          # currently no options
+# [editor.gutters.diff]                 # currently no options
+# [editor.gutters.spacer]               # currently no options
+# [editor.gutters.code-action-hint]     # currently no options
+
+# -----------------------------------------------------------------------------
+# Soft wrap
+# -----------------------------------------------------------------------------
+# [editor.soft-wrap]
+# enable = false  # default
+# max-wrap = 20  # default
+# max-indent-retain = 40  # default
+# wrap-indicator = "↪ "  # default
+# wrap-at-text-width = false  # default
+
+# -----------------------------------------------------------------------------
+# Smart tab
+# -----------------------------------------------------------------------------
+# [editor.smart-tab]
+# enable = true  # default
+# supersede-menu = false  # default
+
+# -----------------------------------------------------------------------------
+# Inline diagnostics
+# -----------------------------------------------------------------------------
+# [editor.inline-diagnostics]
+# cursor-line = "warning"  # default
+# other-lines = "disable"  # default
+# prefix-len = 1  # default
+# max-wrap = 20  # default
+# max-diagnostics = 10  # default
+# cursor-line / other-lines: error | warning | info | hint | disable
+
+# -----------------------------------------------------------------------------
+# Word completion
+# -----------------------------------------------------------------------------
+# [editor.word-completion]
+# enable = true  # default
+# trigger-length = 7  # default
+
+# -----------------------------------------------------------------------------
+# Workspace trust
+# -----------------------------------------------------------------------------
+# [editor.workspace-trust]
+# level = "servers"  # default; none | servers | insecure
+# prompt = true  # default
+# trusted = []  # default; source discourages broad trust globs
+
+# -----------------------------------------------------------------------------
+# Keymaps — normal mode
+# -----------------------------------------------------------------------------
+# Default bindings transcribed from keymap.md. These are references, not required config.
+# Uncommenting a line explicitly rebinds that key to the documented command.
+# [keys.normal]
+# "h" = "move_char_left"  # Move left
+# "left" = "move_char_left"  # Move left
+# "j" = "move_visual_line_down"  # Move down
+# "down" = "move_visual_line_down"  # Move down
+# "k" = "move_visual_line_up"  # Move up
+# "up" = "move_visual_line_up"  # Move up
+# "l" = "move_char_right"  # Move right
+# "right" = "move_char_right"  # Move right
+# "w" = "move_next_word_start"  # Move next word start
+# "b" = "move_prev_word_start"  # Move previous word start
+# "e" = "move_next_word_end"  # Move next word end
+# "W" = "move_next_long_word_start"  # Move next WORD start
+# "B" = "move_prev_long_word_start"  # Move previous WORD start
+# "E" = "move_next_long_word_end"  # Move next WORD end
+# "t" = "find_till_char"  # Find till next char
+# "f" = "find_next_char"  # Find next char
+# "T" = "till_prev_char"  # Find till previous char
+# "F" = "find_prev_char"  # Find previous char
+# "A-." = "repeat_last_motion"  # Repeat last motion (f, t, m, [ or ])
+# "home" = "goto_line_start"  # Move to the start of the line
+# "end" = "goto_line_end"  # Move to the end of the line
+# "C-b" = "page_up"  # Move page up
+# "pageup" = "page_up"  # Move page up
+# "C-f" = "page_down"  # Move page down
+# "pagedown" = "page_down"  # Move page down
+# "C-u" = "page_cursor_half_up"  # Move cursor and page half page up
+# "C-d" = "page_cursor_half_down"  # Move cursor and page half page down
+# "C-i" = "jump_forward"  # Jump forward on the jumplist
+# "C-o" = "jump_backward"  # Jump backward on the jumplist
+# "C-s" = "save_selection"  # Save the current selection to the jumplist
+# "r" = "replace"  # Replace with a character
+# "R" = "replace_with_yanked"  # Replace with yanked text
+# "~" = "switch_case"  # Switch case of the selected text
+# "`" = "switch_to_lowercase"  # Set the selected text to lower case
+# "A-`" = "switch_to_uppercase"  # Set the selected text to upper case
+# "i" = "insert_mode"  # Insert before selection
+# "a" = "append_mode"  # Insert after selection (append)
+# "I" = "insert_at_line_start"  # Insert at the start of the line
+# "A" = "insert_at_line_end"  # Insert at the end of the line
+# "o" = "open_below"  # Open new line below selection
+# "O" = "open_above"  # Open new line above selection
+# "u" = "undo"  # Undo change
+# "U" = "redo"  # Redo change
+# "A-u" = "earlier"  # Move backward in history
+# "A-U" = "later"  # Move forward in history
+# "y" = "yank"  # Yank selection
+# "p" = "paste_after"  # Paste after selection
+# "P" = "paste_before"  # Paste before selection
+# "\"" = "select_register"  # Select a register to yank to or paste from
+# ">" = "indent"  # Indent selection
+# "<" = "unindent"  # Unindent selection
+# "=" = "format_selections"  # Format selection ()
+# "d" = "delete_selection"  # Delete selection
+# "A-d" = "delete_selection_noyank"  # Delete selection, without yanking
+# "c" = "change_selection"  # Change selection (delete and enter insert mode)
+# "A-c" = "change_selection_noyank"  # Change selection (delete and enter insert mode, without yanking)
+# "C-a" = "increment"  # Increment object (number) under cursor
+# "C-x" = "decrement"  # Decrement object (number) under cursor
+# "Q" = "record_macro"  # Start/stop macro recording to the selected register (experimental)
+# "q" = "replay_macro"  # Play back a recorded macro from the selected register (experimental)
+# "C-z" = "suspend"  # Suspend Helix and return to the shell (resume with fg)
+# "|" = "shell_pipe"  # Pipe each selection through shell command, replacing with output
+# "A-|" = "shell_pipe_to"  # Pipe each selection into shell command, ignoring output
+# "!" = "shell_insert_output"  # Run shell command, inserting output before each selection
+# "A-!" = "shell_append_output"  # Run shell command, appending output after each selection
+# "$" = "shell_keep_pipe"  # Pipe each selection into shell command, keep selections where command returned 0
+# "s" = "select_regex"  # Select all regex matches inside selections
+# "S" = "split_selection"  # Split selection into sub selections on regex matches
+# "A-s" = "split_selection_on_newline"  # Split selection on newlines
+# "A-minus" = "merge_selections"  # Merge selections
+# "A-_" = "merge_consecutive_selections"  # Merge consecutive selections
+# "&" = "align_selections"  # Align selection in columns
+# "_" = "trim_selections"  # Trim whitespace from the selection
+# ";" = "collapse_selection"  # Collapse selection onto a single cursor
+# "A-;" = "flip_selections"  # Flip selection cursor and anchor
+# "A-:" = "ensure_selections_forward"  # Ensures the selection is in forward direction
+# "," = "keep_primary_selection"  # Keep only the primary selection
+# "A-," = "remove_primary_selection"  # Remove the primary selection
+# "C" = "copy_selection_on_next_line"  # Copy selection onto the next line (Add cursor below)
+# "A-C" = "copy_selection_on_prev_line"  # Copy selection onto the previous line (Add cursor above)
+# "(" = "rotate_selections_backward"  # Rotate main selection backward
+# ")" = "rotate_selections_forward"  # Rotate main selection forward
+# "A-(" = "rotate_selection_contents_backward"  # Rotate selection contents backward
+# "A-)" = "rotate_selection_contents_forward"  # Rotate selection contents forward
+# "%" = "select_all"  # Select entire file
+# "x" = "extend_line_below"  # Select current line, if already selected, extend to next line
+# "X" = "extend_to_line_bounds"  # Extend selection to line bounds (line-wise selection)
+# "A-x" = "shrink_to_line_bounds"  # Shrink selection to line bounds (line-wise selection)
+# "J" = "join_selections"  # Join lines inside selection
+# "A-J" = "join_selections_space"  # Join lines inside selection and select the inserted space
+# "K" = "keep_selections"  # Keep selections matching the regex
+# "A-K" = "remove_selections"  # Remove selections matching the regex
+# "C-c" = "toggle_comments"  # Comment/uncomment the selections
+# "A-o" = "expand_selection"  # Expand selection to parent syntax node ()
+# "A-up" = "expand_selection"  # Expand selection to parent syntax node ()
+# "A-i" = "shrink_selection"  # Shrink syntax tree object selection ()
+# "A-down" = "shrink_selection"  # Shrink syntax tree object selection ()
+# "A-p" = "select_prev_sibling"  # Select previous sibling node in syntax tree ()
+# "A-left" = "select_prev_sibling"  # Select previous sibling node in syntax tree ()
+# "A-n" = "select_next_sibling"  # Select next sibling node in syntax tree ()
+# "A-right" = "select_next_sibling"  # Select next sibling node in syntax tree ()
+# "A-a" = "select_all_siblings"  # Select all sibling nodes in syntax tree ()
+# "A-I" = "select_all_children"  # Select all children nodes in syntax tree ()
+# "A-S-down" = "select_all_children"  # Select all children nodes in syntax tree ()
+# "A-e" = "move_parent_node_end"  # Move to end of parent node in syntax tree ()
+# "A-b" = "move_parent_node_start"  # Move to start of parent node in syntax tree ()
+# "/" = "search"  # Search for regex pattern
+# "?" = "rsearch"  # Search for previous pattern
+# "n" = "search_next"  # Select next search match
+# "N" = "search_prev"  # Select previous search match
+# "*" = "search_selection_detect_word_boundaries"  # Use current selection as the search pattern, automatically wrapping with \b on word boundaries
+# "A-*" = "search_selection"  # Use current selection as the search pattern
+# "v" = "select_mode"  # Enter [select (extend) mode](#select--extend-mode)
+# ":" = "command_mode"  # Enter command mode
+
+# -----------------------------------------------------------------------------
+# Keymaps — normal minor mode: View mode (z)
+# -----------------------------------------------------------------------------
+# [keys.normal."z"]
+# "z" = "align_view_center"  # Vertically center the line
+# "c" = "align_view_center"  # Vertically center the line
+# "t" = "align_view_top"  # Align the line to the top of the screen
+# "b" = "align_view_bottom"  # Align the line to the bottom of the screen
+# "m" = "align_view_middle"  # Align the line to the middle of the screen (horizontally)
+# "j" = "scroll_down"  # Scroll the view downwards
+# "down" = "scroll_down"  # Scroll the view downwards
+# "k" = "scroll_up"  # Scroll the view upwards
+# "up" = "scroll_up"  # Scroll the view upwards
+# "C-f" = "page_down"  # Move page down
+# "pagedown" = "page_down"  # Move page down
+# "C-b" = "page_up"  # Move page up
+# "pageup" = "page_up"  # Move page up
+# "C-u" = "page_cursor_half_up"  # Move cursor and page half page up
+# "C-d" = "page_cursor_half_down"  # Move cursor and page half page down
+
+# -----------------------------------------------------------------------------
+# Keymaps — normal minor mode: Goto mode (g)
+# -----------------------------------------------------------------------------
+# [keys.normal."g"]
+# "g" = "goto_file_start"  # Go to the start of the file
+# "|" = "goto_column"  # Go to the start of line
+# "e" = "goto_last_line"  # Go to the end of the file
+# "f" = "goto_file"  # Go to files/URLs in selections
+# "h" = "goto_line_start"  # Go to the start of the line
+# "l" = "goto_line_end"  # Go to the end of the line
+# "s" = "goto_first_nonwhitespace"  # Go to first non-whitespace character of the line
+# "t" = "goto_window_top"  # Go to the top of the screen
+# "c" = "goto_window_center"  # Go to the middle of the screen
+# "b" = "goto_window_bottom"  # Go to the bottom of the screen
+# "d" = "goto_definition"  # Go to definition ()
+# "D" = "goto_declaration"  # Go to declaration ()
+# "y" = "goto_type_definition"  # Go to type definition ()
+# "r" = "goto_reference"  # Go to references ()
+# "i" = "goto_implementation"  # Go to implementation ()
+# "a" = "goto_last_accessed_file"  # Go to the last accessed/alternate file
+# "m" = "goto_last_modified_file"  # Go to the last modified/alternate file
+# "n" = "goto_next_buffer"  # Go to next buffer
+# "p" = "goto_previous_buffer"  # Go to previous buffer
+# "." = "goto_last_modification"  # Go to last modification in current file
+# "j" = "move_line_down"  # Move down textual (instead of visual) line
+# "k" = "move_line_up"  # Move up textual (instead of visual) line
+# "w" = "goto_word"  # Show labels at each word and select the word that belongs to the entered labels
+
+# -----------------------------------------------------------------------------
+# Keymaps — normal minor mode: Match mode (m)
+# -----------------------------------------------------------------------------
+# [keys.normal."m"]
+# "m" = "match_brackets"  # Goto matching bracket ()
+# "s" = "surround_add"  # Surround current selection with <char>
+# "r" = "surround_replace"  # Replace surround character <from> with <to>
+# "d" = "surround_delete"  # Delete surround character <char>
+# "a" = "select_textobject_around"  # Select around textobject
+# "i" = "select_textobject_inner"  # Select inside textobject
+
+# -----------------------------------------------------------------------------
+# Keymaps — normal minor mode: Window mode (C-w)
+# -----------------------------------------------------------------------------
+# [keys.normal."C-w"]
+# "w" = "rotate_view"  # Switch to next window
+# "C-w" = "rotate_view"  # Switch to next window
+# "v" = "vsplit"  # Vertical right split
+# "C-v" = "vsplit"  # Vertical right split
+# "s" = "hsplit"  # Horizontal bottom split
+# "C-s" = "hsplit"  # Horizontal bottom split
+# "t" = "transpose_view"  # Transpose the two adjacent splits
+# "C-t" = "transpose_view"  # Transpose the two adjacent splits
+# "f" = "goto_file_hsplit"  # Go to files/URLs in selections in horizontal splits
+# "F" = "goto_file_vsplit"  # Go to files/URLs in selections in vertical splits
+# "h" = "jump_view_left"  # Move to left split
+# "C-h" = "jump_view_left"  # Move to left split
+# "left" = "jump_view_left"  # Move to left split
+# "j" = "jump_view_down"  # Move to split below
+# "C-j" = "jump_view_down"  # Move to split below
+# "down" = "jump_view_down"  # Move to split below
+# "k" = "jump_view_up"  # Move to split above
+# "C-k" = "jump_view_up"  # Move to split above
+# "up" = "jump_view_up"  # Move to split above
+# "l" = "jump_view_right"  # Move to right split
+# "C-l" = "jump_view_right"  # Move to right split
+# "right" = "jump_view_right"  # Move to right split
+# "q" = "wclose"  # Close current window
+# "C-q" = "wclose"  # Close current window
+# "o" = "wonly"  # Only keep the current window, closing all the others
+# "C-o" = "wonly"  # Only keep the current window, closing all the others
+# "H" = "swap_view_left"  # Swap window to the left
+# "J" = "swap_view_down"  # Swap window downwards
+# "K" = "swap_view_up"  # Swap window upwards
+# "L" = "swap_view_right"  # Swap window to the right
+
+# Nested n-prefix bindings in window mode:
+# [keys.normal."C-w".n]
+# "s" = "hsplit_new"  # New horizontal split with a scratch buffer
+# "C-s" = "hsplit_new"  # New horizontal split with a scratch buffer
+# "v" = "vsplit_new"  # New vertical split with a scratch buffer
+# "C-v" = "vsplit_new"  # New vertical split with a scratch buffer
+
+# -----------------------------------------------------------------------------
+# Keymaps — normal minor mode: Space mode (space)
+# -----------------------------------------------------------------------------
+# [keys.normal."space"]
+# "f" = "file_picker"  # Open file picker at LSP workspace root
+# "F" = "file_picker_in_current_directory"  # Open file picker at current working directory
+# "e" = "file_explorer"  # Open file explorer at workspace root
+# "." = "file_explorer_in_current_buffer_directory"  # Open file explorer at current buffer's directory
+# "b" = "buffer_picker"  # Open buffer picker
+# "j" = "jumplist_picker"  # Open jumplist picker
+# "g" = "changed_file_picker"  # Open changed file picker
+# "k" = "hover"  # Show documentation for item under cursor in a [popup](#popup) ()
+# "s" = "lsp_or_syntax_symbol_picker"  # Open document symbol picker ( or )
+# "S" = "lsp_or_syntax_workspace_symbol_picker"  # Open workspace symbol picker ( or )
+# "d" = "diagnostics_picker"  # Open document diagnostics picker ()
+# "D" = "workspace_diagnostics_picker"  # Open workspace diagnostics picker ()
+# "r" = "rename_symbol"  # Rename symbol ()
+# "a" = "code_action"  # Apply code action ()
+# "h" = "select_references_to_symbol_under_cursor"  # Select symbol references ()
+# "'" = "last_picker"  # Open last fuzzy picker
+# "c" = "toggle_comments"  # Comment/uncomment selections
+# "C" = "toggle_block_comments"  # Block comment/uncomment selections
+# "A-c" = "toggle_line_comments"  # Line comment/uncomment selections
+# "p" = "paste_clipboard_after"  # Paste system clipboard after selections
+# "P" = "paste_clipboard_before"  # Paste system clipboard before selections
+# "y" = "yank_to_clipboard"  # Yank selections to clipboard
+# "Y" = "yank_main_selection_to_clipboard"  # Yank main selection to clipboard
+# "R" = "replace_selections_with_clipboard"  # Replace selections by clipboard contents
+# "/" = "global_search"  # Global search in workspace folder
+# "?" = "command_palette"  # Open command palette
+
+# -----------------------------------------------------------------------------
+# Keymaps — unimpaired prefix ]
+# -----------------------------------------------------------------------------
+# [keys.normal."]"]
+# "d" = "goto_next_diag"  # Go to next diagnostic ()
+# "D" = "goto_last_diag"  # Go to last diagnostic in document ()
+# "f" = "goto_next_function"  # Go to next function ()
+# "t" = "goto_next_class"  # Go to next type definition ()
+# "a" = "goto_next_parameter"  # Go to next argument/parameter ()
+# "c" = "goto_next_comment"  # Go to next comment ()
+# "e" = "goto_next_entry"  # Go to next entry ()
+# "T" = "goto_next_test"  # Go to next test ()
+# "p" = "goto_next_paragraph"  # Go to next paragraph
+# "g" = "goto_next_change"  # Go to next change
+# "G" = "goto_last_change"  # Go to last change
+# "x" = "goto_prev_xml_element"  # Go to previous (X)HTML element
+# "space" = "add_newline_below"  # Add newline below
+
+# -----------------------------------------------------------------------------
+# Keymaps — unimpaired prefix [
+# -----------------------------------------------------------------------------
+# [keys.normal."["]
+# "d" = "goto_prev_diag"  # Go to previous diagnostic ()
+# "D" = "goto_first_diag"  # Go to first diagnostic in document ()
+# "f" = "goto_prev_function"  # Go to previous function ()
+# "t" = "goto_prev_class"  # Go to previous type definition ()
+# "a" = "goto_prev_parameter"  # Go to previous argument/parameter ()
+# "c" = "goto_prev_comment"  # Go to previous comment ()
+# "e" = "goto_prev_entry"  # Go to previous entry ()
+# "T" = "goto_prev_test"  # Go to previous test ()
+# "p" = "goto_prev_paragraph"  # Go to previous paragraph
+# "g" = "goto_prev_change"  # Go to previous change
+# "G" = "goto_first_change"  # Go to first change
+# "x" = "goto_next_xml_element"  # Go to next (X)HTML element
+# "space" = "add_newline_above"  # Add newline above
+
+# -----------------------------------------------------------------------------
+# Keymaps — insert mode
+# -----------------------------------------------------------------------------
+# [keys.insert]
+# "esc" = "normal_mode"  # Switch to normal mode
+# "C-s" = "commit_undo_checkpoint"  # Commit undo checkpoint
+# "C-x" = "completion"  # Autocomplete
+# "C-r" = "insert_register"  # Insert a register content
+# "C-w" = "delete_word_backward"  # Delete previous word
+# "A-backspace" = "delete_word_backward"  # Delete previous word
+# "A-d" = "delete_word_forward"  # Delete next word
+# "A-del" = "delete_word_forward"  # Delete next word
+# "C-u" = "kill_to_line_start"  # Delete to start of line
+# "C-k" = "kill_to_line_end"  # Delete to end of line
+# "C-h" = "delete_char_backward"  # Delete previous char
+# "backspace" = "delete_char_backward"  # Delete previous char
+# "S-backspace" = "delete_char_backward"  # Delete previous char
+# "C-d" = "delete_char_forward"  # Delete next char
+# "del" = "delete_char_forward"  # Delete next char
+# "C-j" = "insert_newline"  # Insert new line
+# "ret" = "insert_newline"  # Insert new line
+# "tab" = "smart_tab"  # [Smart tab] (configurable)
+# "S-tab" = "insert_tab"  # Insert tab
+# "up" = "move_line_up"  # Move to previous line
+# "down" = "move_line_down"  # Move to next line
+# "left" = "move_char_left"  # Backward a char
+# "right" = "move_char_right"  # Forward a char
+# "pageup" = "page_up"  # Move one page up
+# "pagedown" = "page_down"  # Move one page down
+# "home" = "goto_line_start"  # Move to line start
+# "end" = "goto_line_end_newline"  # Move to line end
+
+# -----------------------------------------------------------------------------
+# Keymaps — select mode
+# -----------------------------------------------------------------------------
+# keymap.md states that select/extend mode echoes normal mode but transforms
+# movements/gotos into extending selections; it does not enumerate a separate
+# complete command table, so no synthetic defaults are invented here.
+# The following smart-tab bindings are explicitly documented in editor.md:
+# [keys.select]
+# tab = "extend_parent_node_end"  # optional smart-tab example
+# S-tab = "extend_parent_node_start"  # optional smart-tab example
+
+# -----------------------------------------------------------------------------
+# Optional smart-tab keymap additions from editor.md
+# -----------------------------------------------------------------------------
+# [keys.normal]
+# tab = "move_parent_node_end"  # optional example
+# S-tab = "move_parent_node_start"  # optional example
+
+# [keys.insert]
+# S-tab = "move_parent_node_start"  # optional example
+
+# -----------------------------------------------------------------------------
+# Not part of config.toml
+# -----------------------------------------------------------------------------
+# Language definitions, language servers, formatters, grammar sources, and
+# language-level overrides belong in languages.toml, not config.toml.
+#
+# languages.toml-only families documented in languages.md include:
+#   use-grammars
+#   [[language]]
+#   [language-server.<name>]
+#   [[grammar]]
+#
+# Picker, prompt, completion-menu, popup, and signature-help popup key tables
+# are documented in keymap.md as not remappable, so they are intentionally not
+# projected into [keys.*] config here.
